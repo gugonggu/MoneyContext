@@ -120,4 +120,14 @@ describe("RLS user isolation", () => {
     expect(error).toBeNull();
     expect(data).toEqual([]);
   });
+
+  it("does not allow a user to update or delete another user's transaction", async () => {
+    const updated = await userAClient.from("transactions").update({ memo: "unauthorized" }).eq("id", transactionBId).select("id");
+    const deleted = await userAClient.from("transactions").delete().eq("id", transactionBId).select("id");
+
+    expect(updated.error).toBeNull();
+    expect(updated.data).toEqual([]);
+    expect(deleted.error).toBeNull();
+    expect(deleted.data).toEqual([]);
+  });
 });
