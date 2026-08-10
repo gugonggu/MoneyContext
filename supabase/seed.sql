@@ -1,0 +1,3 @@
+-- Default categories are seeded transactionally during user onboarding because
+-- categories are user-owned records. This file intentionally contains no global
+-- finance data.

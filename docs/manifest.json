@@ -1,0 +1,40 @@
+{
+  "project": "Money Context",
+  "generated_at": "2026-08-10T15:41:00+09:00",
+  "documents": [
+    "AGENTS.md",
+    "ARCHITECTURE.md",
+    "BUSINESS_RULES.md",
+    "DATABASE_SCHEMA.md",
+    "DECISIONS.md",
+    "EXPORT_FORMATS.md",
+    "GLOSSARY.md",
+    "IMPLEMENTATION_PLAN.md",
+    "MONEY_CONTEXT_SPEC.md",
+    "README.md",
+    "SECURITY.md",
+    "SETUP_AND_ENV.md",
+    "TEST_CASES.md",
+    "UI_UX.md"
+  ],
+  "recommended_repo_layout": {
+    "root": [
+      "AGENTS.md",
+      "README.md"
+    ],
+    "docs": [
+      "DATABASE_SCHEMA.md",
+      "ARCHITECTURE.md",
+      "IMPLEMENTATION_PLAN.md",
+      "MONEY_CONTEXT_SPEC.md",
+      "TEST_CASES.md",
+      "UI_UX.md",
+      "GLOSSARY.md",
+      "EXPORT_FORMATS.md",
+      "SETUP_AND_ENV.md",
+      "DECISIONS.md",
+      "SECURITY.md",
+      "BUSINESS_RULES.md"
+    ]
+  }
+}
