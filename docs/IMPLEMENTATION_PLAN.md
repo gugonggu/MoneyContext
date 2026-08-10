@@ -260,10 +260,10 @@
 
 **Produces:** INCOME/EXPENSE/TRANSFER/ADJUSTMENT create/edit/delete.
 
-- [ ] Implement input schemas.
-- [ ] Implement transaction services.
-- [ ] Enforce type-specific required fields.
-- [ ] Add integration tests for balances/statistics semantics.
+- [x] Implement input schemas.
+- [x] Implement transaction services.
+- [x] Enforce type-specific required fields.
+- [x] Add integration tests for balances/statistics semantics.
 - [ ] Commit: `feat: add transaction services`.
 
 ### Task 19: Category and tag management
