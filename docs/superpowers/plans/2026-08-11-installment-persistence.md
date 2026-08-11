@@ -95,7 +95,7 @@ Lock the owned `SCHEDULED` payment, resolve the plan purchase card, require an o
 
 Run: `npm test -- tests/integration/installment.test.ts`
 
-Expected: PASS with local Supabase configuration; otherwise report the missing environment while retaining the test file.
+Expected: PASS against the configured Supabase Cloud project; otherwise report the missing environment while retaining the test file.
 
 - [ ] **Step 6: Commit**
 

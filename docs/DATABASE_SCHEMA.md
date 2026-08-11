@@ -132,7 +132,7 @@ unique(user_id, lower(name))
 id uuid pk
 user_id uuid not null
 type transaction_type not null check type in ('INCOME','EXPENSE')
-amount numeric(18,2) not null check amount >= 0
+amount numeric(18,2) not null check (type = 'ADJUSTMENT' or amount >= 0)
 currency char(3) not null
 account_id uuid not null
 category_id uuid null
@@ -180,7 +180,7 @@ status transaction_status not null default CONFIRMED
 transaction_at timestamptz not null
 amount numeric(18,2) not null check amount >= 0
 currency char(3) not null default 'KRW'
-base_amount numeric(18,2) not null
+base_amount numeric(18,2) not null check (type = 'ADJUSTMENT' or base_amount >= 0)
 base_currency char(3) not null default 'KRW'
 exchange_rate numeric(24,10) null
 category_id uuid null

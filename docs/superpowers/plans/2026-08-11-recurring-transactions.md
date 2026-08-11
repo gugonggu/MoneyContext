@@ -192,7 +192,7 @@ The function must create `transaction_at` as the occurrence date in `Asia/Seoul`
 
 - [ ] **Step 4: Apply and verify the migration, then run the full relevant suite**
 
-Run: `supabase db reset; npm test -- tests/unit/recurring-schedule.test.ts tests/unit/recurring-service.test.ts tests/integration/recurring.test.ts; npm run lint; npm run typecheck; npm run build`
+Run: `supabase db push --linked; npm test -- tests/unit/recurring-schedule.test.ts tests/unit/recurring-service.test.ts tests/integration/recurring.test.ts; npm run lint; npm run typecheck; npm run build`
 
 Expected: migration succeeds; TC-REC-001 and TC-REC-002 pass; no duplicate occurrence is stored.
 

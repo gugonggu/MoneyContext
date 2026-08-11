@@ -30,6 +30,17 @@ describe("transaction service", () => {
     await expect(service.create(userId, { type: "EXPENSE", amount: 10_000, baseAmount: 9_000, currency: "KRW", transactionAt: "2026-08-11T10:00:00+09:00", accountId: bank.id })).rejects.toThrow("baseAmount");
   });
 
+  it("persists a signed ADJUSTMENT while continuing to reject negative expenses", async () => {
+    const service = createTransactionService(repository());
+
+    await expect(service.create(userId, {
+      type: "ADJUSTMENT", amount: -50_000, baseAmount: -50_000, currency: "KRW", transactionAt: "2026-08-11T10:00:00+09:00", accountId: bank.id,
+    })).resolves.toMatchObject({ type: "ADJUSTMENT", amount: -50_000, baseAmount: -50_000 });
+    await expect(service.create(userId, {
+      type: "EXPENSE", amount: -50_000, baseAmount: -50_000, currency: "KRW", transactionAt: "2026-08-11T10:00:00+09:00", accountId: bank.id,
+    })).rejects.toThrow("amount must be a non-negative integer");
+  });
+
   it("persists an owned active category on an EXPENSE transaction", async () => {
     const service = createTransactionService(repository());
     await expect(service.create(userId, { type: "EXPENSE", amount: 10_000, baseAmount: 10_000, currency: "KRW", transactionAt: "2026-08-11T10:00:00+09:00", accountId: bank.id, categoryId: category.id })).resolves.toMatchObject({ categoryId: category.id });

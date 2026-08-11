@@ -15,9 +15,9 @@
 권장:
 
 ```text
-local
-preview
-production
+development (cloud)
+preview (cloud)
+production (cloud)
 ```
 
 Supabase는 가능하면 production과 개발용 프로젝트를 분리한다.
@@ -38,14 +38,16 @@ NEXT_PUBLIC_APP_URL=
 
 OAuth Client Secret은 Supabase Provider 설정 또는 안전한 서버 설정에 보관한다.
 
-# 4. Supabase Local
+# 4. Supabase Cloud
+
+개발·미리보기·운영 환경은 각각 연결된 Supabase Cloud 프로젝트를 사용한다. 로컬 Supabase 컨테이너는 사용하지 않는다.
 
 권장 흐름:
 
 ```bash
 supabase init
-supabase start
-supabase db reset
+supabase link --project-ref <cloud-project-ref>
+supabase db push --linked
 ```
 
 모든 DB 변경은 migration으로 관리한다.
@@ -104,7 +106,7 @@ Migration은 다음을 포함해야 한다.
 
 - Google Cloud OAuth Client 생성
 - Supabase callback URL 등록
-- production/local redirect 검증
+- development/production cloud redirect 검증
 
 # 8. Vercel
 

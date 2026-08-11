@@ -91,11 +91,11 @@
   for each row execute function public.validate_savings_contribution_transfer();
   ```
 
-- [ ] **Step 4: Reset the local database and re-run invariant coverage**
+- [ ] **Step 4: Apply migrations to the linked Supabase Cloud project and re-run invariant coverage**
 
-  Run: `supabase db reset; npx vitest run tests/integration/planning.test.ts`
+  Run: `supabase db push --linked; npx vitest run tests/integration/planning.test.ts`
 
-  Expected: reset succeeds; the standalone and valid transfer cases pass and every invalid-link assertion receives a database error.
+  Expected: the cloud migration succeeds; the standalone and valid transfer cases pass and every invalid-link assertion receives a database error.
 
 - [ ] **Step 5: Commit the independently verifiable schema work**
 

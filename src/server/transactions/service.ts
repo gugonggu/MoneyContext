@@ -75,7 +75,9 @@ function validateSearchFilters(filters: TransactionSearchFilters): TransactionSe
   return { ...filters, limit: clampSearchLimit(filters.limit), offset: clampSearchOffset(filters.offset) };
 }
 const fail = (message: string): never => { throw new Error(message); };
-function validAmount(value: number, name: string) { if (!Number.isSafeInteger(value) || value < 0) fail(`${name} must be a non-negative integer`); }
+function validAmount(value: number, name: string, allowNegative = false) {
+  if (!Number.isSafeInteger(value) || (!allowNegative && value < 0)) fail(`${name} must be a non-negative integer`);
+}
 function validCurrency(input: TransactionInput) {
   if (!/^[A-Z]{3}$/.test(input.currency)) fail("currency must be an ISO 4217 code");
   if (input.currency === "KRW" && input.amount !== input.baseAmount) fail("KRW baseAmount must equal amount");
@@ -94,7 +96,8 @@ async function activeCategory(repository: TransactionRepository, userId: string,
   return category.id;
 }
 async function validate(repository: TransactionRepository, userId: string, input: TransactionInput): Promise<TransactionInput> {
-  validAmount(input.amount, "amount"); validAmount(input.baseAmount, "baseAmount"); validCurrency(input);
+  const isAdjustment = input.type === "ADJUSTMENT";
+  validAmount(input.amount, "amount", isAdjustment); validAmount(input.baseAmount, "baseAmount", isAdjustment); validCurrency(input);
   if (Number.isNaN(Date.parse(input.transactionAt))) fail("transactionAt must be an ISO timestamp");
   if (input.type === "TRANSFER") {
     if (!input.fromAccountId || !input.toAccountId || input.fromAccountId === input.toAccountId) fail("TRANSFER requires distinct source and destination accounts");

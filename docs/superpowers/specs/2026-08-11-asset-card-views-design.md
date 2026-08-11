@@ -10,7 +10,7 @@ A server-only asset read service will query current-user accounts, transactions,
 
 The summary separates liquid assets, liabilities, and net worth. Linked DEBIT accounts are never added as separate assets alongside their BANK account. Credit cards are presented as liability/cashflow information, not assets; their detail shows outstanding amount, available credit, payment date, and upcoming installment payments. Card settlements remain transfers and are not displayed as new expenses.
 
-Each account detail exposes reconciliation. The user enters an actual balance; the system calculates `actual - calculated` and submits one existing `ADJUSTMENT` transaction only when non-zero. The adjustment is scoped to the selected owned account and remains excluded from income, expense, and budget statistics under the existing transaction/domain rules.
+Each account detail exposes reconciliation. The user enters an actual balance; the system calculates `actual - calculated` and submits one existing `ADJUSTMENT` transaction only when non-zero. ADJUSTMENT alone permits signed `amount` and `base_amount`, so a lower actual balance is represented by a negative adjustment. The adjustment is scoped to the selected owned account and remains excluded from income, expense, and budget statistics under the existing transaction/domain rules.
 
 ## Validation and Tests
 

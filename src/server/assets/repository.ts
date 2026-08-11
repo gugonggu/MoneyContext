@@ -9,6 +9,7 @@ import type {
   AssetReadRepository,
   AssetTransactionRecord,
 } from "@/server/assets/service";
+import type { ReconciliationAccount, ReconciliationRepository } from "@/server/assets/reconciliation";
 
 type AccountRow = Readonly<{
   id: string;
@@ -150,6 +151,24 @@ export function createAssetReadRepository(supabase: SupabaseClient): AssetReadRe
         .order("sequence");
       if (error) throw new Error(error.message);
       return (data as unknown as InstallmentPaymentRow[]).map(toInstallmentPaymentRecord);
+    },
+  };
+}
+
+export function createReconciliationRepository(supabase: SupabaseClient): ReconciliationRepository {
+  const readRepository = createAssetReadRepository(supabase);
+  return {
+    async findAccount(userId, accountId): Promise<ReconciliationAccount | null> {
+      const { data, error } = await supabase.from("accounts").select("id,user_id,is_active").eq("user_id", userId).eq("id", accountId).maybeSingle();
+      if (error) throw new Error(error.message);
+      return data ? { id: data.id, userId: data.user_id, isActive: data.is_active } : null;
+    },
+    async getCalculatedBalance(userId, accountId) {
+      const { createAssetReadService } = await import("@/server/assets/service");
+      const overview = await createAssetReadService(readRepository).getOverview(userId);
+      const account = [...overview.accounts.bank, ...overview.accounts.cash, ...overview.accounts.debit, ...overview.accounts.liability].find((item) => item.id === accountId);
+      if (!account) throw new Error("account does not support balance reconciliation");
+      return account.balance;
     },
   };
 }

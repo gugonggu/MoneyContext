@@ -14,7 +14,7 @@
 - Money uses safe integer KRW units; UI contains no financial calculations.
 - DEBIT is not separately included in liquid assets with its linked BANK account.
 - Credit-card settlements are transfers, never new expenses.
-- Reconciliation creates no transaction for zero difference; non-zero difference creates ADJUSTMENT only.
+- Reconciliation creates no transaction for zero difference; non-zero difference creates ADJUSTMENT only. ADJUSTMENT may use signed KRW amounts; every other transaction type remains non-negative.
 
 ---
 

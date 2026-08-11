@@ -75,7 +75,7 @@
 - [ ] Implement profiles/app_settings/accounts/card settings/categories/tags.
 - [ ] Add FK/check/unique/index constraints.
 - [ ] Add updated_at trigger helper.
-- [ ] Run `supabase db reset` and verify migration.
+- [ ] Apply migrations to the linked Supabase Cloud project with `supabase db push --linked` and verify.
 - [ ] Commit: `feat: add core finance schema`.
 
 ### Task 4: Transaction and planning schema
@@ -89,7 +89,7 @@
 - [ ] Add transaction-type consistency constraints or validation triggers.
 - [ ] Add recurring occurrence unique key.
 - [ ] Add installment relationship constraints.
-- [ ] Reset local DB and inspect constraints.
+- [ ] Apply migrations to the linked Supabase Cloud project and inspect constraints.
 - [ ] Commit: `feat: add transaction and installment schema`.
 
 ### Task 5: Budget, savings and notification schema
@@ -347,11 +347,11 @@
 
 ### Task 28: Asset and card screens
 
-- [ ] Build asset summary.
-- [ ] Build account groups.
-- [ ] Build credit-card detail with outstanding/payment schedule.
-- [ ] Add balance reconciliation flow.
-- [ ] Commit: `feat: add asset and card views`.
+- [x] Build asset summary.
+- [x] Build account groups.
+- [x] Build credit-card detail with outstanding/payment schedule.
+- [x] Add balance reconciliation flow.
+- [x] Commit: `feat: add asset and card views`.
 
 ### Task 29: Budget, savings and forecast screens
 
