@@ -12,7 +12,7 @@ export const exportPresets: Readonly<Record<ExportPreset, Readonly<{ purpose: st
   },
   FINANCIAL_HEALTH: {
     purpose: "재정 건강 점검",
-    sections: ["CARDS", "SAVINGS_GOALS", "PLANNED_CASHFLOWS"],
+    sections: ["CATEGORY_SPENDING", "CARDS", "SAVINGS_GOALS", "PLANNED_CASHFLOWS"],
   },
 };
 

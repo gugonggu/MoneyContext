@@ -9,6 +9,8 @@ export type ExportTransaction = Readonly<{
   transactionDate: string;
   type: ActualTransactionType;
   status: TransactionStatus;
+  originalAmount?: number;
+  originalCurrency?: string;
   baseAmount: number;
   categoryName?: string;
   accountName?: string;
@@ -67,7 +69,16 @@ function formatMoney(value: bigint, currency: string): string {
 }
 
 function dateKey(value: string): string {
-  return value.slice(0, 10);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw new RangeError("transactionDate must be a valid date-time");
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const part = (type: "year" | "month" | "day") => parts.find((item) => item.type === type)?.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
 function inPeriod(value: string, period: ExportPeriod): boolean {
