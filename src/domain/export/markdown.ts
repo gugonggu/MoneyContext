@@ -14,6 +14,8 @@ export type ExportTransaction = Readonly<{
   baseAmount: number;
   categoryName?: string;
   accountName?: string;
+  fromAccountName?: string;
+  toAccountName?: string;
   tagNames?: readonly string[];
   memo?: string;
 }>;
