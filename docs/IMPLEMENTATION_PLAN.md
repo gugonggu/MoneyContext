@@ -301,10 +301,10 @@
 
 ### Task 23: Budget and savings persistence
 
-- [ ] Implement monthly/category budget CRUD.
-- [ ] Implement savings goals/contributions CRUD.
-- [ ] Link contribution to actual transaction when requested.
-- [ ] Add integration tests.
+- [x] Implement monthly/category budget CRUD.
+- [x] Implement savings goals/contributions CRUD.
+- [x] Link contribution to actual transaction when requested.
+- [x] Add integration tests.
 - [ ] Commit: `feat: add budget and savings services`.
 
 # Stage F — Product UI
