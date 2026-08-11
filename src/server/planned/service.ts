@@ -1,0 +1,4 @@
+import "server-only";
+export type PlannedRecord=Readonly<{id:string;userId:string;status:"PLANNED"|"CONFIRMED"|"CANCELLED"}>;
+export interface PlannedRepository{find(userId:string,id:string):Promise<PlannedRecord|null>;confirm(userId:string,id:string):Promise<PlannedRecord|null>;}
+export function createPlannedTransactionService(repository:PlannedRepository){return{async confirm(userId:string,id:string){const row=await repository.find(userId,id);if(!row)throw new Error("planned transaction not found");if(row.status==="CONFIRMED")throw new Error("planned transaction already confirmed");if(row.status==="CANCELLED")throw new Error("cancelled planned transaction cannot be confirmed");const confirmed=await repository.confirm(userId,id);if(!confirmed)throw new Error("planned transaction already confirmed");return confirmed;}};}
