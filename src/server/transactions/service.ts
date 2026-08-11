@@ -2,10 +2,12 @@ import "server-only";
 
 export type TransactionType = "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
 type Account = Readonly<{ id: string; userId: string; type: "BANK" | "CASH" | "DEBIT" | "CREDIT_CARD" | "LIABILITY"; isActive: boolean }>;
-type TransactionInput = Readonly<{ type: TransactionType; amount: number; baseAmount: number; currency: string; transactionAt: string; accountId?: string; fromAccountId?: string; toAccountId?: string; exchangeRate?: string; memo?: string }>;
+type Category = Readonly<{ id: string; userId: string; isActive: boolean }>;
+type TransactionInput = Readonly<{ type: TransactionType; amount: number; baseAmount: number; currency: string; transactionAt: string; accountId?: string; fromAccountId?: string; toAccountId?: string; categoryId?: string; exchangeRate?: string; memo?: string }>;
 export type TransactionRecord = Readonly<TransactionInput & { id: string; userId: string }>;
 export interface TransactionRepository {
   findAccount(userId: string, id: string): Promise<Account | null>;
+  findCategory(userId: string, id: string): Promise<Category | null>;
   create(userId: string, input: TransactionInput): Promise<TransactionRecord>;
   list(userId: string): Promise<TransactionRecord[]>;
   update(userId: string, id: string, input: TransactionInput): Promise<TransactionRecord | null>;
@@ -24,14 +26,20 @@ async function active(repository: TransactionRepository, userId: string, id: str
   if (!account || !account.isActive) throw new Error("account must be an active account owned by the current user");
   return account.id;
 }
+async function activeCategory(repository: TransactionRepository, userId: string, id: string | undefined) {
+  if (!id) return undefined;
+  const category = await repository.findCategory(userId, id);
+  if (!category || !category.isActive) throw new Error("categoryId must be an active category owned by the current user");
+  return category.id;
+}
 async function validate(repository: TransactionRepository, userId: string, input: TransactionInput): Promise<TransactionInput> {
   validAmount(input.amount, "amount"); validAmount(input.baseAmount, "baseAmount"); validCurrency(input);
   if (Number.isNaN(Date.parse(input.transactionAt))) fail("transactionAt must be an ISO timestamp");
   if (input.type === "TRANSFER") {
     if (!input.fromAccountId || !input.toAccountId || input.fromAccountId === input.toAccountId) fail("TRANSFER requires distinct source and destination accounts");
-    return { ...input, accountId: undefined, fromAccountId: await active(repository, userId, input.fromAccountId), toAccountId: await active(repository, userId, input.toAccountId) };
+    return { ...input, accountId: undefined, categoryId: undefined, fromAccountId: await active(repository, userId, input.fromAccountId), toAccountId: await active(repository, userId, input.toAccountId) };
   }
-  return { ...input, accountId: await active(repository, userId, input.accountId), fromAccountId: undefined, toAccountId: undefined };
+  return { ...input, accountId: await active(repository, userId, input.accountId), categoryId: await activeCategory(repository, userId, input.categoryId), fromAccountId: undefined, toAccountId: undefined };
 }
 export function createTransactionService(repository: TransactionRepository) { return {
   list: (userId: string) => repository.list(userId),
