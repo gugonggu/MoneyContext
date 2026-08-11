@@ -15,9 +15,22 @@ const categories = [
   { id: "cat-etc", name: "기타", kind: "BOTH" as const },
 ];
 const tags = [{ id: "tag-work", name: "업무" }];
+const today = "2026-08-11";
 
-function renderForm(action = vi.fn(async () => ({ status: "idle" as const }))) {
-  render(<QuickEntryForm accounts={accounts} categories={categories} tags={tags} action={action} />);
+function renderForm(
+  action = vi.fn(async () => ({ status: "idle" as const })),
+  recentTransactions: Array<{ accountId: string; categoryId?: string; type: "INCOME" | "EXPENSE"; occurredAt: string }> = [],
+) {
+  render(
+    <QuickEntryForm
+      accounts={accounts}
+      categories={categories}
+      tags={tags}
+      action={action}
+      recentTransactions={recentTransactions}
+      today={today}
+    />,
+  );
   return action;
 }
 
@@ -103,5 +116,45 @@ describe("QuickEntryForm", () => {
     expect(within(document.body).getByRole("alert").textContent).toContain("저장에 실패했습니다");
     expect((screen.getByLabelText("메모") as HTMLInputElement).value).toBe("커피");
     expect((screen.getByLabelText("금액") as HTMLInputElement).value).toBe("4500");
+  });
+
+  const recentTransactions = [
+    { accountId: "bank-a", categoryId: "cat-food", type: "EXPENSE" as const, occurredAt: "2026-08-10" },
+    { accountId: "bank-a", categoryId: "cat-food", type: "EXPENSE" as const, occurredAt: "2026-08-09" },
+    { accountId: "card-a", categoryId: "cat-food", type: "EXPENSE" as const, occurredAt: "2026-08-05" },
+  ];
+
+  it("suggests recent accounts, frequent categories, and combos from transaction history", () => {
+    renderForm(undefined, recentTransactions);
+
+    expect(screen.getByRole("button", { name: "주거래 은행" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "식비" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "식비 · 주거래 은행" })).toBeTruthy();
+  });
+
+  it("fills the category and account fields when a combo suggestion is clicked", () => {
+    renderForm(undefined, recentTransactions);
+
+    fireEvent.click(screen.getByRole("button", { name: "식비 · 주거래 은행" }));
+
+    expect((screen.getByLabelText("카테고리") as HTMLSelectElement).value).toBe("cat-food");
+    expect((screen.getByLabelText("결제수단") as HTMLSelectElement).value).toBe("bank-a");
+  });
+
+  it("scopes suggestions to the current transaction type and hides them for TRANSFER", () => {
+    renderForm(undefined, recentTransactions);
+
+    fireEvent.click(screen.getByRole("radio", { name: "수입" }));
+    expect(screen.queryByRole("button", { name: "식비" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("radio", { name: "이체" }));
+    expect(screen.queryByRole("button", { name: "주거래 은행" })).toBeNull();
+  });
+
+  it("shows no suggestions when there is no transaction history", () => {
+    renderForm();
+
+    expect(screen.queryByText("최근 사용 결제수단")).toBeNull();
+    expect(screen.queryByText("자주 쓰는 카테고리")).toBeNull();
   });
 });

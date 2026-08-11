@@ -2,7 +2,7 @@ import { QuickEntryForm, type QuickEntryState } from "@/components/transactions/
 import { listAccountsForCurrentUser } from "@/server/accounts";
 import { assignTagForCurrentUser, listCategoriesForCurrentUser, listTagsForCurrentUser } from "@/server/categories";
 import { createInstallmentPurchaseForCurrentUser } from "@/server/installments";
-import { createTransactionForCurrentUser } from "@/server/transactions";
+import { createTransactionForCurrentUser, listRecentTransactionsForPatterns } from "@/server/transactions";
 
 async function submitQuickEntry(_previous: QuickEntryState, formData: FormData): Promise<QuickEntryState> {
   "use server";
@@ -73,10 +73,11 @@ async function submitQuickEntry(_previous: QuickEntryState, formData: FormData):
 }
 
 export default async function NewTransactionPage() {
-  const [accounts, categories, tags] = await Promise.all([
+  const [accounts, categories, tags, recentTransactions] = await Promise.all([
     listAccountsForCurrentUser(),
     listCategoriesForCurrentUser(),
     listTagsForCurrentUser(),
+    listRecentTransactionsForPatterns(),
   ]);
 
   return (
@@ -86,6 +87,12 @@ export default async function NewTransactionPage() {
         accounts={accounts.map((account) => ({ id: account.id, name: account.name, type: account.type }))}
         categories={categories.map((category) => ({ id: category.id, name: category.name, kind: category.kind }))}
         tags={tags.map((tag) => ({ id: tag.id, name: tag.name }))}
+        recentTransactions={recentTransactions.map((transaction) => ({
+          accountId: transaction.accountId,
+          categoryId: transaction.categoryId,
+          type: transaction.type,
+          occurredAt: transaction.transactionAt,
+        }))}
         action={submitQuickEntry}
       />
     </div>

@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
+
+import {
+  rankFrequentCategories,
+  rankFrequentCategoryAccountCombos,
+  rankRecentAccounts,
+} from "@/domain/transactions/pattern-recommendations";
 
 export type QuickEntryAccount = Readonly<{
   id: string;
@@ -10,6 +16,12 @@ export type QuickEntryAccount = Readonly<{
 
 export type QuickEntryCategory = Readonly<{ id: string; name: string; kind: "INCOME" | "EXPENSE" | "BOTH" }>;
 export type QuickEntryTag = Readonly<{ id: string; name: string }>;
+export type QuickEntryRecentTransaction = Readonly<{
+  accountId: string;
+  categoryId?: string;
+  type: "INCOME" | "EXPENSE";
+  occurredAt: string;
+}>;
 
 export type QuickEntryState = Readonly<{ status: "idle" | "success" | "error"; message?: string }>;
 export type QuickEntryAction = (state: QuickEntryState, formData: FormData) => Promise<QuickEntryState>;
@@ -29,11 +41,15 @@ export function QuickEntryForm({
   categories,
   tags,
   action,
+  recentTransactions = [],
+  today = new Date().toISOString().slice(0, 10),
 }: Readonly<{
   accounts: readonly QuickEntryAccount[];
   categories: readonly QuickEntryCategory[];
   tags: readonly QuickEntryTag[];
   action: QuickEntryAction;
+  recentTransactions?: readonly QuickEntryRecentTransaction[];
+  today?: string;
 }>) {
   const [state, formAction, isPending] = useActionState(action, { status: "idle" });
 
@@ -55,6 +71,54 @@ export function QuickEntryForm({
 
   const visibleCategories = categories.filter((category) => category.kind === "BOTH" || category.kind === type);
   const hasCreditCardAccount = accounts.some((account) => account.type === "CREDIT_CARD");
+
+  const accountNameById = useMemo(() => new Map(accounts.map((account) => [account.id, account.name])), [accounts]);
+  const categoryNameById = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
+
+  const patternTransactions = useMemo(
+    () =>
+      recentTransactions
+        .filter((transaction) => transaction.type === type)
+        .map((transaction) => ({ accountId: transaction.accountId, categoryId: transaction.categoryId, occurredAt: transaction.occurredAt })),
+    [recentTransactions, type],
+  );
+
+  const recentAccountSuggestions = useMemo(
+    () =>
+      type === "TRANSFER"
+        ? []
+        : rankRecentAccounts(patternTransactions, today)
+            .map((ranked) => ({ id: ranked.key, name: accountNameById.get(ranked.key) }))
+            .filter((item): item is { id: string; name: string } => Boolean(item.name)),
+    [patternTransactions, today, type, accountNameById],
+  );
+
+  const frequentCategorySuggestions = useMemo(
+    () =>
+      type === "TRANSFER"
+        ? []
+        : rankFrequentCategories(patternTransactions, today)
+            .map((ranked) => ({ id: ranked.key, name: categoryNameById.get(ranked.key) }))
+            .filter((item): item is { id: string; name: string } => Boolean(item.name)),
+    [patternTransactions, today, type, categoryNameById],
+  );
+
+  const comboSuggestions = useMemo(
+    () =>
+      type === "TRANSFER"
+        ? []
+        : rankFrequentCategoryAccountCombos(patternTransactions, today)
+            .map((ranked) => {
+              const [categoryKey, accountKey] = ranked.key.split(":");
+              const categoryName = categoryNameById.get(categoryKey);
+              const accountName = accountNameById.get(accountKey);
+              return categoryName && accountName ? { categoryId: categoryKey, accountId: accountKey, categoryName, accountName } : null;
+            })
+            .filter((item): item is { categoryId: string; accountId: string; categoryName: string; accountName: string } => item !== null),
+    [patternTransactions, today, type, categoryNameById, accountNameById],
+  );
+
+  const hasSuggestions = recentAccountSuggestions.length > 0 || frequentCategorySuggestions.length > 0 || comboSuggestions.length > 0;
 
   function toggleTag(tagId: string) {
     setSelectedTagIds((current) => {
@@ -95,6 +159,50 @@ export function QuickEntryForm({
           onChange={(event) => setAmount(event.target.value)}
         />
       </label>
+
+      {hasSuggestions ? (
+        <div>
+          {recentAccountSuggestions.length > 0 ? (
+            <div>
+              <p>최근 사용 결제수단</p>
+              {recentAccountSuggestions.map((suggestion) => (
+                <button key={suggestion.id} type="button" onClick={() => setAccountId(suggestion.id)}>
+                  {suggestion.name}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {frequentCategorySuggestions.length > 0 ? (
+            <div>
+              <p>자주 쓰는 카테고리</p>
+              {frequentCategorySuggestions.map((suggestion) => (
+                <button key={suggestion.id} type="button" onClick={() => setCategoryId(suggestion.id)}>
+                  {suggestion.name}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {comboSuggestions.length > 0 ? (
+            <div>
+              <p>자주 쓰는 카테고리 + 결제수단 조합</p>
+              {comboSuggestions.map((suggestion) => (
+                <button
+                  key={`${suggestion.categoryId}:${suggestion.accountId}`}
+                  type="button"
+                  onClick={() => {
+                    setCategoryId(suggestion.categoryId);
+                    setAccountId(suggestion.accountId);
+                  }}
+                >
+                  {suggestion.categoryName} · {suggestion.accountName}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {type === "TRANSFER" ? (
         <>
