@@ -373,13 +373,13 @@
 
 ### Task 31: Statistics
 
-- [ ] Implement statistics query/read models.
-- [ ] Implement monthly/3m/6m trends.
-- [ ] Implement category/tag/payment method.
-- [ ] Implement fixed/variable, weekday/week-of-month, MoM.
-- [ ] Implement savings rate and net-worth trend.
-- [ ] Build desktop-rich/mobile-summary visualization.
-- [ ] Commit: `feat: add finance statistics`.
+- [x] Implement statistics query/read models.
+- [x] Implement monthly/3m/6m trends.
+- [x] Implement category/tag/payment method.
+- [x] Implement fixed/variable, weekday/week-of-month, MoM.
+- [x] Implement savings rate and net-worth trend.
+- [x] Build desktop-rich/mobile-summary visualization.
+- [x] Commit: `feat: add finance statistics`.
 
 ### Task 32: Notifications
 

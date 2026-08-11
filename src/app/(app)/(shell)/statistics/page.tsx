@@ -1,8 +1,3 @@
-export default function StatisticsPage() {
-  return (
-    <div>
-      <h1>통계</h1>
-      <p>통계 화면은 준비 중입니다.</p>
-    </div>
-  );
-}
+import { StatisticsOverview } from "@/components/statistics/StatisticsOverview";
+import { getStatisticsForCurrentUser } from "@/server/statistics";
+export default async function StatisticsPage() { return <StatisticsOverview statistics={await getStatisticsForCurrentUser()} />; }
