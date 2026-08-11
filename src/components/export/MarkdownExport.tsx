@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 
 export type MarkdownExportRequest = Readonly<{
   preset: "SPENDING_REVIEW" | "BUDGET_REVIEW" | "FINANCIAL_HEALTH";
@@ -19,6 +19,12 @@ const PRESETS = [
   { value: "BUDGET_REVIEW", label: "예산 점검" },
   { value: "FINANCIAL_HEALTH", label: "재정 건강 점검" },
 ] as const;
+
+const PERIOD_OPTIONS: readonly Readonly<{ kind: PeriodKind; label: string }>[] = [
+  { kind: "RECENT", label: "최근 기간" },
+  { kind: "MONTH", label: "월 선택" },
+  { kind: "CUSTOM", label: "직접 범위" },
+];
 
 function currentSeoulMonth(): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -40,6 +46,7 @@ export function MarkdownExport({ initialMarkdown, onGenerate }: Readonly<{ initi
   const [markdown, setMarkdown] = useState(initialMarkdown);
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
+  const periodRadioRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   function request(): MarkdownExportRequest | null {
     if (periodKind === "RECENT") return { preset, period: { kind: "RECENT", months: recentMonths } };
@@ -48,7 +55,33 @@ export function MarkdownExport({ initialMarkdown, onGenerate }: Readonly<{ initi
       setMessage("시작일과 종료일을 입력하세요.");
       return null;
     }
+    if (startDate > endDate) {
+      setMessage("시작일은 종료일보다 늦을 수 없습니다.");
+      return null;
+    }
     return { preset, period: { kind: "CUSTOM", startDate, endDate } };
+  }
+
+  function selectPeriod(index: number) {
+    const nextIndex = (index + PERIOD_OPTIONS.length) % PERIOD_OPTIONS.length;
+    setPeriodKind(PERIOD_OPTIONS[nextIndex].kind);
+    periodRadioRefs.current[nextIndex]?.focus();
+  }
+
+  function handlePeriodKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      selectPeriod(index + 1);
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      selectPeriod(index - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      selectPeriod(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      selectPeriod(PERIOD_OPTIONS.length - 1);
+    }
   }
 
   function refreshPreview() {
@@ -90,15 +123,20 @@ export function MarkdownExport({ initialMarkdown, onGenerate }: Readonly<{ initi
       </label>
 
       <div role="radiogroup" aria-label="기간 선택">
-        <button type="button" role="radio" aria-checked={periodKind === "RECENT"} onClick={() => setPeriodKind("RECENT")}>
-          최근 기간
-        </button>
-        <button type="button" role="radio" aria-checked={periodKind === "MONTH"} onClick={() => setPeriodKind("MONTH")}>
-          월 선택
-        </button>
-        <button type="button" role="radio" aria-checked={periodKind === "CUSTOM"} onClick={() => setPeriodKind("CUSTOM")}>
-          직접 범위
-        </button>
+        {PERIOD_OPTIONS.map((option, index) => (
+          <button
+            key={option.kind}
+            ref={(element) => { periodRadioRefs.current[index] = element; }}
+            type="button"
+            role="radio"
+            aria-checked={periodKind === option.kind}
+            tabIndex={periodKind === option.kind ? 0 : -1}
+            onClick={() => setPeriodKind(option.kind)}
+            onKeyDown={(event) => handlePeriodKeyDown(event, index)}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
 
       {periodKind === "RECENT" ? (
