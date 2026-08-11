@@ -319,13 +319,13 @@
 
 ### Task 25: Quick transaction entry
 
-- [ ] Build transaction type switcher.
-- [ ] Build amount-first input.
-- [ ] Add category/account quick selectors.
-- [ ] Add collapsed date/memo/tag/FX/installment options.
-- [ ] Preserve form state on recoverable error.
-- [ ] Add component/E2E tests.
-- [ ] Commit: `feat: add quick transaction entry`.
+- [x] Build transaction type switcher.
+- [x] Build amount-first input.
+- [x] Add category/account quick selectors.
+- [x] Add collapsed date/memo/tag/FX/installment options.
+- [x] Preserve form state on recoverable error.
+- [ ] Add component/E2E tests. (component tests added; formal Playwright E2E deferred to Task 39's E2E infra — manually verified against a real browser + cloud DB instead)
+- [x] Commit: `feat: add quick transaction entry`.
 
 ### Task 26: Recent pattern recommendations
 
