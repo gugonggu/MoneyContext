@@ -7,13 +7,14 @@ const bank = { id: "bank-a", userId, type: "BANK" as const, isActive: true };
 const bankB = { id: "bank-b", userId, type: "BANK" as const, isActive: true };
 const category = { id: "category-a", userId, isActive: true };
 
-function repository(accounts = [bank, bankB], categories = [category]): TransactionRepository & { listRecentForPatterns: ReturnType<typeof vi.fn> } {
+function repository(accounts = [bank, bankB], categories = [category]): TransactionRepository & { listRecentForPatterns: ReturnType<typeof vi.fn>; search: ReturnType<typeof vi.fn> } {
   return {
     findAccount: async (_userId, id) => accounts.find((account) => account.id === id) ?? null,
     findCategory: async (_userId, id) => categories.find((item) => item.id === id) ?? null,
     create: async (_userId, input) => ({ id: "transaction-a", userId, ...input }),
     list: async () => [], update: async () => null, remove: async () => false,
     listRecentForPatterns: vi.fn(async () => []),
+    search: vi.fn(async () => []),
   };
 }
 
@@ -55,5 +56,26 @@ describe("transaction service", () => {
 
     await service.listRecentForPatterns(userId);
     expect(repo.listRecentForPatterns).toHaveBeenCalledWith(userId, 200);
+  });
+
+  it("rejects a search amount range where maxAmount is below minAmount", async () => {
+    const service = createTransactionService(repository());
+    await expect(service.search(userId, { minAmount: 5_000, maxAmount: 1_000 })).rejects.toThrow("maxAmount");
+  });
+
+  it("rejects a search date range where to precedes from", async () => {
+    const service = createTransactionService(repository());
+    await expect(service.search(userId, { from: "2026-08-10", to: "2026-08-01" })).rejects.toThrow("to");
+  });
+
+  it("clamps the search limit and forwards the remaining filters unchanged", async () => {
+    const repo = repository();
+    const service = createTransactionService(repo);
+
+    await service.search(userId, { memo: "coffee", limit: 10_000 });
+    expect(repo.search).toHaveBeenCalledWith(userId, { memo: "coffee", limit: 100 });
+
+    await service.search(userId, {});
+    expect(repo.search).toHaveBeenCalledWith(userId, { limit: 50 });
   });
 });
