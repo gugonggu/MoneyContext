@@ -8,7 +8,7 @@ Implementation Plan Stage E, Task 21만 구현한다. 사용자는 반복 수입
 
 서버 서비스는 규칙 입력과 현재 사용자 소유권을 검증하고, repository가 호출하는 DB RPC가 발생 생성과 `next_run_date` 갱신을 하나의 트랜잭션으로 처리한다. 호출 주체는 향후 Cron 또는 운영 작업으로 추가할 수 있으며, 현재는 서버 전용 서비스의 명시적 실행으로 검증한다.
 
-`transactions`의 `(user_id, recurring_rule_id, recurring_occurrence_date)` 부분 unique index를 최종 중복 방어선으로 사용한다. 동일 실행일에 RPC가 재시도되거나 동시에 호출되어도 거래는 한 번만 생성된다.
+`transactions`의 `(user_id, recurring_rule_id, recurring_occurrence_date)` 부분 unique index를 최종 중복 방어선으로 사용한다. 동일 실행일에 RPC가 재시도되거나 동시에 호출되어도 거래는 한 번만 생성된다. 반복 거래는 현재 스키마가 환율과 과거 기준금액을 저장하지 않으므로 KRW만 허용하며, 생성 거래의 `base_amount`는 거래 금액과 동일하게 저장한다.
 
 ## 구성 및 데이터 흐름
 
