@@ -63,5 +63,8 @@ function utcDate(year: number, month: number, day: number): Date {
 }
 
 function formatUtcDate(date: Date): string {
+  if (date.getUTCFullYear() < 0 || date.getUTCFullYear() > 9999) {
+    throw new RangeError("next occurrence must be within the four-digit year range");
+  }
   return date.toISOString().slice(0, 10);
 }
