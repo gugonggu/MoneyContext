@@ -228,8 +228,8 @@
 - [x] Add TC-SAV tests.
 - [x] Implement current contribution total.
 - [x] Implement remaining contribution count.
-- [ ] Implement projection status.
-- [x] Commit: `feat: initialize money context application`.
+- [x] Implement projection status.
+- [x] Commit: `feat: add savings projection status`.
 
 ### Task 16: Forecast spendable engine
 
