@@ -393,13 +393,13 @@
 
 ### Task 33: GPT Markdown export
 
-- [ ] Implement analysis preset enum/config.
-- [ ] Implement period selector.
-- [ ] Build export read model.
-- [ ] Generate Markdown following `EXPORT_FORMATS.md`.
-- [ ] Add preview and clipboard copy.
-- [ ] Verify Business Rule notes are included.
-- [ ] Commit: `feat: add gpt markdown export`.
+- [x] Implement analysis preset enum/config.
+- [x] Implement period selector.
+- [x] Build export read model.
+- [x] Generate Markdown following `EXPORT_FORMATS.md`.
+- [x] Add preview and clipboard copy.
+- [x] Verify Business Rule notes are included.
+- [x] Commit: `feat: add gpt markdown export`.
 
 ### Task 34: JSON and CSV analysis export
 
