@@ -19,3 +19,4 @@
 
 # TypeScript build metadata
 *.tsbuildinfo
+.worktrees/
