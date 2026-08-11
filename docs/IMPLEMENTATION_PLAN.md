@@ -338,12 +338,12 @@
 
 ### Task 27: Transaction history
 
-- [ ] Build mobile date-grouped list.
-- [ ] Build desktop table.
-- [ ] Add period/type/account/category/tag/status filters.
-- [ ] Add memo search and amount range.
-- [ ] Add edit/delete workflow.
-- [ ] Commit: `feat: add transaction history`.
+- [x] Build mobile date-grouped list.
+- [x] Build desktop table.
+- [x] Add period/type/account/category/tag/status filters.
+- [x] Add memo search and amount range.
+- [x] Add edit/delete workflow.
+- [x] Commit: `feat: add transaction history`.
 
 ### Task 28: Asset and card screens
 
