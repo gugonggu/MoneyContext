@@ -107,4 +107,21 @@ describe("generateTransactionCsv", () => {
     expect(csv).toContain("'-tag,@tag");
     expect(csv).toContain("'=account");
   });
+
+  it("prefixes formula-like text after leading control characters or whitespace", () => {
+    const csv = generateTransactionCsv(readModel({
+      transactions: [{
+        id: "prefixed-formula-text",
+        transactionDate: "2026-08-05T00:00:00.000+09:00",
+        type: "EXPENSE",
+        status: "CONFIRMED",
+        baseAmount: 100,
+        memo: "\t=SUM(A1:A2)",
+        categoryName: "\r +category",
+      }],
+    }));
+
+    expect(csv).toContain("'\t=SUM(A1:A2)");
+    expect(csv).toContain("'\r +category");
+  });
 });

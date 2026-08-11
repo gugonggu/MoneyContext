@@ -48,7 +48,7 @@ function inPeriod(transaction: ExportTransaction, readModel: ExportReadModel): b
 
 function escapeCsvCell(value: string | number | undefined): string {
   if (value === undefined) return "";
-  const text = typeof value === "string" && /^[=+\-@]/.test(value) ? `'${value}` : String(value);
+  const text = typeof value === "string" && /^[\s\x00-\x1F]*[=+\-@]/.test(value) ? `'${value}` : String(value);
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
