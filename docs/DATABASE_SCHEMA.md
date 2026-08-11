@@ -326,9 +326,12 @@ title text not null
 message text not null
 related_entity_type text null
 related_entity_id uuid null
+dedupe_key text not null check trimmed non-empty
+dedupe_day date not null
 is_read boolean not null default false
 created_at timestamptz not null
 read_at timestamptz null
+unique(user_id, dedupe_key, dedupe_day)
 ```
 
 # 20. RLS 기본 패턴
