@@ -276,10 +276,10 @@
 
 ### Task 20: Planned transactions
 
-- [ ] Implement CRUD.
+- [x] Implement CRUD.
 - [x] Implement PLANNED → CONFIRMED transaction conversion atomically.
 - [x] Prevent double conversion.
-- [ ] Add TC-PLAN integration tests.
+- [x] Add TC-PLAN integration tests.
 - [ ] Commit: `feat: add planned transaction workflow`.
 
 ### Task 21: Recurring transactions
