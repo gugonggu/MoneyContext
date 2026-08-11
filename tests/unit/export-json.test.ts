@@ -89,6 +89,46 @@ describe("generateAnalysisJson", () => {
     })]);
   });
 
+  it("preserves signed safe integer amounts for balance adjustments", () => {
+    const result = generateAnalysisJson(readModel({
+      transactions: [{
+        id: "negative-adjustment",
+        transactionDate: "2026-08-05T00:00:00.000+09:00",
+        type: "ADJUSTMENT",
+        status: "CONFIRMED",
+        originalAmount: -100,
+        originalCurrency: "KRW",
+        baseAmount: -100,
+      }],
+    }));
+
+    expect(result.transactions).toEqual([expect.objectContaining({ original_amount: -100, base_amount: -100 })]);
+  });
+
+  it("rejects negative amounts for transaction types other than adjustments", () => {
+    expect(() => generateAnalysisJson(readModel({
+      transactions: [{
+        id: "negative-expense",
+        transactionDate: "2026-08-05T00:00:00.000+09:00",
+        type: "EXPENSE",
+        status: "CONFIRMED",
+        baseAmount: -100,
+      }],
+    }))).toThrow(RangeError);
+  });
+
+  it("includes only planned future cashflows", () => {
+    const result = generateAnalysisJson(readModel({
+      plannedCashflows: [
+        { scheduledDate: "2026-08-10", type: "EXPENSE", status: "PLANNED", baseAmount: 10_000 },
+        { scheduledDate: "2026-08-11", type: "EXPENSE", status: "CONFIRMED", baseAmount: 20_000 },
+        { scheduledDate: "2026-08-12", type: "INCOME", status: "CANCELLED", baseAmount: 30_000 },
+      ],
+    }));
+
+    expect(result.planned_cashflows).toEqual([expect.objectContaining({ scheduled_date: "2026-08-10", status: "PLANNED" })]);
+  });
+
   it("whitelists analysis fields and does not expose secret-like source properties", () => {
     const result = generateAnalysisJson({
       ...readModel(),

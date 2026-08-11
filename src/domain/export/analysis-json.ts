@@ -59,6 +59,14 @@ function assertNonNegativeAmount(value: number, label: string): void {
   if (!Number.isSafeInteger(value) || value < 0) throw new RangeError(`${label} must be a non-negative safe integer`);
 }
 
+function assertTransactionAmount(transaction: ExportTransaction, value: number, label: string): void {
+  if (transaction.type === "ADJUSTMENT") {
+    assertSafeInteger(value, label);
+    return;
+  }
+  assertNonNegativeAmount(value, label);
+}
+
 function seoulDate(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) throw new RangeError("transactionDate must be a valid date-time");
@@ -160,7 +168,7 @@ export function generateAnalysisJson(readModel: ExportReadModel): AnalysisJson {
       assertNonNegativeAmount(goal.contributedBaseAmount, "savings goal contributedBaseAmount");
       return { name: goal.name, target_base_amount: goal.targetBaseAmount, contributed_base_amount: goal.contributedBaseAmount, target_date: goal.targetDate };
     }),
-    planned_cashflows: readModel.plannedCashflows.map((flow) => {
+    planned_cashflows: readModel.plannedCashflows.filter((flow) => flow.status === "PLANNED").map((flow) => {
       assertNonNegativeAmount(flow.baseAmount, "planned cashflow baseAmount");
       return { scheduled_date: flow.scheduledDate, transaction_type: flow.type, status: flow.status, base_amount: flow.baseAmount, memo: flow.memo ?? null };
     }),
@@ -170,8 +178,8 @@ export function generateAnalysisJson(readModel: ExportReadModel): AnalysisJson {
       account_spending: spendingBreakdown(actual, (transaction) => [transaction.accountName ?? "Unspecified"]),
     },
     transactions: transactions.map((transaction) => {
-      assertNonNegativeAmount(transaction.baseAmount, "transaction baseAmount");
-      if (transaction.originalAmount !== undefined) assertNonNegativeAmount(transaction.originalAmount, "transaction originalAmount");
+      assertTransactionAmount(transaction, transaction.baseAmount, "transaction baseAmount");
+      if (transaction.originalAmount !== undefined) assertTransactionAmount(transaction, transaction.originalAmount, "transaction originalAmount");
       return {
         transaction_date: seoulDate(transaction.transactionDate),
         transaction_type: transaction.type,

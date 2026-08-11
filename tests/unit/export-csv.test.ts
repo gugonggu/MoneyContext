@@ -58,4 +58,53 @@ describe("generateTransactionCsv", () => {
     expect(csv).toContain('"Main ""Card"""');
     expect(csv).toContain('"trip,weekend"');
   });
+
+  it("preserves a signed adjustment amount without treating it as a spreadsheet formula", () => {
+    const csv = generateTransactionCsv(readModel({
+      transactions: [{
+        id: "negative-adjustment",
+        transactionDate: "2026-08-05T00:00:00.000+09:00",
+        type: "ADJUSTMENT",
+        status: "CONFIRMED",
+        originalAmount: -100,
+        originalCurrency: "KRW",
+        baseAmount: -100,
+      }],
+    }));
+
+    expect(csv).toContain(",-100,KRW,-100,KRW");
+  });
+
+  it("rejects negative amounts for transaction types other than adjustments", () => {
+    expect(() => generateTransactionCsv(readModel({
+      transactions: [{
+        id: "negative-expense",
+        transactionDate: "2026-08-05T00:00:00.000+09:00",
+        type: "EXPENSE",
+        status: "CONFIRMED",
+        baseAmount: -100,
+      }],
+    }))).toThrow(RangeError);
+  });
+
+  it("prefixes formula-like text cells with an apostrophe", () => {
+    const csv = generateTransactionCsv(readModel({
+      transactions: [{
+        id: "formula-text",
+        transactionDate: "2026-08-05T00:00:00.000+09:00",
+        type: "EXPENSE",
+        status: "CONFIRMED",
+        baseAmount: 100,
+        memo: "=SUM(A1:A2)",
+        categoryName: "+category",
+        tagNames: ["-tag", "@tag"],
+        accountName: "=account",
+      }],
+    }));
+
+    expect(csv).toContain("'=SUM(A1:A2)");
+    expect(csv).toContain("'+category");
+    expect(csv).toContain("'-tag,@tag");
+    expect(csv).toContain("'=account");
+  });
 });
