@@ -44,6 +44,7 @@ export interface TransactionRepository {
   remove(userId: string, id: string): Promise<boolean>;
   listRecentForPatterns(userId: string, limit: number): Promise<PatternTransaction[]>;
   search(userId: string, filters: TransactionSearchFilters): Promise<TransactionSearchResult[]>;
+  get(userId: string, id: string): Promise<TransactionRecord | null>;
 }
 const MIN_PATTERN_LIMIT = 1;
 const MAX_PATTERN_LIMIT = 500;
@@ -103,4 +104,5 @@ export function createTransactionService(repository: TransactionRepository) { re
   remove: async (userId: string, id: string) => { if (!await repository.remove(userId, id)) fail("transaction not found"); },
   listRecentForPatterns: (userId: string, limit: number = DEFAULT_PATTERN_LIMIT) => repository.listRecentForPatterns(userId, clampPatternLimit(limit)),
   search: async (userId: string, filters: TransactionSearchFilters) => repository.search(userId, validateSearchFilters(filters)),
+  get: async (userId: string, id: string) => { const row = await repository.get(userId, id); if (!row) throw new Error("transaction not found"); return row; },
 }; }
