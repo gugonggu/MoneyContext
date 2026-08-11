@@ -39,12 +39,20 @@ describe("notification candidate rules", () => {
         { id: "overdue", scheduledDate: "2026-08-10", baseAmount: 50_000 },
         { id: "today", scheduledDate: today, baseAmount: 60_000 },
         { id: "future", scheduledDate: "2026-08-12", baseAmount: 70_000 },
+        { id: "confirmed", scheduledDate: "2026-08-10", baseAmount: 80_000, status: "CONFIRMED" },
+        { id: "cancelled", scheduledDate: "2026-08-10", baseAmount: 90_000, status: "CANCELLED" },
       ],
     }));
 
     expect(candidates.filter((candidate) => candidate.type === "PLANNED_DUE").map((candidate) => candidate.relatedEntityId))
       .toEqual(["overdue", "today"]);
     expect(candidates.map((candidate) => candidate.dedupeKey)).toContain("planned-due:overdue:2026-08-10");
+  });
+
+  it("rejects a due planned row with a non-integer base amount before formatting it", () => {
+    expect(() => buildNotificationCandidates(input({
+      plannedTransactions: [{ id: "planned-1", scheduledDate: today, baseAmount: 50_000.5 }],
+    }))).toThrow("planned transaction baseAmount must be a safe integer");
   });
 
   it("notifies card payments due from today through three Seoul calendar days away", () => {
@@ -107,8 +115,12 @@ describe("notification candidate rules", () => {
 
   it("generates identical dedupe keys for a second run with the same data", () => {
     const ruleInput = input({
+      pendingRecurringTransactions: [{ id: "recurring-1", occurrenceDate: today }],
       plannedTransactions: [{ id: "planned-1", scheduledDate: today, baseAmount: 50_000 }],
       cardPayments: [{ accountId: "card-1", dueDate: "2026-08-12" }],
+      monthlyBudgets: [{ id: "budget-1", baseAmount: 100_000 }],
+      transactions: [{ type: "EXPENSE", status: "CONFIRMED", transactionDate: today, baseAmount: 100_000 }],
+      savingsGoals: [{ id: "goal-1", targetAmount: 1_000_000, contributedBaseAmount: 0, targetDate: "2026-10-01", monthlyContributionPlan: 0, isActive: true }],
     });
 
     expect(buildNotificationCandidates(ruleInput).map((candidate) => candidate.dedupeKey))

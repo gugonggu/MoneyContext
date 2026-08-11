@@ -104,6 +104,7 @@ export function buildNotificationCandidates(input: NotificationRuleInput): reado
   }
 
   for (const transaction of input.plannedTransactions) {
+    asInteger(transaction.baseAmount, "planned transaction baseAmount");
     if (transaction.status !== undefined && transaction.status !== "PLANNED") continue;
     parseDate(transaction.scheduledDate);
     if (transaction.scheduledDate > input.today) continue;
