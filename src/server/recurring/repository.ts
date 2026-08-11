@@ -2,7 +2,12 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { RecurringRepository, RecurringRule, ValidRecurringInput } from "@/server/recurring/service";
+import type {
+  GeneratedOccurrence,
+  RecurringRepository,
+  RecurringRule,
+  ValidRecurringInput,
+} from "@/server/recurring/service";
 
 const map = (row: Record<string, unknown>): RecurringRule => ({
   id: String(row.id),
@@ -71,8 +76,16 @@ export function createRecurringRepository(supabase: SupabaseClient): RecurringRe
       if (error) throw new Error(error.message);
       return data !== null;
     },
-    async generateDue() {
-      throw new Error("recurring occurrence generation is not implemented");
+    async generateDue(_userId, today) {
+      const { data, error } = await supabase.rpc("generate_due_recurring_transactions", {
+        input_today: today,
+      });
+      if (error) throw new Error(error.message);
+      return (data ?? []).map((row: Record<string, unknown>): GeneratedOccurrence => ({
+        ruleId: String(row.rule_id),
+        occurrenceDate: String(row.occurrence_date),
+        status: row.transaction_status as GeneratedOccurrence["status"],
+      }));
     },
   };
 }
