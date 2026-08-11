@@ -5,7 +5,7 @@ import { createNotificationRepository } from "@/server/notifications/repository"
 import { createNotificationService } from "@/server/notifications/service";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
-function seoulCalendarDate(now = new Date()): string {
+export function seoulCalendarDate(now = new Date()): string {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Seoul",
     year: "numeric",

@@ -23,7 +23,7 @@ export type NotificationRecord = Readonly<{
 export interface NotificationRepository {
   getRuleInput(userId: string, today: string): Promise<NotificationRuleInput>;
   findExisting(userId: string, candidate: NotificationCandidate, today: string): Promise<boolean>;
-  insert(userId: string, candidate: NotificationCandidate): Promise<NotificationRecord>;
+  insert(userId: string, candidate: NotificationCandidate, today: string): Promise<NotificationRecord>;
   list(userId: string): Promise<NotificationRecord[]>;
   markRead(userId: string, id: string): Promise<NotificationRecord | null>;
 }
@@ -40,6 +40,10 @@ function assertIsoDate(value: string): void {
   }
 }
 
+function isUniqueConstraintError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "23505";
+}
+
 export function createNotificationService(repository: NotificationRepository) {
   return {
     list: (userId: string) => repository.list(userId),
@@ -48,7 +52,11 @@ export function createNotificationService(repository: NotificationRepository) {
       const candidates = buildNotificationCandidates(await repository.getRuleInput(userId, today));
       for (const candidate of candidates) {
         if (!await repository.findExisting(userId, candidate, today)) {
-          await repository.insert(userId, candidate);
+          try {
+            await repository.insert(userId, candidate, today);
+          } catch (error) {
+            if (!isUniqueConstraintError(error)) throw error;
+          }
         }
       }
       return repository.list(userId);

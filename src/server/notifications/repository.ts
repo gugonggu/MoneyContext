@@ -18,10 +18,14 @@ type NotificationRow = Readonly<{
   read_at: string | null;
 }>;
 
-function toSafeInteger(value: number | string | null, field: string): number {
+function toSafeInteger(value: number | string, field: string): number {
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed)) throw new Error(`${field} must be a safe integer`);
   return parsed;
+}
+
+function throwDatabaseError(error: Readonly<{ message: string; code?: string }>): never {
+  throw Object.assign(new Error(error.message), { code: error.code });
 }
 
 function assertIsoDate(value: string): [number, number, number] {
@@ -94,13 +98,15 @@ function mapNotification(row: NotificationRow): NotificationRecord {
   };
 }
 
-function notificationPayload(candidate: NotificationCandidate) {
+function notificationPayload(candidate: NotificationCandidate, today: string) {
   return {
     type: candidate.type,
     title: candidate.title,
     message: candidate.message,
     related_entity_type: candidate.relatedEntityType,
     related_entity_id: candidate.relatedEntityId,
+    dedupe_key: candidate.dedupeKey,
+    dedupe_day: today,
   };
 }
 
@@ -120,7 +126,7 @@ export function createNotificationRepository(supabase: SupabaseClient): Notifica
         supabase.from("savings_contributions").select("goal_id,amount").eq("user_id", userId),
       ]);
       for (const result of [recurring, planned, cardSettings, budgets, transactions, goals, contributions]) {
-        if (result.error) throw new Error(result.error.message);
+        if (result.error) throwDatabaseError(result.error);
       }
 
       const contributedByGoal = new Map<string, bigint>();
@@ -136,12 +142,12 @@ export function createNotificationRepository(supabase: SupabaseClient): Notifica
           id: String(row.id),
           occurrenceDate: String(row.recurring_occurrence_date),
         })),
-        plannedTransactions: (planned.data ?? []).map((row) => ({
+        plannedTransactions: (planned.data ?? []).flatMap((row) => row.base_amount === null ? [] : [{
           id: String(row.id),
           scheduledDate: String(row.scheduled_date),
           baseAmount: toSafeInteger(row.base_amount, "planned transaction base_amount"),
           status: row.status as "PLANNED" | "CONFIRMED" | "CANCELLED",
-        })),
+        }]),
         cardPayments: (cardSettings.data ?? []).flatMap((row) =>
           cardDueDates(today, toSafeInteger(row.payment_day, "credit card payment_day")).map((dueDate) => ({ accountId: String(row.account_id), dueDate })),
         ),
@@ -167,31 +173,24 @@ export function createNotificationRepository(supabase: SupabaseClient): Notifica
     },
 
     async findExisting(userId, candidate, today) {
-      const start = seoulDayStart(today).toISOString();
-      const end = seoulDayStart(addDays(today, 1)).toISOString();
       const { data, error } = await supabase
         .from("notifications")
         .select("id")
         .eq("user_id", userId)
-        .eq("type", candidate.type)
-        .eq("title", candidate.title)
-        .eq("message", candidate.message)
-        .eq("related_entity_type", candidate.relatedEntityType)
-        .eq("related_entity_id", candidate.relatedEntityId)
-        .gte("created_at", start)
-        .lt("created_at", end)
+        .eq("dedupe_key", candidate.dedupeKey)
+        .eq("dedupe_day", today)
         .limit(1);
-      if (error) throw new Error(error.message);
+      if (error) throwDatabaseError(error);
       return (data ?? []).length > 0;
     },
 
-    async insert(userId, candidate) {
+    async insert(userId, candidate, today) {
       const { data, error } = await supabase
         .from("notifications")
-        .insert({ user_id: userId, ...notificationPayload(candidate) })
+        .insert({ user_id: userId, ...notificationPayload(candidate, today) })
         .select("*")
         .single();
-      if (error) throw new Error(error.message);
+      if (error) throwDatabaseError(error);
       return mapNotification(data as NotificationRow);
     },
 
@@ -201,7 +200,7 @@ export function createNotificationRepository(supabase: SupabaseClient): Notifica
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
-      if (error) throw new Error(error.message);
+      if (error) throwDatabaseError(error);
       return (data as NotificationRow[]).map(mapNotification);
     },
 
@@ -213,7 +212,7 @@ export function createNotificationRepository(supabase: SupabaseClient): Notifica
         .eq("id", id)
         .select("*")
         .maybeSingle();
-      if (error) throw new Error(error.message);
+      if (error) throwDatabaseError(error);
       return data ? mapNotification(data as NotificationRow) : null;
     },
   };

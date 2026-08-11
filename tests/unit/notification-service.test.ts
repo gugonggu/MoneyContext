@@ -6,6 +6,7 @@ import {
   type NotificationRecord,
   type NotificationRepository,
 } from "@/server/notifications/service";
+import { seoulCalendarDate } from "@/server/notifications/index";
 
 const today = "2026-08-11";
 const userA = "user-a";
@@ -86,5 +87,21 @@ describe("notification service", () => {
     await service.refresh(userA, today);
 
     await expect(service.markRead(userB, "notification-1")).rejects.toThrow("notification not found");
+  });
+
+  it("keeps refreshing when a concurrent insert loses the notification unique race", async () => {
+    const repository = createFakeRepository();
+    const service = createNotificationService(repository);
+    repository.findExisting = async () => false;
+    repository.insert = async () => {
+      throw Object.assign(new Error("duplicate key value violates unique constraint"), { code: "23505" });
+    };
+
+    await expect(service.refresh(userA, today)).resolves.toEqual([]);
+  });
+
+  it("uses the next Seoul calendar date exactly at midnight", () => {
+    expect(seoulCalendarDate(new Date("2026-08-11T14:59:59.999Z"))).toBe("2026-08-11");
+    expect(seoulCalendarDate(new Date("2026-08-11T15:00:00.000Z"))).toBe("2026-08-12");
   });
 });
