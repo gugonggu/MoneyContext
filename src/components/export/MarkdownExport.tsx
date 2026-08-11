@@ -62,6 +62,17 @@ export function MarkdownExport({ initialMarkdown, onGenerate }: Readonly<{ initi
     return { preset, period: { kind: "CUSTOM", startDate, endDate } };
   }
 
+  function downloadHref(format: "json" | "csv"): string {
+    const params = new URLSearchParams({ kind: periodKind });
+    if (periodKind === "RECENT") params.set("months", String(recentMonths));
+    if (periodKind === "MONTH") params.set("month", month);
+    if (periodKind === "CUSTOM") {
+      params.set("startDate", startDate);
+      params.set("endDate", endDate);
+    }
+    return `/api/export/${format}?${params.toString()}`;
+  }
+
   function selectPeriod(index: number) {
     const nextIndex = (index + PERIOD_OPTIONS.length) % PERIOD_OPTIONS.length;
     setPeriodKind(PERIOD_OPTIONS[nextIndex].kind);
@@ -181,6 +192,14 @@ export function MarkdownExport({ initialMarkdown, onGenerate }: Readonly<{ initi
 
       <h2>Markdown 미리보기</h2>
       <pre aria-label="Markdown 미리보기" tabIndex={0}>{markdown}</pre>
+      <div role="group" aria-label="분석 데이터 다운로드">
+        <a href={downloadHref("json")} download>
+          JSON 다운로드
+        </a>
+        <a href={downloadHref("csv")} download>
+          CSV 다운로드
+        </a>
+      </div>
     </section>
   );
 }

@@ -403,11 +403,11 @@
 
 ### Task 34: JSON and CSV analysis export
 
-- [ ] Implement Analysis JSON schema v1.
-- [ ] Implement transaction CSV.
-- [ ] Add encoding/content-disposition tests.
-- [ ] Verify exports contain only current user data.
-- [ ] Commit: `feat: add json and csv exports`.
+- [x] Implement Analysis JSON schema v1.
+- [x] Implement transaction CSV.
+- [x] Add encoding/content-disposition tests.
+- [x] Verify exports contain only current user data.
+- [x] Commit: `feat: add json and csv exports`.
 
 ### Task 35: Full backup and restore
 
