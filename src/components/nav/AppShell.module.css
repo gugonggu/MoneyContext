@@ -1,0 +1,116 @@
+.skipLink {
+  position: absolute;
+  left: -999px;
+  top: -999px;
+}
+
+.skipLink:focus {
+  left: 1rem;
+  top: 1rem;
+  z-index: 100;
+  background: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 0 0 2px #2563eb;
+}
+
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  display: none;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 1.5rem;
+  padding-bottom: 5rem;
+}
+
+.bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+}
+
+.bottomNav ul {
+  display: flex;
+  justify-content: space-around;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bottomNav li {
+  flex: 1;
+  text-align: center;
+}
+
+.bottomNav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 0;
+  text-decoration: none;
+  color: #475569;
+  font-size: 0.75rem;
+}
+
+.bottomNav a[aria-current="page"] {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.primaryAction {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+@media (min-width: 768px) {
+  .sidebar {
+    display: block;
+    width: 16rem;
+    flex-shrink: 0;
+    border-right: 1px solid #e2e8f0;
+    padding: 1.5rem 1rem;
+  }
+
+  .sidebar ul {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .sidebar a {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    color: #0f172a;
+  }
+
+  .sidebar a[aria-current="page"] {
+    background: #e0e7ff;
+    color: #1d4ed8;
+    font-weight: 600;
+  }
+
+  .bottomNav {
+    display: none;
+  }
+
+  .content {
+    padding-bottom: 1.5rem;
+  }
+}
