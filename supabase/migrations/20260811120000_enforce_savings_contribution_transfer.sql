@@ -43,3 +43,31 @@ $$;
 create trigger savings_contributions_validate_transfer
 before insert or update on public.savings_contributions
 for each row execute function public.validate_savings_contribution_transfer();
+
+create function public.validate_linked_savings_contribution_transfer()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if exists (
+    select 1
+    from public.savings_contributions contribution
+    where contribution.transfer_id = new.id
+      and (
+        new.type <> 'TRANSFER'
+        or new.status <> 'CONFIRMED'
+        or contribution.user_id is distinct from new.user_id
+      )
+  ) then
+    raise exception 'cannot invalidate a transfer linked to a savings contribution'
+      using errcode = '23514';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger transactions_validate_linked_savings_contribution_transfer
+before update of type, status, user_id on public.transactions
+for each row execute function public.validate_linked_savings_contribution_transfer();

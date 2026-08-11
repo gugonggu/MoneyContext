@@ -3,20 +3,19 @@ import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { getSupabasePublicConfig } from "@/lib/supabase/config";
+import { createSupabaseAdminClient } from "@/server/supabase/admin";
+
 type TestUser = Readonly<{
   id: string;
   email: string;
   password: string;
 }>;
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const hasSupabaseCredentials = Boolean(supabaseUrl && supabaseAnonKey && supabaseServiceRoleKey);
-const describeWithSupabase = hasSupabaseCredentials ? describe : describe.skip;
 const testRunId = randomUUID();
+const admin = createSupabaseAdminClient();
+const { url, anonKey } = getSupabasePublicConfig();
 
-let admin: SupabaseClient;
 let userA: TestUser;
 let userB: TestUser;
 let userAClient: SupabaseClient;
@@ -34,7 +33,7 @@ async function createTestUser(label: "a" | "b"): Promise<TestUser> {
 }
 
 async function authenticatedClient(user: TestUser): Promise<SupabaseClient> {
-  const client = createClient(supabaseUrl!, supabaseAnonKey!, {
+  const client = createClient(url, anonKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -104,11 +103,8 @@ async function insertContribution(
     .single();
 }
 
-describeWithSupabase("TC-PLAN savings contribution transfer integrity", () => {
+describe("TC-PLAN savings contribution transfer integrity", () => {
   beforeAll(async () => {
-    admin = createClient(supabaseUrl!, supabaseServiceRoleKey!, {
-      auth: { autoRefreshToken: false, persistSession: false, storageKey: `money-context-planning-admin-${testRunId}` },
-    });
     userA = await createTestUser("a");
     userB = await createTestUser("b");
 
@@ -136,7 +132,6 @@ describeWithSupabase("TC-PLAN savings contribution transfer integrity", () => {
   });
 
   afterAll(async () => {
-    if (!admin) return;
     await admin.from("profiles").delete().in("id", [userA?.id, userB?.id].filter(Boolean));
     await Promise.all([userA, userB].filter(Boolean).map((user) => admin.auth.admin.deleteUser(user.id)));
   });
@@ -184,6 +179,35 @@ describeWithSupabase("TC-PLAN savings contribution transfer integrity", () => {
     const transferId = await createTransfer(userAClient, userA.id, userABankAccountIds, { status: "PENDING" });
     const { error } = await insertContribution(userAClient, userA.id, goalIds[0], { transfer_id: transferId });
     expect(error).not.toBeNull();
+  });
+
+  it("rejects changing a linked transfer to CANCELLED", async () => {
+    const transferId = await createTransfer(userAClient, userA.id, userABankAccountIds);
+    const linked = await insertContribution(userAClient, userA.id, goalIds[0], { transfer_id: transferId });
+    if (linked.error) throw new Error(linked.error.message);
+
+    const { error: cancelledError } = await userAClient
+      .from("transactions")
+      .update({ status: "CANCELLED" })
+      .eq("id", transferId);
+    expect(cancelledError).not.toBeNull();
+  });
+
+  it("rejects changing a linked transfer to EXPENSE", async () => {
+    const transferId = await createTransfer(userAClient, userA.id, userABankAccountIds);
+    const linked = await insertContribution(userAClient, userA.id, goalIds[0], { transfer_id: transferId });
+    if (linked.error) throw new Error(linked.error.message);
+
+    const { error: expenseError } = await userAClient
+      .from("transactions")
+      .update({
+        type: "EXPENSE",
+        account_id: userABankAccountIds[0],
+        from_account_id: null,
+        to_account_id: null,
+      })
+      .eq("id", transferId);
+    expect(expenseError).not.toBeNull();
   });
 
   it("rejects another user's transfer link", async () => {
