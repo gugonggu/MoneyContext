@@ -268,27 +268,27 @@
 
 ### Task 19: Category and tag management
 
-- [ ] Implement default seed and user custom categories.
-- [ ] Implement deactivate behavior.
-- [ ] Implement tags and transaction tag assignment.
+- [x] Implement default seed and user custom categories.
+- [x] Implement deactivate behavior.
+- [x] Implement tags and transaction tag assignment.
 - [ ] Add ownership tests.
 - [ ] Commit: `feat: add categories and tags`.
 
 ### Task 20: Planned transactions
 
 - [ ] Implement CRUD.
-- [ ] Implement PLANNED → CONFIRMED transaction conversion atomically.
-- [ ] Prevent double conversion.
+- [x] Implement PLANNED → CONFIRMED transaction conversion atomically.
+- [x] Prevent double conversion.
 - [ ] Add TC-PLAN integration tests.
 - [ ] Commit: `feat: add planned transaction workflow`.
 
 ### Task 21: Recurring transactions
 
-- [ ] Implement rule CRUD.
-- [ ] Implement occurrence generator.
-- [ ] Implement AUTO_CONFIRM and REQUIRE_CONFIRMATION.
-- [ ] Enforce idempotency via occurrence unique key.
-- [ ] Add TC-REC tests.
+- [x] Implement rule CRUD.
+- [x] Implement occurrence generator.
+- [x] Implement AUTO_CONFIRM and REQUIRE_CONFIRMATION.
+- [x] Enforce idempotency via occurrence unique key.
+- [x] Add TC-REC tests.
 - [ ] Commit: `feat: add recurring transaction generation`.
 
 ### Task 22: Installment persistence
