@@ -293,10 +293,10 @@
 
 ### Task 22: Installment persistence
 
-- [ ] Create installment plan together with card expense in one transaction.
-- [ ] Persist generated payment schedule.
-- [ ] Implement settlement linkage.
-- [ ] Add integration tests.
+- [x] Create installment plan together with card expense in one transaction.
+- [x] Persist generated payment schedule.
+- [x] Implement settlement linkage.
+- [x] Add integration tests.
 - [ ] Commit: `feat: persist installment plans`.
 
 ### Task 23: Budget and savings persistence
