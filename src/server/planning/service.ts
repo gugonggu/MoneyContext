@@ -105,6 +105,10 @@ function assertNonNegativeSafeInteger(value: number, field: string): void {
   if (!Number.isSafeInteger(value) || value < 0) fail(`${field} must be a non-negative safe integer`);
 }
 
+function assertSafeInteger(value: number, field: string): void {
+  if (!Number.isSafeInteger(value)) fail(`${field} must be a safe integer`);
+}
+
 function assertPositiveSafeInteger(value: number, field: string): void {
   if (!Number.isSafeInteger(value) || value <= 0) fail(`${field} must be a positive safe integer`);
 }
@@ -132,7 +136,7 @@ async function validateCategoryBudget(
 ): Promise<CategoryBudgetInput> {
   assertPeriod(input.year, input.month);
   assertNonNegativeSafeInteger(input.baseBudget, "baseBudget");
-  assertNonNegativeSafeInteger(input.rolloverAmount, "rolloverAmount");
+  assertSafeInteger(input.rolloverAmount, "rolloverAmount");
   const category = await repository.findCategory(userId, input.categoryId);
   if (!category || category.userId !== userId || !category.isActive) {
     fail("categoryId must be an active category owned by the current user");
@@ -158,7 +162,7 @@ async function validateSavingsContribution(
   assertValidIsoDate(input.contributionDate, "contributionDate");
   const goal = await repository.findGoal(userId, input.goalId);
   if (!goal || goal.userId !== userId) fail("goalId must be owned by the current user");
-  if (input.transferId) {
+  if (input.transferId !== undefined) {
     const transfer = await repository.findTransfer(userId, input.transferId);
     if (!transfer || transfer.userId !== userId || transfer.type !== "TRANSFER" || transfer.status !== "CONFIRMED") {
       fail("transferId must be a confirmed transfer owned by the current user");

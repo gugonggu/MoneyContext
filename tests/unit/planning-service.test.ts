@@ -47,6 +47,7 @@ function repository(options: {
   categories?: readonly OwnedActiveCategory[];
   goals?: readonly OwnedSavingsGoal[];
   transfers?: readonly OwnedTransfer[];
+  transferLookupIds?: string[];
 } = {}): PlanningRepository {
   const categories = options.categories ?? [category];
   const seededGoals = options.goals ?? [goal];
@@ -68,7 +69,10 @@ function repository(options: {
   return {
     findCategory: async (_ownerId, id) => categories.find((item) => item.id === id) ?? null,
     findGoal: async (_ownerId, id) => goals.find((item) => item.id === id) ?? null,
-    findTransfer: async (_ownerId, id) => transfers.find((item) => item.id === id) ?? null,
+    findTransfer: async (_ownerId, id) => {
+      options.transferLookupIds?.push(id);
+      return transfers.find((item) => item.id === id) ?? null;
+    },
     listMonthlyBudgets: async (ownerId) => monthlyBudgets.filter((item) => item.userId === ownerId),
     createMonthlyBudget: async (ownerId, input) => {
       const row = { id: `monthly-${nextId++}`, userId: ownerId, ...input };
@@ -113,7 +117,7 @@ function repository(options: {
     deactivateSavingsGoal: async (ownerId, id) => {
       const row = goals.find((item) => item.id === id && item.userId === ownerId);
       if (!row) return false;
-      row.isActive = false;
+      goals.splice(goals.indexOf(row), 1, { ...row, isActive: false });
       return true;
     },
     listSavingsContributions: async (ownerId) => contributions.filter((item) => item.userId === ownerId),
@@ -148,10 +152,13 @@ describe("planning service", () => {
     ["month above the calendar range", { month: 13 }, "month must be between 1 and 12"],
     ["a fractional budget amount", { totalBudget: 1.5 }, "totalBudget must be a non-negative safe integer"],
     ["a negative budget amount", { totalBudget: -1 }, "totalBudget must be a non-negative safe integer"],
-  ])("rejects a monthly budget with %s", async (_label, changes, message) => {
+    ["an unsafe budget amount", { totalBudget: Number.MAX_SAFE_INTEGER + 1 }, "totalBudget must be a non-negative safe integer"],
+  ])("rejects a monthly budget with %s on create and update", async (_label, changes, message) => {
     const service = createPlanningService(repository());
+    const created = await service.createMonthlyBudget(userId, monthlyBudgetInput);
 
     await expect(service.createMonthlyBudget(userId, { ...monthlyBudgetInput, ...changes })).rejects.toThrow(message);
+    await expect(service.updateMonthlyBudget(userId, created.id, { ...monthlyBudgetInput, ...changes })).rejects.toThrow(message);
   });
 
   it("creates, lists, updates, and removes a monthly budget within the caller scope", async () => {
@@ -186,14 +193,43 @@ describe("planning service", () => {
   });
 
   it.each([
+    ["a negative base budget", { baseBudget: -1 }, "baseBudget must be a non-negative safe integer"],
+    ["a fractional base budget", { baseBudget: 1.5 }, "baseBudget must be a non-negative safe integer"],
+    ["an unsafe base budget", { baseBudget: Number.MAX_SAFE_INTEGER + 1 }, "baseBudget must be a non-negative safe integer"],
+    ["a fractional rollover", { rolloverAmount: 1.5 }, "rolloverAmount must be a safe integer"],
+    ["an unsafe rollover", { rolloverAmount: Number.MAX_SAFE_INTEGER + 1 }, "rolloverAmount must be a safe integer"],
+  ])("rejects a category budget with %s on create and update", async (_label, changes, message) => {
+    const service = createPlanningService(repository());
+    const created = await service.createCategoryBudget(userId, categoryBudgetInput);
+
+    await expect(service.createCategoryBudget(userId, { ...categoryBudgetInput, ...changes })).rejects.toThrow(message);
+    await expect(service.updateCategoryBudget(userId, created.id, { ...categoryBudgetInput, ...changes })).rejects.toThrow(message);
+  });
+
+  it("preserves negative rollover on category budget create and update", async () => {
+    const service = createPlanningService(repository());
+    const created = await service.createCategoryBudget(userId, { ...categoryBudgetInput, rolloverAmount: -20_000 });
+
+    expect(created.rolloverAmount).toBe(-20_000);
+    await expect(service.updateCategoryBudget(userId, created.id, { ...categoryBudgetInput, rolloverAmount: -30_000 }))
+      .resolves.toMatchObject({ rolloverAmount: -30_000 });
+  });
+
+  it.each([
     ["an invalid target date", { targetDate: "2026-02-30" }, "targetDate must be a valid ISO date"],
     ["a blank name", { name: "  " }, "name is required"],
     ["a zero target amount", { targetAmount: 0 }, "targetAmount must be a positive safe integer"],
     ["a fractional target amount", { targetAmount: 1.5 }, "targetAmount must be a positive safe integer"],
-  ])("rejects a savings goal with %s", async (_label, changes, message) => {
+    ["an unsafe target amount", { targetAmount: Number.MAX_SAFE_INTEGER + 1 }, "targetAmount must be a positive safe integer"],
+    ["a negative monthly contribution plan", { monthlyContributionPlan: -1 }, "monthlyContributionPlan must be a non-negative safe integer"],
+    ["a fractional monthly contribution plan", { monthlyContributionPlan: 1.5 }, "monthlyContributionPlan must be a non-negative safe integer"],
+    ["an unsafe monthly contribution plan", { monthlyContributionPlan: Number.MAX_SAFE_INTEGER + 1 }, "monthlyContributionPlan must be a non-negative safe integer"],
+  ])("rejects a savings goal with %s on create and update", async (_label, changes, message) => {
     const service = createPlanningService(repository());
+    const created = await service.createSavingsGoal(userId, savingsGoalInput);
 
     await expect(service.createSavingsGoal(userId, { ...savingsGoalInput, ...changes })).rejects.toThrow(message);
+    await expect(service.updateSavingsGoal(userId, created.id, { ...savingsGoalInput, ...changes })).rejects.toThrow(message);
   });
 
   it("normalizes a goal name and supports update and deactivation", async () => {
@@ -225,6 +261,36 @@ describe("planning service", () => {
 
     await expect(service.createSavingsContribution(userId, { ...contributionInput, transferId: confirmedTransfer.id }))
       .rejects.toThrow("transferId must be a confirmed transfer owned by the current user");
+  });
+
+  it.each([
+    ["a zero amount", { amount: 0 }, "amount must be a positive safe integer"],
+    ["a negative amount", { amount: -1 }, "amount must be a positive safe integer"],
+    ["a fractional amount", { amount: 1.5 }, "amount must be a positive safe integer"],
+    ["an unsafe amount", { amount: Number.MAX_SAFE_INTEGER + 1 }, "amount must be a positive safe integer"],
+  ])("rejects a contribution with %s on create and update", async (_label, changes, message) => {
+    const service = createPlanningService(repository());
+    const created = await service.createSavingsContribution(userId, contributionInput);
+
+    await expect(service.createSavingsContribution(userId, { ...contributionInput, ...changes })).rejects.toThrow(message);
+    await expect(service.updateSavingsContribution(userId, created.id, { ...contributionInput, ...changes })).rejects.toThrow(message);
+  });
+
+  it("does not look up a transfer for an omitted transferId", async () => {
+    const transferLookupIds: string[] = [];
+    const service = createPlanningService(repository({ transferLookupIds }));
+
+    await expect(service.createSavingsContribution(userId, contributionInput)).resolves.toMatchObject({ amount: 300_000 });
+    expect(transferLookupIds).toEqual([]);
+  });
+
+  it("looks up and rejects every provided transferId, including a blank value", async () => {
+    const transferLookupIds: string[] = [];
+    const service = createPlanningService(repository({ transferLookupIds }));
+
+    await expect(service.createSavingsContribution(userId, { ...contributionInput, transferId: "" }))
+      .rejects.toThrow("transferId must be a confirmed transfer owned by the current user");
+    expect(transferLookupIds).toEqual([""]);
   });
 
   it("creates, lists, updates, and removes standalone and transfer-linked contributions", async () => {
