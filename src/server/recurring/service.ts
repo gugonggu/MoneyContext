@@ -50,8 +50,9 @@ async function validate(repository: RecurringRepository, userId: string, input: 
   if (!Number.isSafeInteger(input.amount) || input.amount < 0) fail("amount must be a non-negative safe integer");
   if (input.currency !== "KRW") fail("recurring transaction currency must be KRW");
   if (input.confirmationMode !== "AUTO_CONFIRM" && input.confirmationMode !== "REQUIRE_CONFIRMATION") fail("confirmationMode is invalid");
+  if (input.frequency !== "DAILY" && input.frequency !== "WEEKLY" && input.frequency !== "MONTHLY") fail("frequency is invalid");
   assertValidIsoDate(input.startDate, "startDate");
-  if (input.endDate) {
+  if (input.endDate !== undefined) {
     assertValidIsoDate(input.endDate, "endDate");
     if (input.endDate < input.startDate) fail("endDate must not be before startDate");
   }

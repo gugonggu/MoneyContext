@@ -77,6 +77,19 @@ describe("recurring transaction service", () => {
     });
   });
 
+  it("rejects a frequency outside the supported recurrence values", async () => {
+    const service = createRecurringTransactionService(repository());
+    const runtimeInput = { ...input, frequency: "YEARLY" } as unknown as RecurringInput;
+
+    await expect(service.create(userId, runtimeInput)).rejects.toThrow("frequency");
+  });
+
+  it("rejects an explicitly supplied empty end date", async () => {
+    const service = createRecurringTransactionService(repository());
+
+    await expect(service.create(userId, { ...input, endDate: "" })).rejects.toThrow("endDate");
+  });
+
   it.each([
     ["a fractional amount", { amount: 14_900.5 }, "amount"],
     ["an unsafe amount", { amount: Number.MAX_SAFE_INTEGER + 1 }, "amount"],
