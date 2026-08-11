@@ -12,6 +12,9 @@ export default function MorePage() {
           <Link href="/statistics">통계</Link>
         </li>
         <li>
+          <Link href="/notifications">알림</Link>
+        </li>
+        <li>
           <Link href="/export">AI Export</Link>
         </li>
         <li>

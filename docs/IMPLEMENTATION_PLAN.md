@@ -383,11 +383,11 @@
 
 ### Task 32: Notifications
 
-- [ ] Build notification generation rules.
-- [ ] Add budget thresholds 80/90/100.
-- [ ] Add recurring confirmation, planned due, card due, savings risk.
-- [ ] Build in-app notification center/read state.
-- [ ] Commit: `feat: add in-app finance notifications`.
+- [x] Build notification generation rules.
+- [x] Add budget thresholds 80/90/100.
+- [x] Add recurring confirmation, planned due, card due, savings risk.
+- [x] Build in-app notification center/read state.
+- [x] Commit: `feat: add in-app finance notifications`.
 
 # Stage G — Export, Backup, Administration
 
