@@ -1,8 +1,3 @@
-export default function HomePage() {
-  return (
-    <div>
-      <h1>홈</h1>
-      <p>대시보드는 준비 중입니다.</p>
-    </div>
-  );
-}
+import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
+import { getDashboardOverviewForCurrentUser } from "@/server/dashboard";
+export default async function HomePage() { return <DashboardOverview overview={await getDashboardOverviewForCurrentUser()} />; }

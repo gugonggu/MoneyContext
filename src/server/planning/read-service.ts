@@ -29,6 +29,7 @@ export function createPlanningReadService(repository: PlanningReadRepository) {
         return { id: goal.id, name: goal.name, contributedAmount, remainingAmount, requiredMonthlyAmount: calculateRequiredMonthlySavings(remainingAmount, 0) };
       }),
       freeSpendable: calculateFreeSpendable(data.liquidAssets, data.deductions),
+      futureCashflowCount: data.deductions.length,
     };
   } };
 }

@@ -1,0 +1,8 @@
+import "server-only";
+import { getAssetOverviewForCurrentUser } from "@/server/assets";
+import { getPlanningOverviewForCurrentUser } from "@/server/planning";
+import { listTransactionsForCurrentUser } from "@/server/transactions";
+import { requireCurrentProfile } from "@/server/auth/require-profile";
+import { getSalaryCycle } from "@/lib/dates/salary-cycle";
+import { createDashboardService } from "./service";
+export async function getDashboardOverviewForCurrentUser() { const [profile, assets, planning, transactions] = await Promise.all([requireCurrentProfile(), getAssetOverviewForCurrentUser(), getPlanningOverviewForCurrentUser(), listTransactionsForCurrentUser()]); const today = new Date().toISOString().slice(0, 10); const cycle = getSalaryCycle(today, profile.salary_cycle_day); const cycleTransactions = transactions.filter((x) => x.transactionAt.slice(0, 10) >= cycle.start && x.transactionAt.slice(0, 10) <= cycle.end); const income = cycleTransactions.filter((x) => x.type === "INCOME").reduce((s,x)=>s+x.baseAmount,0); const expense = cycleTransactions.filter((x) => x.type === "EXPENSE").reduce((s,x)=>s+x.baseAmount,0); const remainingDays = Math.max(1, Math.floor((Date.parse(cycle.end) - Date.parse(today)) / 86_400_000) + 1); return createDashboardService({ getData: async () => ({ freeSpendable: planning.freeSpendable, dailySpendable: Math.floor(Math.max(0, planning.freeSpendable) / remainingDays), liquidAssets: assets.liquidAssets, netWorth: assets.netWorth, cardOutstanding: assets.cards.reduce((s,x)=>s+x.outstanding,0), income, expense, budgetUsage: planning.budget.actualUsage, savingsGoals: planning.goals.length, upcomingEvents: planning.futureCashflowCount }) }).getOverview(profile.id); }

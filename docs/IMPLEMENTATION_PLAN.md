@@ -363,13 +363,13 @@
 
 ### Task 30: Dashboard
 
-- [ ] Create dashboard read service.
-- [ ] Render free spendable and daily amount first.
-- [ ] Render income/expense/budget/savings summary.
-- [ ] Render asset/card summary.
-- [ ] Render budget risks, upcoming events, savings goals.
-- [ ] Add snapshot/component tests.
-- [ ] Commit: `feat: add financial dashboard`.
+- [x] Create dashboard read service.
+- [x] Render free spendable and daily amount first.
+- [x] Render income/expense/budget/savings summary.
+- [x] Render asset/card summary.
+- [x] Render budget risks, upcoming events, savings goals.
+- [x] Add snapshot/component tests.
+- [x] Commit: `feat: add financial dashboard`.
 
 ### Task 31: Statistics
 
