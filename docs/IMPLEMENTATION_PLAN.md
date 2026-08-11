@@ -35,13 +35,13 @@
 
 **Produces:** local app, lint, typecheck, unit test, build commands.
 
-- [ ] Create Next.js App Router TypeScript project.
-- [ ] Configure chosen package manager and commit lockfile.
-- [ ] Configure lint, typecheck, unit tests, Testing Library, Playwright skeleton.
-- [ ] Add `dev`, `build`, `lint`, `typecheck`, `test`, `test:e2e` scripts.
-- [ ] Add `.env.example` from `SETUP_AND_ENV.md`.
-- [ ] Run lint/typecheck/test/build and verify all pass.
-- [ ] Commit: `chore: scaffold money context application`.
+- [x] Create Next.js App Router TypeScript project.
+- [x] Configure chosen package manager and commit lockfile.
+- [x] Configure lint, typecheck, unit tests, Testing Library, Playwright skeleton.
+- [x] Add `dev`, `build`, `lint`, `typecheck`, `test`, `test:e2e` scripts.
+- [x] Add `.env.example` from `SETUP_AND_ENV.md`.
+- [x] Run lint/typecheck/test/build and verify all pass.
+- [x] Commit: `feat: initialize money context application`.
 
 ### Task 2: Supabase clients and auth-safe server boundary
 
@@ -53,13 +53,13 @@
 
 **Produces:** browser anon client, server session client, server-only admin client.
 
-- [ ] Add Supabase dependencies.
-- [ ] Implement browser client with public URL/anon key only.
-- [ ] Implement server client using request cookies.
-- [ ] Implement service-role admin client in server-only module.
-- [ ] Add guard so admin module cannot be imported by client code.
-- [ ] Run typecheck/build.
-- [ ] Commit: `chore: add supabase client boundaries`.
+- [x] Add Supabase dependencies.
+- [x] Implement browser client with public URL/anon key only.
+- [x] Implement server client using request cookies.
+- [x] Implement service-role admin client in server-only module.
+- [x] Add guard so admin module cannot be imported by client code.
+- [x] Run typecheck/build.
+- [x] Commit: `feat: initialize money context application`.
 
 # Stage B — Database and Security
 
@@ -71,12 +71,12 @@
 
 **Produces:** enums, profiles, app_settings, accounts, card settings, categories, tags.
 
-- [ ] Implement enums defined in `DATABASE_SCHEMA.md`.
-- [ ] Implement profiles/app_settings/accounts/card settings/categories/tags.
-- [ ] Add FK/check/unique/index constraints.
-- [ ] Add updated_at trigger helper.
-- [ ] Apply migrations to the linked Supabase Cloud project with `supabase db push --linked` and verify.
-- [ ] Commit: `feat: add core finance schema`.
+- [x] Implement enums defined in `DATABASE_SCHEMA.md`.
+- [x] Implement profiles/app_settings/accounts/card settings/categories/tags.
+- [x] Add FK/check/unique/index constraints.
+- [x] Add updated_at trigger helper.
+- [x] Apply migrations to the linked Supabase Cloud project with `supabase db push --linked` and verify.
+- [x] Commit: `feat: initialize money context application`.
 
 ### Task 4: Transaction and planning schema
 
@@ -85,22 +85,22 @@
 
 **Produces:** transactions, transaction_tags, recurring, planned, installment.
 
-- [ ] Add tables and ownership columns.
-- [ ] Add transaction-type consistency constraints or validation triggers.
-- [ ] Add recurring occurrence unique key.
-- [ ] Add installment relationship constraints.
-- [ ] Apply migrations to the linked Supabase Cloud project and inspect constraints.
-- [ ] Commit: `feat: add transaction and installment schema`.
+- [x] Add tables and ownership columns.
+- [x] Add transaction-type consistency constraints or validation triggers.
+- [x] Add recurring occurrence unique key.
+- [x] Add installment relationship constraints.
+- [x] Apply migrations to the linked Supabase Cloud project and inspect constraints.
+- [x] Commit: `feat: initialize money context application`.
 
 ### Task 5: Budget, savings and notification schema
 
 **Produces:** monthly/category budgets, savings goals/contributions, notifications.
 
-- [ ] Add tables from `DATABASE_SCHEMA.md`.
-- [ ] Add period/category unique constraints.
-- [ ] Add ownership/indexes.
-- [ ] Reset DB and verify.
-- [ ] Commit: `feat: add planning schema`.
+- [x] Add tables from `DATABASE_SCHEMA.md`.
+- [x] Add period/category unique constraints.
+- [x] Add ownership/indexes.
+- [x] Apply migrations to the linked Supabase Cloud project and verify.
+- [x] Commit: `feat: initialize money context application`.
 
 ### Task 6: RLS and cross-user ownership protection
 
@@ -110,13 +110,13 @@
 
 **Produces:** DB-level tenant isolation.
 
-- [ ] Enable RLS for every user-owned table.
-- [ ] Add SELECT/INSERT/UPDATE/DELETE policies.
-- [ ] Add profiles self-only policies.
-- [ ] Add cross-user reference validation for account/category/tag relationships.
-- [ ] Write User A/User B policy tests from `TEST_CASES.md`.
-- [ ] Run policy tests.
-- [ ] Commit: `test: enforce user data isolation with rls`.
+- [x] Enable RLS for every user-owned table.
+- [x] Add SELECT/INSERT/UPDATE/DELETE policies.
+- [x] Add profiles self-only policies.
+- [x] Add cross-user reference validation for account/category/tag relationships.
+- [x] Write User A/User B policy tests from `TEST_CASES.md`.
+- [x] Run policy tests.
+- [x] Commit: `feat: initialize money context application`.
 
 # Stage C — Authentication and Onboarding
 
@@ -169,79 +169,79 @@
 
 **Produces:** integer-safe money operations, KRW formatting input helpers, Seoul period helpers.
 
-- [ ] Write failing tests for addition/subtraction/format boundaries.
-- [ ] Implement money primitive without floating-point arithmetic.
-- [ ] Write salary cycle tests including month-end behavior.
-- [ ] Implement Asia/Seoul cycle helpers.
-- [ ] Run tests.
-- [ ] Commit: `feat: add money and salary cycle primitives`.
+- [x] Write failing tests for addition/subtraction/format boundaries.
+- [x] Implement money primitive without floating-point arithmetic.
+- [x] Write salary cycle tests including month-end behavior.
+- [x] Implement Asia/Seoul cycle helpers.
+- [x] Run tests.
+- [x] Commit: `feat: initialize money context application`.
 
 ### Task 11: Balance and net-worth engine
 
 **Produces:** account balances, liquid assets, liabilities, net worth.
 
-- [ ] Add Golden Tests TC-BAL, TC-TRF, TC-DEBIT.
-- [ ] Implement balance calculation.
-- [ ] Implement DEBIT linked-bank semantics.
-- [ ] Implement general liability calculation.
-- [ ] Implement net worth calculation interface.
-- [ ] Run tests.
-- [ ] Commit: `feat: add balance and net worth engine`.
+- [x] Add Golden Tests TC-BAL, TC-TRF, TC-DEBIT.
+- [x] Implement balance calculation.
+- [x] Implement DEBIT linked-bank semantics.
+- [x] Implement general liability calculation.
+- [x] Implement net worth calculation interface.
+- [x] Run tests.
+- [x] Commit: `feat: initialize money context application`.
 
 ### Task 12: Credit-card engine
 
 **Produces:** outstanding, billing period, upcoming settlement, remaining limit.
 
-- [ ] Add TC-CC tests.
-- [ ] Implement card purchase outstanding logic.
-- [ ] Implement billing cycle period parser.
-- [ ] Implement card settlement transfer semantics.
-- [ ] Verify no double-counted expense.
-- [ ] Commit: `feat: add credit card calculation engine`.
+- [x] Add TC-CC tests.
+- [x] Implement card purchase outstanding logic.
+- [x] Implement billing cycle period parser.
+- [x] Implement card settlement transfer semantics.
+- [x] Verify no double-counted expense.
+- [x] Commit: `feat: initialize money context application`.
 
 ### Task 13: Installment engine
 
 **Produces:** installment schedule generation and fee semantics.
 
-- [ ] Add TC-INS tests.
-- [ ] Implement principal split with deterministic remainder allocation.
-- [ ] Implement scheduled dates aligned with card billing.
-- [ ] Implement interest fee handling.
-- [ ] Verify original purchase expense remains one-time.
-- [ ] Commit: `feat: add installment schedule engine`.
+- [x] Add TC-INS tests.
+- [x] Implement principal split with deterministic remainder allocation.
+- [x] Implement scheduled dates aligned with card billing.
+- [x] Implement interest fee handling.
+- [x] Verify original purchase expense remains one-time.
+- [x] Commit: `feat: add installment payment schedule domain`.
 
 ### Task 14: Budget engine
 
 **Produces:** actual usage, planned forecast usage, rollover.
 
-- [ ] Add TC-BUD and TC-PLAN budget tests.
-- [ ] Implement monthly budget usage.
-- [ ] Implement category budget usage.
-- [ ] Implement positive/negative rollover.
-- [ ] Implement planned-inclusive forecast usage.
-- [ ] Commit: `feat: add budget calculation engine`.
+- [x] Add TC-BUD and TC-PLAN budget tests.
+- [x] Implement monthly budget usage.
+- [x] Implement category budget usage.
+- [x] Implement positive/negative rollover.
+- [x] Implement planned-inclusive forecast usage.
+- [x] Commit: `feat: initialize money context application`.
 
 ### Task 15: Savings projection engine
 
 **Produces:** contribution total, required monthly amount, status/estimated completion.
 
-- [ ] Add TC-SAV tests.
-- [ ] Implement current contribution total.
-- [ ] Implement remaining contribution count.
+- [x] Add TC-SAV tests.
+- [x] Implement current contribution total.
+- [x] Implement remaining contribution count.
 - [ ] Implement projection status.
-- [ ] Commit: `feat: add savings projection engine`.
+- [x] Commit: `feat: initialize money context application`.
 
 ### Task 16: Forecast spendable engine
 
 **Produces:** current cycle forecast, free spendable amount, daily amount.
 
-- [ ] Add TC-SPEND tests including duplicate card settlement case.
-- [ ] Define forecast item provenance/type.
+- [x] Add TC-SPEND tests including duplicate card settlement case.
+- [x] Define forecast item provenance/type.
 - [ ] Implement required future cashflow aggregation.
-- [ ] Deduplicate card outstanding vs matching settlement schedule.
-- [ ] Implement free spendable amount.
-- [ ] Implement daily spendable using today-inclusive remaining days.
-- [ ] Commit: `feat: add cashflow forecast engine`.
+- [x] Deduplicate card outstanding vs matching settlement schedule.
+- [x] Implement free spendable amount.
+- [x] Implement daily spendable using today-inclusive remaining days.
+- [x] Commit: `feat: initialize money context application`.
 
 # Stage E — Persistence Use Cases
 
@@ -254,7 +254,7 @@
 - [x] Validate DEBIT linked BANK ownership.
 - [x] Validate card payment account ownership.
 - [x] Add integration tests.
-- [ ] Commit: `feat: add financial account management`.
+- [x] Commit: `feat: initialize money context application`.
 
 ### Task 18: Transaction CRUD
 
@@ -264,7 +264,7 @@
 - [x] Implement transaction services.
 - [x] Enforce type-specific required fields.
 - [x] Add integration tests for balances/statistics semantics.
-- [ ] Commit: `feat: add transaction services`.
+- [x] Commit: `feat: add transaction services`.
 
 ### Task 19: Category and tag management
 
@@ -272,7 +272,7 @@
 - [x] Implement deactivate behavior.
 - [x] Implement tags and transaction tag assignment.
 - [x] Add ownership tests.
-- [ ] Commit: `feat: add categories and tags`.
+- [x] Commit: `feat: add categories and tags`.
 
 ### Task 20: Planned transactions
 
@@ -280,7 +280,7 @@
 - [x] Implement PLANNED → CONFIRMED transaction conversion atomically.
 - [x] Prevent double conversion.
 - [x] Add TC-PLAN integration tests.
-- [ ] Commit: `feat: add planned transaction workflow`.
+- [x] Commit: `feat: add planned transaction workflow`.
 
 ### Task 21: Recurring transactions
 
@@ -289,7 +289,7 @@
 - [x] Implement AUTO_CONFIRM and REQUIRE_CONFIRMATION.
 - [x] Enforce idempotency via occurrence unique key.
 - [x] Add TC-REC tests.
-- [ ] Commit: `feat: add recurring transaction generation`.
+- [x] Commit: `feat: add recurring transaction generation`.
 
 ### Task 22: Installment persistence
 
@@ -297,14 +297,14 @@
 - [x] Persist generated payment schedule.
 - [x] Implement settlement linkage.
 - [x] Add integration tests.
-- [ ] Commit: `feat: persist installment plans`.
+- [x] Commit: `feat: persist installment purchases and settlements`.
 
 ### Task 23: Budget and savings persistence
 
 - [x] Implement monthly/category budget CRUD.
 - [x] Implement savings goals/contributions CRUD.
 - [x] Link contribution to actual transaction when requested.
-- [ ] Add integration tests.
+- [x] Add integration tests.
 - [x] Commit: `feat: add budget and savings services`.
 
 # Stage F — Product UI
