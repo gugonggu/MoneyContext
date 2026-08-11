@@ -2,10 +2,14 @@ import "server-only";
 
 import { requireCurrentProfile } from "@/server/auth/require-profile";
 import { createPlanningRepository } from "@/server/planning/repository";
+import { createPlanningReadRepository } from "@/server/planning/read-repository";
+import { createPlanningReadService } from "@/server/planning/read-service";
 import { createPlanningService } from "@/server/planning/service";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 export { createPlanningRepository } from "@/server/planning/repository";
+export { createPlanningReadRepository } from "@/server/planning/read-repository";
+export { createPlanningReadService } from "@/server/planning/read-service";
 export { createPlanningService } from "@/server/planning/service";
 export type {
   CategoryBudgetInput,
@@ -102,4 +106,9 @@ export async function updateSavingsContributionForCurrentUser(id: string, input:
 export async function removeSavingsContributionForCurrentUser(id: string) {
   const { userId, service } = await current();
   return service.removeSavingsContribution(userId, id);
+}
+
+export async function getPlanningOverviewForCurrentUser() {
+  const [profile, supabase] = await Promise.all([requireCurrentProfile(), createSupabaseServerClient()]);
+  return createPlanningReadService(createPlanningReadRepository(supabase)).getOverview(profile.id);
 }

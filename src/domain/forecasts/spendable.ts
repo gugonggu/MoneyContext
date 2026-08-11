@@ -1,13 +1,16 @@
 export type ForecastDeduction = Readonly<{ amount: number; provenance: string }>;
 
-export function calculateFreeSpendable(liquidAssets: number, deductions: readonly ForecastDeduction[]): number {
+export function aggregateRequiredCashflow(items: readonly ForecastDeduction[]): number {
   const seen = new Set<string>();
-  const total = deductions.reduce((sum, item) => {
-    if (seen.has(item.provenance)) return sum;
+  return items.reduce((total, item) => {
+    if (seen.has(item.provenance)) return total;
     seen.add(item.provenance);
-    return sum + item.amount;
+    return total + item.amount;
   }, 0);
-  return liquidAssets - total;
+}
+
+export function calculateFreeSpendable(liquidAssets: number, deductions: readonly ForecastDeduction[]): number {
+  return liquidAssets - aggregateRequiredCashflow(deductions);
 }
 
 export function calculateDailySpendable(freeSpendable: number, remainingDays: number): number {

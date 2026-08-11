@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { calculateActualBudgetUsage, calculateForecastBudgetUsage, calculateRollover } from "@/domain/budgets/usage";
-import { calculateFreeSpendable } from "@/domain/forecasts/spendable";
+import { aggregateRequiredCashflow, calculateFreeSpendable } from "@/domain/forecasts/spendable";
 import { calculateRemainingSavings, calculateRequiredMonthlySavings, projectSavingsGoal } from "@/domain/savings/projection";
 
 it("keeps pending expense out of actual budget usage", () => expect(calculateActualBudgetUsage([{ amount: 300_000, status: "CONFIRMED" }, { amount: 200_000, status: "PENDING" }])).toBe(300_000));
@@ -14,3 +14,10 @@ it("classifies savings goals by achieved, on-track, at-risk, and overdue status"
   expect(projectSavingsGoal({ targetAmount: 1_000, contributedAmount: 500, targetDate: "2026-08-01", monthlyContributionPlan: 1_000, today: "2026-08-11" }).status).toBe("OVERDUE");
 });
 it("deduplicates forecast deductions by provenance", () => expect(calculateFreeSpendable(1_500_000, [{ amount: 300_000, provenance: "card" }, { amount: 300_000, provenance: "card" }, { amount: 200_000, provenance: "planned" }])).toBe(1_000_000));
+it("aggregates planned, recurring, card, and savings cashflow without duplicate card deductions", () => {
+  expect(aggregateRequiredCashflow([
+    { amount: 200_000, provenance: "planned:rent" }, { amount: 50_000, provenance: "recurring:phone" },
+    { amount: 300_000, provenance: "card:card-a" }, { amount: 300_000, provenance: "card:card-a" },
+    { amount: 100_000, provenance: "savings:goal-a" },
+  ])).toBe(650_000);
+});

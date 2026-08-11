@@ -237,7 +237,7 @@
 
 - [x] Add TC-SPEND tests including duplicate card settlement case.
 - [x] Define forecast item provenance/type.
-- [ ] Implement required future cashflow aggregation.
+- [x] Implement required future cashflow aggregation.
 - [x] Deduplicate card outstanding vs matching settlement schedule.
 - [x] Implement free spendable amount.
 - [x] Implement daily spendable using today-inclusive remaining days.
@@ -355,11 +355,11 @@
 
 ### Task 29: Budget, savings and forecast screens
 
-- [ ] Build monthly/category budget UI.
-- [ ] Add rollover settings.
-- [ ] Build savings goal progress/projection.
-- [ ] Build future cashflow list and free-spendable summary.
-- [ ] Commit: `feat: add financial planning views`.
+- [x] Build monthly/category budget UI.
+- [x] Add rollover settings.
+- [x] Build savings goal progress/projection.
+- [x] Build future cashflow list and free-spendable summary.
+- [x] Commit: `feat: add financial planning views`.
 
 ### Task 30: Dashboard
 
