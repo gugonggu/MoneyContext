@@ -271,7 +271,7 @@
 - [x] Implement default seed and user custom categories.
 - [x] Implement deactivate behavior.
 - [x] Implement tags and transaction tag assignment.
-- [ ] Add ownership tests.
+- [x] Add ownership tests.
 - [ ] Commit: `feat: add categories and tags`.
 
 ### Task 20: Planned transactions
