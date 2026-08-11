@@ -329,12 +329,12 @@
 
 ### Task 26: Recent pattern recommendations
 
-- [ ] Define scoring using recency + frequency.
-- [ ] Query recent user transactions only.
-- [ ] Rank category/account combinations.
-- [ ] Show recommendations without AI.
-- [ ] Add deterministic scoring tests.
-- [ ] Commit: `feat: add transaction pattern suggestions`.
+- [x] Define scoring using recency + frequency.
+- [x] Query recent user transactions only.
+- [x] Rank category/account combinations.
+- [x] Show recommendations without AI.
+- [x] Add deterministic scoring tests.
+- [x] Commit: `feat: add transaction pattern suggestions`.
 
 ### Task 27: Transaction history
 
