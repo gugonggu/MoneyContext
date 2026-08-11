@@ -311,11 +311,11 @@
 
 ### Task 24: Responsive navigation and layouts
 
-- [ ] Implement mobile Bottom Navigation.
-- [ ] Implement desktop Sidebar.
-- [ ] Add responsive route shell.
-- [ ] Verify keyboard/focus behavior.
-- [ ] Commit: `feat: add responsive application navigation`.
+- [x] Implement mobile Bottom Navigation.
+- [x] Implement desktop Sidebar.
+- [x] Add responsive route shell.
+- [x] Verify keyboard/focus behavior.
+- [x] Commit: `feat: add responsive application navigation`.
 
 ### Task 25: Quick transaction entry
 
