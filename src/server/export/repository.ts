@@ -20,6 +20,8 @@ type TransactionRow = Readonly<{
   memo: string | null;
   categories: { name: string } | { name: string }[] | null;
   accounts: { name: string } | { name: string }[] | null;
+  from_accounts: { name: string } | { name: string }[] | null;
+  to_accounts: { name: string } | { name: string }[] | null;
   transaction_tags: Array<{ tags: { name: string } | { name: string }[] | null }> | null;
 }>;
 
@@ -73,6 +75,8 @@ function periodMonths(period: ExportPeriod): readonly string[] {
 function mapTransaction(row: TransactionRow): ExportTransaction {
   const category = one(row.categories);
   const account = one(row.accounts);
+  const fromAccount = one(row.from_accounts);
+  const toAccount = one(row.to_accounts);
   const tagNames = (row.transaction_tags ?? []).flatMap((link) => {
     const tag = one(link.tags);
     return tag ? [tag.name] : [];
@@ -87,6 +91,8 @@ function mapTransaction(row: TransactionRow): ExportTransaction {
     baseAmount: asSafeInteger(row.base_amount, "transaction base_amount"),
     ...(category ? { categoryName: category.name } : {}),
     ...(account ? { accountName: account.name } : {}),
+    ...(fromAccount ? { fromAccountName: fromAccount.name } : {}),
+    ...(toAccount ? { toAccountName: toAccount.name } : {}),
     ...(tagNames.length > 0 ? { tagNames } : {}),
     ...(row.memo === null ? {} : { memo: row.memo }),
   };
@@ -113,7 +119,7 @@ export function createExportRepository(supabase: SupabaseClient): ExportReadRepo
       const nextDate = nextSeoulDate(period.endDate);
       const [profileResult, transactionResult, monthlyBudgetResult, categoryBudgetResult, plannedResult, goalResult, contributionResult, assets] = await Promise.all([
         supabase.from("profiles").select("base_currency").eq("id", userId).maybeSingle(),
-        supabase.from("transactions").select("id,transaction_at,type,status,amount,currency,base_amount,memo,categories(name),accounts!transactions_account_id_fkey(name),transaction_tags(tags(name))").eq("user_id", userId).gte("transaction_at", `${period.startDate}T00:00:00+09:00`).lt("transaction_at", `${nextDate}T00:00:00+09:00`).order("transaction_at"),
+        supabase.from("transactions").select("id,transaction_at,type,status,amount,currency,base_amount,memo,categories(name),accounts!transactions_account_id_fkey(name),from_accounts:accounts!transactions_from_account_id_fkey(name),to_accounts:accounts!transactions_to_account_id_fkey(name),transaction_tags(tags(name))").eq("user_id", userId).gte("transaction_at", `${period.startDate}T00:00:00+09:00`).lt("transaction_at", `${nextDate}T00:00:00+09:00`).order("transaction_at"),
         supabase.from("monthly_budgets").select("year,month,total_budget").eq("user_id", userId),
         supabase.from("category_budgets").select("year,month,base_budget,rollover_amount,categories(name)").eq("user_id", userId),
         supabase.from("planned_transactions").select("scheduled_date,type,status,amount,base_amount,memo").eq("user_id", userId).gte("scheduled_date", period.startDate).lte("scheduled_date", period.endDate),

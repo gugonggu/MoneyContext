@@ -18,6 +18,7 @@ let userA: TestUser;
 let userB: TestUser;
 let userAClient: SupabaseClient;
 let userBClient: SupabaseClient;
+let userACheckingAccountId: string;
 
 async function createTestUser(label: "a" | "b"): Promise<TestUser> {
   const email = `money-context-export-${label}-${testRunId}@example.test`;
@@ -56,6 +57,7 @@ describe("authenticated markdown export read model", () => {
     if (accountsAError || accountsBError || categoriesAError || categoriesBError || tagsAError || tagsBError || !accountsA?.[0] || !accountsB?.[0] || !categoriesA?.[0] || !categoriesB?.[0] || !tagsA?.[0] || !tagsB?.[0]) {
       throw new Error("Unable to create export test records");
     }
+    userACheckingAccountId = accountsA[0].id;
 
     userAClient = await authenticatedClient(userA);
     userBClient = await authenticatedClient(userB);
@@ -113,6 +115,40 @@ describe("authenticated markdown export read model", () => {
     expect(markdown).not.toContain("B checking");
     expect(markdown).not.toContain("B private");
     expect(markdown).not.toContain("1,350 KRW");
+  });
+
+  it("maps both transfer account names for a current-user export", async () => {
+    const { data: savings, error: savingsError } = await userAClient
+      .from("accounts")
+      .insert({ user_id: userA.id, name: "A savings", type: "BANK" })
+      .select("id")
+      .single();
+    if (savingsError || !savings) throw new Error(savingsError?.message ?? "Unable to create transfer destination");
+
+    const { error: transferError } = await userAClient.from("transactions").insert({
+      user_id: userA.id,
+      type: "TRANSFER",
+      status: "CONFIRMED",
+      transaction_at: "2026-08-12T12:00:00+09:00",
+      amount: 2_000,
+      currency: "KRW",
+      base_amount: 2_000,
+      base_currency: "KRW",
+      from_account_id: userACheckingAccountId,
+      to_account_id: savings.id,
+    });
+    if (transferError) throw new Error(transferError.message);
+
+    const readData = await createExportRepository(userAClient).getReadData(userA.id, {
+      startDate: "2026-08-01",
+      endDate: "2026-08-31",
+    });
+
+    expect(readData.transactions).toContainEqual(expect.objectContaining({
+      type: "TRANSFER",
+      fromAccountName: "A checking",
+      toAccountName: "A savings",
+    }));
   });
 
   it("omits a foreign-currency planned transaction without a stored base amount", async () => {
