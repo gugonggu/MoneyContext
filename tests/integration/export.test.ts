@@ -114,4 +114,35 @@ describe("authenticated markdown export read model", () => {
     expect(markdown).not.toContain("B private");
     expect(markdown).not.toContain("1,350 KRW");
   });
+
+  it("omits a foreign-currency planned transaction without a stored base amount", async () => {
+    const { error } = await userAClient.from("planned_transactions").insert({
+      user_id: userA.id,
+      type: "EXPENSE",
+      status: "PLANNED",
+      scheduled_date: "2026-08-20",
+      amount: 20,
+      currency: "USD",
+      base_amount: null,
+      base_currency: "KRW",
+      memo: "Unconverted foreign plan",
+    });
+    if (error) throw new Error(error.message);
+
+    const readData = await createExportRepository(userAClient).getReadData(userA.id, {
+      startDate: "2026-08-01",
+      endDate: "2026-08-31",
+    });
+
+    expect(readData.plannedCashflows).toEqual([]);
+  });
+
+  it("rejects a user A client attempting to export a spoofed user B id", async () => {
+    const service = createExportService(createExportRepository(userAClient));
+
+    await expect(service.generateMarkdown(userB.id, {
+      preset: "SPENDING_REVIEW",
+      period: { kind: "CUSTOM", startDate: "2026-08-01", endDate: "2026-08-31" },
+    })).rejects.toThrow("export data was not found");
+  });
 });

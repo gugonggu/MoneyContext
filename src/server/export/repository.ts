@@ -96,8 +96,8 @@ function isActualExpense(transaction: ExportTransaction): boolean {
   return transaction.type === "EXPENSE" && transaction.status === "CONFIRMED";
 }
 
-function isPlannedIncomeOrExpense(row: PlannedRow): row is PlannedRow & Readonly<{ type: "INCOME" | "EXPENSE" }> {
-  return row.type === "INCOME" || row.type === "EXPENSE";
+function isExportablePlannedCashflow(row: PlannedRow): row is PlannedRow & Readonly<{ type: "INCOME" | "EXPENSE"; base_amount: number | string }> {
+  return (row.type === "INCOME" || row.type === "EXPENSE") && row.base_amount !== null;
 }
 
 function errorOr<T>(result: Readonly<{ data: T | null; error: { message: string } | null }>): T {
@@ -164,7 +164,7 @@ export function createExportRepository(supabase: SupabaseClient): ExportReadRepo
         },
         transactions,
         budgets,
-        plannedCashflows: plannedRows.filter(isPlannedIncomeOrExpense).map((row) => ({ scheduledDate: row.scheduled_date, type: row.type, status: row.status, baseAmount: asSafeInteger(row.base_amount ?? row.amount, "planned base_amount"), ...(row.memo === null ? {} : { memo: row.memo }) })),
+        plannedCashflows: plannedRows.filter(isExportablePlannedCashflow).map((row) => ({ scheduledDate: row.scheduled_date, type: row.type, status: row.status, baseAmount: asSafeInteger(row.base_amount, "planned base_amount"), ...(row.memo === null ? {} : { memo: row.memo }) })),
         savingsGoals: goals.map((goal) => ({ name: goal.name, targetBaseAmount: asSafeInteger(goal.target_amount, "savings target"), contributedBaseAmount: contributedByGoal.get(goal.id) ?? 0, targetDate: goal.target_date })),
         creditCards: assets.cards.map((card) => ({ name: card.name, outstandingBaseAmount: card.outstanding, nextPaymentDate: card.nextPaymentDate })),
       };

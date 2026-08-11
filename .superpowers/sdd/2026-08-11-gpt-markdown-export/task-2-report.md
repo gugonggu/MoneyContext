@@ -48,6 +48,12 @@ TDD 증적:
 - Full Vitest suite: 45 files, 250 tests passed.
 - Diff whitespace check: passed.
 
+## Review follow-up
+
+- A planned foreign-currency row with `base_amount = null` is now omitted from the Markdown read model. The repository never substitutes the original foreign amount as KRW.
+- Added a Supabase Cloud integration test that authenticates as User A and supplies User B's id to the export service. The read is rejected because User A cannot read User B's profile or finance data through RLS.
+- Verification after the fix: focused export suite 2 files / 6 tests passed; typecheck and ESLint passed; full Vitest suite 45 files / 252 tests passed.
+
 남은 위험 또는 다음 Task 주의점:
 
 - Task 3 UI는 `generateMarkdownExportForCurrentUser`만 호출해 서버 전용 auth/read boundary를 유지해야 한다.
