@@ -14,7 +14,7 @@ function repository(accounts = [bank, bankB], categories = [category]): Transact
     create: async (_userId, input) => ({ id: "transaction-a", userId, ...input }),
     list: async () => [], update: async () => null, remove: async () => false,
     listRecentForPatterns: vi.fn(async () => []),
-    search: vi.fn(async () => []),
+    search: vi.fn(async () => ({ items: [], hasMore: false })),
     get: vi.fn(async () => null),
   };
 }
@@ -74,10 +74,21 @@ describe("transaction service", () => {
     const service = createTransactionService(repo);
 
     await service.search(userId, { memo: "coffee", limit: 10_000 });
-    expect(repo.search).toHaveBeenCalledWith(userId, { memo: "coffee", limit: 100 });
+    expect(repo.search).toHaveBeenCalledWith(userId, { memo: "coffee", limit: 100, offset: 0 });
 
     await service.search(userId, {});
-    expect(repo.search).toHaveBeenCalledWith(userId, { limit: 50 });
+    expect(repo.search).toHaveBeenCalledWith(userId, { limit: 20, offset: 0 });
+  });
+
+  it("clamps a negative or fractional offset to a non-negative integer", async () => {
+    const repo = repository();
+    const service = createTransactionService(repo);
+
+    await service.search(userId, { offset: -5 });
+    expect(repo.search).toHaveBeenCalledWith(userId, { limit: 20, offset: 0 });
+
+    await service.search(userId, { offset: 40.9 });
+    expect(repo.search).toHaveBeenCalledWith(userId, { limit: 20, offset: 40 });
   });
 
   it("returns a transaction owned by the current user", async () => {

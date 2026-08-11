@@ -19,7 +19,9 @@ export type TransactionSearchFilters = Readonly<{
   maxAmount?: number;
   memo?: string;
   limit?: number;
+  offset?: number;
 }>;
+export type TransactionSearchPage = Readonly<{ items: readonly TransactionSearchResult[]; hasMore: boolean }>;
 export type TransactionSearchResult = Readonly<{
   id: string;
   type: TransactionType;
@@ -43,7 +45,7 @@ export interface TransactionRepository {
   update(userId: string, id: string, input: TransactionInput): Promise<TransactionRecord | null>;
   remove(userId: string, id: string): Promise<boolean>;
   listRecentForPatterns(userId: string, limit: number): Promise<PatternTransaction[]>;
-  search(userId: string, filters: TransactionSearchFilters): Promise<TransactionSearchResult[]>;
+  search(userId: string, filters: TransactionSearchFilters): Promise<TransactionSearchPage>;
   get(userId: string, id: string): Promise<TransactionRecord | null>;
 }
 const MIN_PATTERN_LIMIT = 1;
@@ -54,9 +56,12 @@ function clampPatternLimit(limit: number): number {
 }
 const MIN_SEARCH_LIMIT = 1;
 const MAX_SEARCH_LIMIT = 100;
-const DEFAULT_SEARCH_LIMIT = 50;
+const DEFAULT_SEARCH_LIMIT = 20;
 function clampSearchLimit(limit: number | undefined): number {
   return Math.min(Math.max(MIN_SEARCH_LIMIT, Math.trunc(limit ?? DEFAULT_SEARCH_LIMIT)), MAX_SEARCH_LIMIT);
+}
+function clampSearchOffset(offset: number | undefined): number {
+  return Math.max(0, Math.trunc(offset ?? 0));
 }
 function validateSearchFilters(filters: TransactionSearchFilters): TransactionSearchFilters {
   if (filters.minAmount !== undefined) validAmount(filters.minAmount, "minAmount");
@@ -67,7 +72,7 @@ function validateSearchFilters(filters: TransactionSearchFilters): TransactionSe
   if (filters.from !== undefined && Number.isNaN(Date.parse(filters.from))) fail("from must be a valid date");
   if (filters.to !== undefined && Number.isNaN(Date.parse(filters.to))) fail("to must be a valid date");
   if (filters.from !== undefined && filters.to !== undefined && filters.to < filters.from) fail("to must not be before from");
-  return { ...filters, limit: clampSearchLimit(filters.limit) };
+  return { ...filters, limit: clampSearchLimit(filters.limit), offset: clampSearchOffset(filters.offset) };
 }
 const fail = (message: string): never => { throw new Error(message); };
 function validAmount(value: number, name: string) { if (!Number.isSafeInteger(value) || value < 0) fail(`${name} must be a non-negative integer`); }

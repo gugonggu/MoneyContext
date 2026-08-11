@@ -10,6 +10,7 @@ import { removeTransactionForCurrentUser, searchTransactionsForCurrentUser, type
 
 const TYPE_LABELS = { INCOME: "수입", EXPENSE: "지출", TRANSFER: "이체", ADJUSTMENT: "조정" } as const;
 const STATUS_LABELS = { PENDING: "대기", CONFIRMED: "확정", CANCELLED: "취소" } as const;
+const PAGE_SIZE = 20;
 
 type RawSearchParams = Record<string, string | string[] | undefined>;
 
@@ -33,6 +34,8 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
 
   const minAmountRaw = param(params, "minAmount");
   const maxAmountRaw = param(params, "maxAmount");
+  const pageRaw = param(params, "page");
+  const page = pageRaw && /^\d+$/.test(pageRaw) && Number(pageRaw) > 0 ? Number(pageRaw) : 1;
   const filters = {
     from: param(params, "from"),
     to: param(params, "to"),
@@ -44,14 +47,17 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     minAmount: minAmountRaw ? Number(minAmountRaw) : undefined,
     maxAmount: maxAmountRaw ? Number(maxAmountRaw) : undefined,
     memo: param(params, "memo"),
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
   };
 
-  const [accounts, categories, tags, transactions] = await Promise.all([
+  const [accounts, categories, tags, searchPage] = await Promise.all([
     listAccountsForCurrentUser(),
     listCategoriesForCurrentUser(),
     listTagsForCurrentUser(),
     searchTransactionsForCurrentUser(filters),
   ]);
+  const { items: transactions, hasMore } = searchPage;
 
   const accountNameById = new Map(accounts.map((account) => [account.id, account.name]));
   const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
@@ -70,10 +76,18 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const groups = groupTransactionsByDate(transactions.map((row) => ({ ...row, transactionAt: row.transactionAt })));
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
+    if (key === "page") continue;
     const first = Array.isArray(value) ? value[0] : value;
     if (first) query.set(key, first);
   }
   const queryString = query.toString() ? `?${query.toString()}` : "";
+
+  function hrefForPage(targetPage: number): string {
+    const pageQuery = new URLSearchParams(query);
+    if (targetPage > 1) pageQuery.set("page", String(targetPage));
+    const suffix = pageQuery.toString();
+    return `/transactions${suffix ? `?${suffix}` : ""}`;
+  }
 
   return (
     <div>
@@ -227,6 +241,12 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
               ))}
             </tbody>
           </table>
+
+          <nav aria-label="페이지">
+            {page > 1 ? <Link href={hrefForPage(page - 1)}>이전</Link> : null}
+            <span>{page}페이지</span>
+            {hasMore ? <Link href={hrefForPage(page + 1)}>다음</Link> : null}
+          </nav>
         </>
       )}
     </div>

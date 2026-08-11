@@ -37,7 +37,7 @@ export function createTransactionRepository(supabase: SupabaseClient): Transacti
         .eq("tag_id", filters.tagId);
       if (tagError) throw new Error(tagError.message);
       const transactionIds = tagRows.map((row) => row.transaction_id);
-      if (transactionIds.length === 0) return [];
+      if (transactionIds.length === 0) return { items: [], hasMore: false };
       return searchTransactions(supabase, userId, filters, transactionIds);
     }
     return searchTransactions(supabase, userId, filters);
@@ -70,10 +70,15 @@ async function searchTransactions(
   if (filters.maxAmount !== undefined) query = query.lte("amount", filters.maxAmount);
   if (filters.memo) query = query.ilike("memo", `%${filters.memo}%`);
 
-  const { data, error } = await query.order("transaction_at", { ascending: false }).limit(filters.limit ?? 50);
+  const limit = filters.limit ?? 20;
+  const offset = filters.offset ?? 0;
+  const { data, error } = await query
+    .order("transaction_at", { ascending: false })
+    .range(offset, offset + limit);
   if (error) throw new Error(error.message);
 
-  return data.map((row) => ({
+  const hasMore = data.length > limit;
+  const items = data.slice(0, limit).map((row) => ({
     id: String(row.id),
     type: row.type as "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT",
     status: row.status as "PENDING" | "CONFIRMED" | "CANCELLED",
@@ -91,4 +96,6 @@ async function searchTransactions(
       .map((tag) => tag.name)
       .filter((name): name is string => Boolean(name)),
   }));
+
+  return { items, hasMore };
 }
