@@ -8,3 +8,4 @@ export async function listTransactionsForCurrentUser() { const { userId, service
 export async function createTransactionForCurrentUser(input: Omit<TransactionRecord, "id" | "userId">) { const { userId, service } = await current(); return service.create(userId, input); }
 export async function updateTransactionForCurrentUser(id: string, input: Omit<TransactionRecord, "id" | "userId">) { const { userId, service } = await current(); return service.update(userId, id, input); }
 export async function removeTransactionForCurrentUser(id: string) { const { userId, service } = await current(); return service.remove(userId, id); }
+export async function listRecentTransactionsForPatterns(limit?: number) { const { userId, service } = await current(); return service.listRecentForPatterns(userId, limit); }

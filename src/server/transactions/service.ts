@@ -5,6 +5,7 @@ type Account = Readonly<{ id: string; userId: string; type: "BANK" | "CASH" | "D
 type Category = Readonly<{ id: string; userId: string; isActive: boolean }>;
 type TransactionInput = Readonly<{ type: TransactionType; amount: number; baseAmount: number; currency: string; transactionAt: string; accountId?: string; fromAccountId?: string; toAccountId?: string; categoryId?: string; exchangeRate?: string; memo?: string }>;
 export type TransactionRecord = Readonly<TransactionInput & { id: string; userId: string }>;
+export type PatternTransaction = Readonly<{ accountId: string; categoryId?: string; type: "INCOME" | "EXPENSE"; transactionAt: string }>;
 export interface TransactionRepository {
   findAccount(userId: string, id: string): Promise<Account | null>;
   findCategory(userId: string, id: string): Promise<Category | null>;
@@ -12,6 +13,13 @@ export interface TransactionRepository {
   list(userId: string): Promise<TransactionRecord[]>;
   update(userId: string, id: string, input: TransactionInput): Promise<TransactionRecord | null>;
   remove(userId: string, id: string): Promise<boolean>;
+  listRecentForPatterns(userId: string, limit: number): Promise<PatternTransaction[]>;
+}
+const MIN_PATTERN_LIMIT = 1;
+const MAX_PATTERN_LIMIT = 500;
+const DEFAULT_PATTERN_LIMIT = 200;
+function clampPatternLimit(limit: number): number {
+  return Math.min(Math.max(MIN_PATTERN_LIMIT, Math.trunc(limit)), MAX_PATTERN_LIMIT);
 }
 const fail = (message: string): never => { throw new Error(message); };
 function validAmount(value: number, name: string) { if (!Number.isSafeInteger(value) || value < 0) fail(`${name} must be a non-negative integer`); }
@@ -46,4 +54,5 @@ export function createTransactionService(repository: TransactionRepository) { re
   create: async (userId: string, input: TransactionInput) => repository.create(userId, await validate(repository, userId, input)),
   update: async (userId: string, id: string, input: TransactionInput) => { const row = await repository.update(userId, id, await validate(repository, userId, input)); if (!row) fail("transaction not found"); return row; },
   remove: async (userId: string, id: string) => { if (!await repository.remove(userId, id)) fail("transaction not found"); },
+  listRecentForPatterns: (userId: string, limit: number = DEFAULT_PATTERN_LIMIT) => repository.listRecentForPatterns(userId, clampPatternLimit(limit)),
 }; }

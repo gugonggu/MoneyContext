@@ -11,4 +11,21 @@ export function createTransactionRepository(supabase: SupabaseClient): Transacti
   async list(userId) { const { data, error } = await supabase.from("transactions").select("*").eq("user_id", userId).order("transaction_at", { ascending: false }); if (error) throw new Error(error.message); return data.map(map); },
   async update(userId, id, input) { const { data, error } = await supabase.from("transactions").update(payload(input)).eq("user_id", userId).eq("id", id).select("*").maybeSingle(); if (error) throw new Error(error.message); return data ? map(data) : null; },
   async remove(userId, id) { const { data, error } = await supabase.from("transactions").delete().eq("user_id", userId).eq("id", id).select("id").maybeSingle(); if (error) throw new Error(error.message); return data !== null; },
+  async listRecentForPatterns(userId, limit) {
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("account_id,category_id,type,transaction_at")
+      .eq("user_id", userId)
+      .eq("status", "CONFIRMED")
+      .in("type", ["INCOME", "EXPENSE"])
+      .order("transaction_at", { ascending: false })
+      .limit(limit);
+    if (error) throw new Error(error.message);
+    return data.map((row) => ({
+      accountId: String(row.account_id),
+      categoryId: row.category_id ? String(row.category_id) : undefined,
+      type: row.type as "INCOME" | "EXPENSE",
+      transactionAt: String(row.transaction_at),
+    }));
+  },
 }; }
