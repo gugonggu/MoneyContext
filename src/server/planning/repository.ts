@@ -122,6 +122,8 @@ const savingsContributionPayload = (input: SavingsContributionInput) => ({
   transfer_id: input.transferId ?? null,
 });
 
+const savingsContributionProjection = "id,user_id,goal_id,amount,contribution_date,transfer_id";
+
 export function createPlanningRepository(supabase: SupabaseClient): PlanningRepository {
   return {
     async findCategory(userId, id): Promise<OwnedActiveCategory | null> {
@@ -294,7 +296,7 @@ export function createPlanningRepository(supabase: SupabaseClient): PlanningRepo
     async listSavingsContributions(userId) {
       const { data, error } = await supabase
         .from("savings_contributions")
-        .select("*")
+        .select(savingsContributionProjection)
         .eq("user_id", userId)
         .order("contribution_date");
       if (error) throw new Error(error.message);
@@ -305,7 +307,7 @@ export function createPlanningRepository(supabase: SupabaseClient): PlanningRepo
       const { data, error } = await supabase
         .from("savings_contributions")
         .insert({ user_id: userId, ...savingsContributionPayload(input) })
-        .select("*")
+        .select(savingsContributionProjection)
         .single();
       if (error) throw new Error(error.message);
       return toSavingsContributionRecord(data as SavingsContributionRow);
@@ -317,7 +319,7 @@ export function createPlanningRepository(supabase: SupabaseClient): PlanningRepo
         .update(savingsContributionPayload(input))
         .eq("user_id", userId)
         .eq("id", id)
-        .select("*")
+        .select(savingsContributionProjection)
         .maybeSingle();
       if (error) throw new Error(error.message);
       return data ? toSavingsContributionRecord(data as SavingsContributionRow) : null;

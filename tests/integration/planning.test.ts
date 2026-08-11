@@ -107,7 +107,7 @@ async function insertContribution(
     .single();
 }
 
-describe("TC-PLAN savings contribution transfer integrity", () => {
+describe("TC-PLAN planning persistence", () => {
   beforeAll(async () => {
     userA = await createTestUser("a");
     userB = await createTestUser("b");
@@ -154,6 +154,7 @@ describe("TC-PLAN savings contribution transfer integrity", () => {
     await Promise.all([userA, userB].filter(Boolean).map((user) => admin.auth.admin.deleteUser(user.id)));
   });
 
+  describe("TC-PLAN savings contribution transfer integrity", () => {
   it("allows standalone contributions and confirmed owned transfer links", async () => {
     const standalone = await insertContribution(userAClient, userA.id, goalIds[0]);
     if (standalone.error) throw new Error(standalone.error.message);
@@ -242,7 +243,7 @@ describe("TC-PLAN savings contribution transfer integrity", () => {
     const second = await insertContribution(userAClient, userA.id, goalIds[1], { transfer_id: transferId });
     expect(second.error).not.toBeNull();
   });
-});
+  });
 
 describe("TC-PLAN planning repository and service", () => {
   it("performs monthly and category budget CRUD for the current user", async () => {
@@ -360,6 +361,19 @@ describe("TC-PLAN planning repository and service", () => {
     expect(updated).not.toHaveProperty("transferId");
     await service.removeSavingsContribution(userA.id, standalone.id);
     await expect(service.listSavingsContributions(userA.id)).resolves.not.toContainEqual(expect.objectContaining({ id: standalone.id }));
+
+    const updatedLinked = await service.updateSavingsContribution(userA.id, linked.id, {
+      goalId: goalIds[1], amount: 80_000, contributionDate: "2026-08-13", transferId,
+    });
+    expect(updatedLinked).toMatchObject({ id: linked.id, amount: 80_000, contributionDate: "2026-08-13", transferId });
+    await service.removeSavingsContribution(userA.id, linked.id);
+    await expect(service.listSavingsContributions(userA.id)).resolves.not.toContainEqual(expect.objectContaining({ id: linked.id }));
+
+    const relinked = await service.createSavingsContribution(userA.id, {
+      goalId: goalIds[0], amount: 80_000, contributionDate: "2026-08-14", transferId,
+    });
+    expect(relinked).toMatchObject({ goalId: goalIds[0], transferId });
+    await service.removeSavingsContribution(userA.id, relinked.id);
   });
 
   it("rejects inactive categories and prevents cross-user reads and mutations", async () => {
@@ -391,4 +405,5 @@ describe("TC-PLAN planning repository and service", () => {
     })).rejects.toThrow("not found");
     await expect(otherService.removeSavingsContribution(userB.id, contribution.id)).rejects.toThrow("not found");
   });
+});
 });
