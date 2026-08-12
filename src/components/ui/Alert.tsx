@@ -21,7 +21,7 @@ export function Alert({
       {...props}
       role={role}
       aria-live={role === "status" ? "polite" : undefined}
-      className={cx("rounded-lg border px-3 py-2 text-sm", KIND_CLASSES[kind], className)}
+      className={cx("rounded-tile border px-3 py-2 text-sm", KIND_CLASSES[kind], className)}
     />
   );
 }

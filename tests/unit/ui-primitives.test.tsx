@@ -3,9 +3,15 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Checkbox } from "@/components/ui/Checkbox";
+import { Alert } from "@/components/ui/Alert";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { StatTile } from "@/components/ui/StatTile";
 import { Surface } from "@/components/ui/Surface";
+import { TextField } from "@/components/ui/TextField";
+import { ToggleButton } from "@/components/ui/ToggleButton";
 
 afterEach(cleanup);
 
@@ -105,5 +111,49 @@ describe("Skeleton", () => {
     expect(skeleton.getAttribute("aria-hidden")).toBe("true");
     expect(skeleton.className).toContain("animate-pulse");
     expect(skeleton.className).toContain("h-8");
+  });
+});
+
+describe("form primitives", () => {
+  it("uses semantic tokens for text fields and selects while retaining labels", () => {
+    render(
+      <>
+        <TextField label="Amount" hint="In Korean won" />
+        <Select label="Account">
+          <option>Cash</option>
+        </Select>
+      </>,
+    );
+
+    const input = screen.getByRole("textbox");
+    const select = screen.getByRole("combobox");
+
+    expect(input.className).toContain("border-border-strong");
+    expect(input.className).toContain("bg-surface-raised");
+    expect(input.className).toContain("text-content-primary");
+    expect(input.className).toContain("rounded-tile");
+    expect(select.className).toContain("border-border-strong");
+    expect(select.className).toContain("bg-surface-raised");
+    expect(screen.getByText("Amount").className).toContain("text-content-secondary");
+    expect(screen.getByText("In Korean won").className).toContain("text-content-muted");
+  });
+
+  it("uses semantic tokens for checkbox, toggle, alert, and page header", () => {
+    render(
+      <>
+        <Checkbox label="Include planned transactions" />
+        <ToggleButton>Cash</ToggleButton>
+        <Alert kind="info" role="status">Saved</Alert>
+        <PageHeader title="Transactions" description="Review your activity" />
+      </>,
+    );
+
+    expect(screen.getByRole("checkbox").className).toContain("border-border-strong");
+    expect(screen.getByText("Include planned transactions").parentElement?.className).toContain("text-content-secondary");
+    expect(screen.getByRole("button", { name: "Cash" }).className).toContain("bg-surface-raised");
+    expect(screen.getByRole("button", { name: "Cash" }).className).toContain("text-content-secondary");
+    expect(screen.getByRole("status").className).toContain("rounded-tile");
+    expect(screen.getByRole("heading", { name: "Transactions" }).className).toContain("text-content-primary");
+    expect(screen.getByText("Review your activity").className).toContain("text-content-muted");
   });
 });

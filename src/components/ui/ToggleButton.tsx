@@ -17,7 +17,7 @@ export function ToggleButton({ className, ...props }: ButtonHTMLAttributes<HTMLB
         "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
         active
           ? "border-brand-600 bg-brand-600 text-white dark:border-brand-500 dark:bg-brand-500"
-          : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800",
+          : "border-border-strong bg-surface-raised text-content-secondary hover:bg-surface-base",
         className,
       )}
     />
