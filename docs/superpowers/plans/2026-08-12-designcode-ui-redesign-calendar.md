@@ -8,6 +8,8 @@
 
 **Tech Stack:** Next.js 16 (App Router), React 19, TypeScript 6, Tailwind CSS 4, Supabase, motion(구 framer-motion), Vitest + Testing Library, Playwright
 
+> **상태 정합화 (2026-08-12):** Task 1은 `3acaa96`에서, Task 2는 `68f18d4`에서 완료되었으며 각각 독립 검토를 통과했다.
+
 ## Global Constraints
 
 - 신규 런타임 의존성은 `motion` **1개만** 추가한다. 차트/아이콘 라이브러리는 추가하지 않고 인라인 SVG로 그린다.
@@ -92,18 +94,18 @@
   - `presets.ts`: `export const springSoft`, `springSnappy`, `springGentle`, `fadeUp`, `DURATION_FAST = 0.12`, `DURATION_BASE = 0.22`
   - `MotionProvider.tsx`: `export function MotionProvider({ children }: { children: ReactNode })`
 
-- [ ] **Step 1: `motion` 설치**
+- [x] **Step 1: `motion` 설치**
 
 ```bash
 npm install motion
 ```
 
-- [ ] **Step 2: 설치 확인**
+- [x] **Step 2: 설치 확인**
 
 Run: `node -e "console.log(require('./package.json').dependencies.motion)"`
 Expected: 버전 문자열이 출력된다 (예: `^12.x.x`)
 
-- [ ] **Step 3: `globals.css`에 의미 토큰 추가**
+- [x] **Step 3: `globals.css`에 의미 토큰 추가**
 
 `@theme` 블록 **뒤에**, `:root` 블록 **앞에** 다음을 삽입한다. `@theme inline`을 쓰는 이유는 유틸리티가 `--mc-*` 변수를 직접 참조하게 만들어 다크 모드에서 값만 바꿔 끼울 수 있게 하기 위해서다.
 
@@ -178,7 +180,7 @@ html[data-theme="dark"] {
 }
 ```
 
-- [ ] **Step 4: `globals.css`의 `body` 규칙을 토큰으로 교체**
+- [x] **Step 4: `globals.css`의 `body` 규칙을 토큰으로 교체**
 
 기존 `body { ... background: var(--color-slate-50); color: var(--color-slate-900); }`와 그 아래 `html[data-theme="dark"] body { ... }` 블록을 다음으로 교체한다.
 
@@ -194,7 +196,7 @@ body {
 
 다크 모드용 `body` 블록은 `--mc-*`가 이미 테마별로 바뀌므로 **삭제한다**.
 
-- [ ] **Step 5: 글래스 유틸리티 클래스 추가**
+- [x] **Step 5: 글래스 유틸리티 클래스 추가**
 
 `globals.css` 맨 아래에 추가한다. 1px 인셋 하이라이트는 DesignCode 킷 카드의 상단 광택을 재현한다.
 
@@ -215,7 +217,7 @@ html[data-theme="dark"] .glass-surface {
 }
 ```
 
-- [ ] **Step 6: `presets.ts` 작성**
+- [x] **Step 6: `presets.ts` 작성**
 
 ```ts
 // src/components/motion/presets.ts
@@ -236,7 +238,7 @@ export const fadeUp: Variants = {
 };
 ```
 
-- [ ] **Step 7: `MotionProvider.tsx` 작성**
+- [x] **Step 7: `MotionProvider.tsx` 작성**
 
 ```tsx
 // src/components/motion/MotionProvider.tsx
@@ -258,7 +260,7 @@ export function MotionProvider({ children }: Readonly<{ children: ReactNode }>) 
 }
 ```
 
-- [ ] **Step 8: 루트 레이아웃에 적용**
+- [x] **Step 8: 루트 레이아웃에 적용**
 
 `src/app/layout.tsx`의 `body`를 다음으로 교체한다.
 
@@ -289,17 +291,17 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
 }
 ```
 
-- [ ] **Step 9: 타입 검사와 린트**
+- [x] **Step 9: 타입 검사와 린트**
 
 Run: `npm run typecheck && npm run lint`
 Expected: 둘 다 통과
 
-- [ ] **Step 10: 기존 테스트가 깨지지 않았는지 확인**
+- [x] **Step 10: 기존 테스트가 깨지지 않았는지 확인**
 
 Run: `npm run test`
 Expected: 전부 통과 (이 태스크는 마크업 구조를 바꾸지 않았다)
 
-- [ ] **Step 11: 커밋**
+- [x] **Step 11: 커밋**
 
 ```bash
 git add package.json package-lock.json src/app/globals.css src/app/layout.tsx src/components/motion
@@ -327,7 +329,7 @@ git commit -m "feat: add semantic design tokens and motion provider"
   - `StatTile`: `({ label: string; value: string; hint?: string; tone?: "neutral" | "positive" | "negative"; className?: string })`
   - `Skeleton`: `({ className?: string })`
 
-- [ ] **Step 1: 실패하는 테스트 작성**
+- [x] **Step 1: 실패하는 테스트 작성**
 
 ```tsx
 // tests/unit/ui-primitives.test.tsx
@@ -403,12 +405,12 @@ describe("Surface", () => {
 });
 ```
 
-- [ ] **Step 2: 테스트를 돌려 실패를 확인**
+- [x] **Step 2: 테스트를 돌려 실패를 확인**
 
 Run: `npx vitest run tests/unit/ui-primitives.test.tsx`
 Expected: FAIL — `Cannot find module '@/components/ui/StatTile'`
 
-- [ ] **Step 3: `Card.tsx` 재작성**
+- [x] **Step 3: `Card.tsx` 재작성**
 
 ```tsx
 // src/components/ui/Card.tsx
@@ -434,7 +436,7 @@ export function Card({
 }
 ```
 
-- [ ] **Step 4: `Button.tsx` 재작성**
+- [x] **Step 4: `Button.tsx` 재작성**
 
 ```tsx
 // src/components/ui/Button.tsx
@@ -481,7 +483,7 @@ export function Button({
 }
 ```
 
-- [ ] **Step 5: `Surface.tsx` 작성**
+- [x] **Step 5: `Surface.tsx` 작성**
 
 ```tsx
 // src/components/ui/Surface.tsx
@@ -504,7 +506,7 @@ export function Surface({
 }
 ```
 
-- [ ] **Step 6: `StatTile.tsx` 작성**
+- [x] **Step 6: `StatTile.tsx` 작성**
 
 ```tsx
 // src/components/ui/StatTile.tsx
@@ -543,7 +545,7 @@ export function StatTile({
 }
 ```
 
-- [ ] **Step 7: `Skeleton.tsx` 작성**
+- [x] **Step 7: `Skeleton.tsx` 작성**
 
 ```tsx
 // src/components/ui/Skeleton.tsx
@@ -559,17 +561,17 @@ export function Skeleton({ className }: Readonly<{ className?: string }>) {
 }
 ```
 
-- [ ] **Step 8: 테스트 통과 확인**
+- [x] **Step 8: 테스트 통과 확인**
 
 Run: `npx vitest run tests/unit/ui-primitives.test.tsx`
 Expected: PASS (전 12건)
 
-- [ ] **Step 9: 전체 스위트 확인**
+- [x] **Step 9: 전체 스위트 확인**
 
 Run: `npm run typecheck && npm run test`
 Expected: 통과. `Card`의 `p-4`가 `p-5`로 바뀌었을 뿐 구조는 그대로라 기존 테스트는 영향받지 않는다. 실패한다면 해당 테스트가 클래스 문자열을 단언하고 있는 것이므로 기대값만 새 클래스로 고친다.
 
-- [ ] **Step 10: 커밋**
+- [x] **Step 10: 커밋**
 
 ```bash
 git add src/components/ui tests/unit/ui-primitives.test.tsx
@@ -4747,4 +4749,3 @@ Expected: 전부 통과
 git add tests/e2e/calendar.spec.ts docs/UI_UX.md
 git commit -m "test: cover the calendar critical path and document the view"
 ```
-
