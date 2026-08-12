@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 
+import { MotionProvider } from "@/components/motion/MotionProvider";
 import { themeBootstrapScript } from "@/components/theme/theme-script";
 
 export const metadata: Metadata = {
@@ -15,7 +16,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       </head>
-      <body className="bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">{children}</body>
+      <body className="bg-surface-base font-sans text-content-primary">
+        <MotionProvider>{children}</MotionProvider>
+      </body>
     </html>
   );
 }
