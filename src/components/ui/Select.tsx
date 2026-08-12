@@ -10,7 +10,7 @@ export function Select({
   ...props
 }: SelectHTMLAttributes<HTMLSelectElement> & { label: ReactNode }) {
   return (
-    <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
+    <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-300">
       {label}
       <select {...props} className={cx(inputClasses, "appearance-none bg-no-repeat", className)}>
         {children}

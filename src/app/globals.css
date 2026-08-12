@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Manual dark mode: an html[data-theme="dark"] attribute (toggled by
+   ThemeToggle, persisted to localStorage) drives every `dark:` utility,
+   instead of the OS `prefers-color-scheme` media query. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme {
   --font-sans: "Inter", "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 
@@ -31,6 +36,10 @@
   color-scheme: light;
 }
 
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -45,6 +54,11 @@ body {
   background: var(--color-slate-50);
   color: var(--color-slate-900);
   -webkit-font-smoothing: antialiased;
+}
+
+html[data-theme="dark"] body {
+  background: var(--color-slate-950);
+  color: var(--color-slate-100);
 }
 
 a:focus-visible,

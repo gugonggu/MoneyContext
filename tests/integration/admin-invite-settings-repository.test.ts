@@ -1,17 +1,38 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createInviteSettingsRepository } from "@/server/admin/invite-settings/repository";
 import { createSupabaseAdminClient } from "@/server/supabase/admin";
 
 const admin = createSupabaseAdminClient();
 
+type AppSettingsRow = { id: string; invite_code_hash: string; signup_enabled: boolean; created_at: string; updated_at: string };
+
+let originalRow: AppSettingsRow | null = null;
+
 async function clearAppSettings(): Promise<void> {
   const { error } = await admin.from("app_settings").delete().neq("id", "00000000-0000-0000-0000-000000000000");
   if (error) throw new Error(error.message);
 }
 
+async function restoreOriginalRow(): Promise<void> {
+  await clearAppSettings();
+  if (!originalRow) return;
+  const { error } = await admin.from("app_settings").insert(originalRow);
+  if (error) throw new Error(error.message);
+}
+
+beforeAll(async () => {
+  // This table is a real singleton row in the shared Supabase project (the
+  // live invite code / signup toggle), not test fixture data - snapshot it
+  // so it can be restored exactly, rather than letting these tests
+  // permanently delete production invite configuration.
+  const { data, error } = await admin.from("app_settings").select("*").maybeSingle();
+  if (error) throw new Error(error.message);
+  originalRow = data as AppSettingsRow | null;
+});
+
 beforeEach(clearAppSettings);
-afterAll(clearAppSettings);
+afterAll(restoreOriginalRow);
 
 describe("invite settings repository", () => {
   it("getStatus returns null when no row exists", async () => {

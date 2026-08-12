@@ -5,9 +5,9 @@ import { cx } from "@/components/ui/cx";
 export type AlertKind = "error" | "success" | "info";
 
 const KIND_CLASSES: Record<AlertKind, string> = {
-  error: "border-negative-100 bg-negative-50 text-negative-700",
-  success: "border-positive-100 bg-positive-50 text-positive-700",
-  info: "border-brand-100 bg-brand-50 text-brand-700",
+  error: "border-negative-100 bg-negative-50 text-negative-700 dark:border-negative-500/30 dark:bg-negative-500/10 dark:text-negative-500",
+  success: "border-positive-100 bg-positive-50 text-positive-700 dark:border-positive-500/30 dark:bg-positive-500/10 dark:text-positive-500",
+  info: "border-brand-100 bg-brand-50 text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400",
 };
 
 export function Alert({
