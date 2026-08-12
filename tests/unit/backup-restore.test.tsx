@@ -18,6 +18,7 @@ afterEach(() => {
   cleanup();
   refresh.mockReset();
   reload.mockReset();
+  window.sessionStorage.clear();
   vi.unstubAllGlobals();
 });
 
@@ -26,6 +27,15 @@ function renderBackupRestore() {
 }
 
 describe("backup and restore controls", () => {
+  it("announces a completed restore after reload and consumes the success flag", () => {
+    window.sessionStorage.setItem("money-context.backup-restored", "1");
+
+    renderBackupRestore();
+
+    expect(screen.getByRole("status").textContent).toContain("Backup restored");
+    expect(window.sessionStorage.getItem("money-context.backup-restored")).toBeNull();
+  });
+
   it("provides a backup download without retaining backup content in the page", () => {
     renderBackupRestore();
 

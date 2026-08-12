@@ -2,12 +2,19 @@
 
 import { useRef, useState } from "react";
 
+const RESTORE_SUCCESS_KEY = "money-context.backup-restored";
+const RESTORE_SUCCESS_MESSAGE = "Backup restored. Your financial data has been refreshed.";
+
 export function BackupRestore() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
-  const [message, setMessage] = useState<Readonly<{ kind: "error" | "success"; text: string }> | null>(null);
+  const [message, setMessage] = useState<Readonly<{ kind: "error" | "success"; text: string }> | null>(() => {
+    if (window.sessionStorage.getItem(RESTORE_SUCCESS_KEY) !== "1") return null;
+    window.sessionStorage.removeItem(RESTORE_SUCCESS_KEY);
+    return { kind: "success", text: RESTORE_SUCCESS_MESSAGE };
+  });
 
   function selectFile(event: React.ChangeEvent<HTMLInputElement>) {
     setFile(event.target.files?.[0] ?? null);
@@ -36,7 +43,8 @@ export function BackupRestore() {
       setFile(null);
       setIsConfirmed(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      setMessage({ kind: "success", text: "Backup restored. Your financial data has been refreshed." });
+      window.sessionStorage.setItem(RESTORE_SUCCESS_KEY, "1");
+      setMessage({ kind: "success", text: RESTORE_SUCCESS_MESSAGE });
       window.location.reload();
     } catch (error) {
       setMessage({
