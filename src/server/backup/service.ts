@@ -8,7 +8,7 @@ export type BackupReadData = Omit<BackupPayload, "metadata">;
 
 export interface BackupRepository {
   getBackupData(userId: string): Promise<BackupReadData>;
-  restoreBackup(payload: BackupPayload): Promise<void>;
+  restoreBackup(userId: string, payload: BackupPayload): Promise<void>;
 }
 
 const MAX_CONSISTENCY_READS = 3;
@@ -54,7 +54,7 @@ export function createBackupService(repository: BackupRepository) {
     },
     async restore(userId: string, input: unknown): Promise<void> {
       const { payload: remapped } = remapBackup(input, userId);
-      await repository.restoreBackup(remapped);
+      await repository.restoreBackup(userId, remapped);
     },
   };
 }
