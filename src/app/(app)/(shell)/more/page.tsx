@@ -9,6 +9,12 @@ export default function MorePage() {
           <Link href="/assets">자산</Link>
         </li>
         <li>
+          <Link href="/transactions/recurring">반복 거래</Link>
+        </li>
+        <li>
+          <Link href="/transactions/planned">예정 거래</Link>
+        </li>
+        <li>
           <Link href="/statistics">통계</Link>
         </li>
         <li>

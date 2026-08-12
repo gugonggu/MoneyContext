@@ -459,9 +459,15 @@
 - [x] Implement E2E-001 onboarding. (`tests/e2e/onboarding.spec.ts` — invalid invite code rejected before OAuth, then onboarding → BANK account → EXPENSE → dashboard reflects it.)
 - [x] Implement E2E-002 card lifecycle. (`tests/e2e/card-lifecycle.spec.ts` — card purchase increases outstanding, settlement transfer decreases it, no double-counted expense.)
 - [x] Implement E2E-003 export. (`tests/e2e/export.spec.ts` — GPT Markdown totals, JSON/CSV downloads.)
-- [x] Add budget/savings critical path. (`tests/e2e/planning.spec.ts` — monthly budget, savings goal, contribution, all reflected on `/plans`.) Recurring/planned transactions have no dedicated UI page yet to drive through a browser, so their critical paths remain covered by existing service-level integration tests (`tests/integration/recurring.test.ts`, `tests/integration/planned.test.ts`) rather than browser E2E — noted here rather than silently skipped.
+- [x] Add recurring/planned/budget/savings critical paths. (`tests/e2e/planning.spec.ts` — monthly budget, savings goal, contribution, all reflected on `/plans`. `tests/e2e/recurring-planned.spec.ts` — a recurring rule created and deactivated; a planned transaction created and confirmed into a real transaction.) Recurring/planned had **no UI at all** before this task (Stage F never assigned a task to build one, even though `MONEY_CONTEXT_SPEC.md` §49 Definition of Done requires "반복 거래를 설정할 수 있다" / "미래 예정 거래를 등록할 수 있다") — see the new pages below.
 - [x] Run E2E in clean DB. (Each spec creates and deletes its own isolated Supabase Cloud test user; ran the full suite twice back-to-back to confirm no cross-test/cross-run state leakage.)
 - [x] Commit: `test: add money context critical e2e flows`.
+
+**Product gap found and closed (not just a testing gap):** recurring rules and planned transactions had full server-side persistence (Task 20/21) but zero UI — `grep -rl "recurring\|planned" src/app src/components` returned nothing before this task. Added:
+- `src/app/(app)/(shell)/transactions/recurring/page.tsx` + `src/components/transactions/RecurringRuleForm.tsx` — create/list/deactivate recurring rules.
+- `src/app/(app)/(shell)/transactions/planned/page.tsx` + `src/components/transactions/PlannedTransactionForm.tsx` — create/list/confirm/remove planned transactions.
+- Linked from `/transactions` (desktop-reachable) and `/more` (mobile bottom nav).
+- Both pages' server actions call `revalidatePath`, applying the same fix already needed on `/plans` (see below) from the start.
 
 **Infrastructure added to make this possible:**
 - `POST /api/test/session` — dev/test-only route that signs a real Supabase session into the browser's cookies from an access/refresh token pair, standing in for the "test provider" the spec allows in place of live Google OAuth. Guarded by `E2E_TEST_MODE` and hard-refuses when `NODE_ENV==="production"`.

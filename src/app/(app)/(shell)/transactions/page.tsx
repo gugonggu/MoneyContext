@@ -92,6 +92,11 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   return (
     <div>
       <h1>거래내역</h1>
+      <nav aria-label="거래 관리">
+        <Link href="/transactions/new">거래 입력</Link>
+        <Link href="/transactions/recurring">반복 거래</Link>
+        <Link href="/transactions/planned">예정 거래</Link>
+      </nav>
 
       <form>
         <label>
