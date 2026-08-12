@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **Status reconciliation (2026-08-12):** The Task 7–9 implementation items below were reconciled against the committed code. Their dedicated auth/onboarding E2E coverage remains part of Task 39. Task 35 is in progress: schema validation, safe remapping, and user-scoped export are complete; restore is not yet implemented.
+> **Status reconciliation (2026-08-12):** The Task 7–9 implementation items below were reconciled against the committed code. Their dedicated auth/onboarding E2E coverage remains part of Task 39. Task 35 is complete: schema validation, remapping, export, transactional restore, and the settings UI are all implemented, tested, and committed.
 
 **Goal:** Money Context의 전체 명세를 하나의 완성형 제품으로 구현하되, 독립적으로 테스트 가능한 작은 Task 단위로 순차 개발한다.
 
@@ -417,9 +417,9 @@
 - [x] Implement full backup export.
 - [x] Implement preflight schema validation.
 - [x] Implement UUID/user ownership remapping.
-- [ ] Implement transactional restore.
-- [ ] Add TC-BACKUP tests. (Schema, remapping, and export coverage exists; restore round-trip and rollback coverage is pending.)
-- [ ] Commit: `feat: add full backup and restore`. (Partial commits: `feat: add backup schema validation`, `feat: add full backup export`.)
+- [x] Implement transactional restore.
+- [x] Add TC-BACKUP tests. (Schema, remapping, export, restore round-trip, cross-user, rollback, and profile-restore coverage all exist.)
+- [x] Commit: `feat: add full backup and restore`. (Delivered across commits `feat: add backup schema validation` .. `fix: restore backup profile safely`; see `docs/superpowers/plans/2026-08-12-full-backup-restore.md`.)
 
 ### Task 36: Admin invite settings
 

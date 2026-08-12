@@ -8,7 +8,7 @@
 
 **Tech Stack:** Next.js 16, TypeScript, Supabase Cloud/Postgres RPC, Vitest.
 
-> **Status reconciliation (2026-08-12):** Tasks 1, 2, and 3 are complete and committed. Task 4 remains the scope of the active Task 35 work.
+> **Status reconciliation (2026-08-12):** Tasks 1, 2, 3, and 4 are complete and committed. Task 35 is done.
 
 ## Global Constraints
 
@@ -48,6 +48,6 @@
 
 **Files:** Create `src/components/settings/BackupRestore.tsx`; modify settings page and plan; test `tests/unit/backup-restore.test.tsx`.
 
-- [ ] Write failing tests for download, JSON file selection, replacement warning, confirmation, and error state.
-- [ ] Implement accessible controls; no user id in client mutation.
-- [ ] Run full test/typecheck/lint/build, mark Task 35 complete, commit `feat: add full backup and restore`.
+- [x] Write failing tests for download, JSON file selection, replacement warning, confirmation, and error state.
+- [x] Implement accessible controls; no user id in client mutation.
+- [x] Run full test/typecheck/lint/build, mark Task 35 complete (commits `feat: add backup restore settings controls` and follow-up fixes through `fix: restore backup profile safely`).
