@@ -429,6 +429,12 @@
 - [x] Verify ADMIN cannot browse finance data of other users.
 - [x] Commit: `feat: add invite administration`. (Delivered across commits `refactor: extract shared invite code hashing helper` .. `test: verify admin update attempt leaves account name unchanged`; see `docs/superpowers/plans/2026-08-12-admin-invite-settings.md`.)
 
+**Follow-ups from final review (not blocking, tracked for later):**
+- `requireAdminProfile()`/`requireCurrentProfile()` reject via `redirect()` in API route handlers (`src/app/api/admin/invite-settings/*`, and pre-existing in `src/app/api/backup/*`), so an expired/non-admin session gets an HTML redirect instead of a JSON 401/403. Should become a shared `require*ProfileForApi()` helper across both features in one change, not fixed per-feature.
+- Rate limiting called for by `docs/SECURITY.md` §14 ("invite code verification", "backup restore") is not yet implemented on either endpoint class.
+- `docs/SETUP_AND_ENV.md` should note: signup stays closed until an ADMIN rotates the invite code at `/settings`, and rotating `APP_INVITE_PEPPER` invalidates the stored hash (requires re-rotating the code afterward).
+- `app_settings` has no DB-level singleton constraint; concurrent invite-code rotations could theoretically insert two rows (accepted risk: ADMIN-only, human-triggered, low-traffic action).
+
 ### Task 37: Account deletion
 
 - [ ] Build deletion warning and backup shortcut.
