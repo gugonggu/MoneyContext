@@ -58,7 +58,13 @@ export function AdminInviteSettings() {
     }
   }
 
-  if (!status) return null;
+  if (!status) {
+    return message ? (
+      <p role={message.kind === "error" ? "alert" : "status"} aria-label={message.kind === "error" ? "Invite settings error" : undefined}>
+        {message.text}
+      </p>
+    ) : null;
+  }
 
   return (
     <section aria-labelledby="admin-invite-settings-heading">

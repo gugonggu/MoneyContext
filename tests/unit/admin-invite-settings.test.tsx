@@ -54,6 +54,13 @@ describe("AdminInviteSettings", () => {
     );
   });
 
+  it("shows an accessible error when the initial status load fails", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new Error("network down"))));
+    render(<AdminInviteSettings />);
+
+    expect(await screen.findByRole("alert", { name: "Invite settings error" })).toBeTruthy();
+  });
+
   it("shows an accessible error when rotation fails and keeps the confirmation available to retry", async () => {
     const fetchMock = vi.fn(async (url: string) => {
       if (url.endsWith("/rotate")) return jsonResponse({ error: "Unable to rotate invite code" }, 500);
