@@ -30,7 +30,6 @@ export type BackupMetadata = {
 export type BackupProfile = {
   id: string;
   display_name: string;
-  role: "USER" | "ADMIN";
   base_currency: string;
   salary_cycle_day: number;
   timezone: string;

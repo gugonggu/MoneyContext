@@ -14,7 +14,7 @@ function validBackup(): BackupPayload {
       base_currency: "KRW",
       timezone: "Asia/Seoul",
     },
-    profile: { id: OLD_USER_ID, display_name: "Backup user", role: "USER", base_currency: "KRW", salary_cycle_day: 25, timezone: "Asia/Seoul", onboarding_completed: true },
+    profile: { id: OLD_USER_ID, display_name: "Backup user", role: "USER", base_currency: "KRW", salary_cycle_day: 25, timezone: "Asia/Seoul", onboarding_completed: true } as unknown as BackupPayload["profile"],
     accounts: [{ id: "bank", user_id: OLD_USER_ID, name: "Bank", type: "BANK", initial_balance: 500_000, linked_account_id: null, is_active: true, sort_order: 0 }],
     credit_card_settings: [],
     categories: [{ id: "food", user_id: OLD_USER_ID, name: "Food", kind: "EXPENSE", is_system_default: false, is_active: true, sort_order: 0 }],
@@ -34,7 +34,20 @@ function validBackup(): BackupPayload {
 
 describe("parseBackup", () => {
   it("accepts the complete v1 backup shape with Seoul metadata", () => {
-    expect(parseBackup(validBackup())).toEqual(validBackup());
+    const parsed = parseBackup(validBackup());
+
+    expect(parsed).toEqual(expect.objectContaining({
+      metadata: validBackup().metadata,
+      profile: {
+        id: OLD_USER_ID,
+        display_name: "Backup user",
+        base_currency: "KRW",
+        salary_cycle_day: 25,
+        timezone: "Asia/Seoul",
+        onboarding_completed: true,
+      },
+    }));
+    expect(parsed.profile).not.toHaveProperty("role");
   });
 
   it("rejects a backup whose v1 metadata or required collections are invalid", () => {
