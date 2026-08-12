@@ -64,6 +64,8 @@ describe("ADMIN role has no special finance data access", () => {
     const { data, error } = await adminClient.from("accounts").update({ name: "hijacked" }).eq("id", regularUserAccountId).select("id");
     expect(error).toBeNull();
     expect(data).toEqual([]);
+    const { data: unchanged } = await admin.from("accounts").select("name").eq("id", regularUserAccountId).maybeSingle();
+    expect(unchanged?.name).toBe("admin isolation regular account");
   });
 
   it("cannot delete another user's account through the authenticated client", async () => {
