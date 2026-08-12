@@ -1,12 +1,9 @@
 import "server-only";
 
-import { createHash, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
 
+import { hashInviteCode } from "@/server/auth/invite-hash";
 import { createSupabaseAdminClient } from "@/server/supabase/admin";
-
-function hashInviteCode(code: string, pepper: string): string {
-  return createHash("sha256").update(`${pepper}:${code}`).digest("hex");
-}
 
 export async function isInviteCodeValid(inviteCode: string): Promise<boolean> {
   const pepper = process.env.APP_INVITE_PEPPER;
