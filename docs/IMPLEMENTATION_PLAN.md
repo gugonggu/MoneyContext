@@ -437,11 +437,11 @@
 
 ### Task 37: Account deletion
 
-- [ ] Build deletion warning and backup shortcut.
-- [ ] Add explicit confirmation.
-- [ ] Delete user-owned data and auth account server-side.
-- [ ] Add failure-path integration tests.
-- [ ] Commit: `feat: add account deletion flow`.
+- [x] Build deletion warning and backup shortcut.
+- [x] Add explicit confirmation.
+- [x] Delete user-owned data and auth account server-side. (Deletes the `auth.users` row via the service-role admin client; `profiles.id references auth.users(id) on delete cascade` and every user-owned table cascades from `profiles`, so no manual per-table deletion is needed.)
+- [x] Add failure-path integration tests. (`tests/integration/account-delete.test.ts` covers a nonexistent-user rejection and a full cascade-delete verification; `tests/unit/account-delete-route.test.ts` covers the 500 error-body path.)
+- [x] Commit: `feat: add account deletion flow`.
 
 # Stage H — Hardening and Release
 
