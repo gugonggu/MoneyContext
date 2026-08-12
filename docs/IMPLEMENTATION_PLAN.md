@@ -447,12 +447,12 @@
 
 ### Task 38: Security regression suite
 
-- [ ] Run all RLS/IDOR tests.
-- [ ] Test modified UUID requests.
-- [ ] Inspect client bundle/env usage for service key leaks.
-- [ ] Test export/restore ownership.
-- [ ] Fix discovered security defects.
-- [ ] Commit: `test: harden user finance data isolation`.
+- [x] Run all RLS/IDOR tests. (Full suite green: `rls.test.ts`, new `rls-security-suite.test.ts`, `admin-finance-isolation.test.ts`, plus per-domain cross-user coverage already in `category-tag`/`installment`/`notifications`/`planned`/`planning`/`recurring` integration tests.)
+- [x] Test modified UUID requests. (`rls-security-suite.test.ts`: rejects a recurring rule against another user's account, an installment plan against another user's transaction, tagging another user's transaction with the caller's own tag, and tagging the caller's own transaction with another user's tag.)
+- [x] Inspect client bundle/env usage for service key leaks. (`SUPABASE_SERVICE_ROLE_KEY` is referenced only in `src/server/supabase/admin.ts`, guarded by `import "server-only"`; grepped the built `.next/static` client bundle for the key name — no matches.)
+- [x] Test export/restore ownership. (Already covered by `backup-export.test.ts`, `backup-restore.test.ts`, `export.test.ts` A/B user isolation; re-ran as part of the full suite.)
+- [x] Fix discovered security defects. (None found — every user-owned table shares one templated `auth.uid() = user_id` RLS policy plus app-level `assert_owned_reference` triggers; new tests only added regression coverage for two previously-untested cases: `profiles` self-only isolation and `transaction_tags`' relationship-scoped policy.)
+- [x] Commit: `test: harden user finance data isolation`.
 
 ### Task 39: Full E2E suite
 
