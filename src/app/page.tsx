@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -10,9 +11,7 @@ export default async function HomePage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-50 via-white to-white px-6 py-16">
       <div className="w-full max-w-xl text-center">
-        <div className="mx-auto mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 text-2xl font-bold text-white shadow-lg shadow-brand-600/20">
-          ₩
-        </div>
+        <Image src="/logo.png" alt="" width={72} height={72} priority className="mx-auto mb-6 rounded-2xl shadow-lg shadow-brand-600/20" />
         <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">Money Context</h1>
         <p className="mt-4 text-lg text-slate-600">개인 재정 기록과 분석을 안전하게 시작하세요.</p>
         <Link

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -20,7 +21,10 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
       </a>
 
       <nav className="hidden w-64 shrink-0 border-r border-slate-200 bg-white p-4 md:block" aria-label="주 메뉴">
-        <div className="mb-6 px-2 text-lg font-bold tracking-tight text-slate-900">Money Context</div>
+        <div className="mb-6 flex items-center gap-2 px-2">
+          <Image src="/logo.png" alt="" width={28} height={28} className="rounded-md" />
+          <span className="text-lg font-bold tracking-tight text-slate-900">Money Context</span>
+        </div>
         <ul className="flex flex-col gap-1">
           {sidebarNavItems.map((item) => {
             const active = isNavItemActive(pathname, item.href);
