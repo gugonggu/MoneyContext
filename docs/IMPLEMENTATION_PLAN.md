@@ -480,14 +480,20 @@
 
 ### Task 40: Production deployment
 
-- [ ] Configure production Supabase.
-- [ ] Apply migrations from clean state.
-- [ ] Configure Google production redirects.
-- [ ] Configure Vercel production env.
-- [ ] Set initial ADMIN and invite configuration.
+- [x] Configure production Supabase. (Decision: reuse the existing linked Supabase Cloud project as production rather than create a new one — see below for the cleanup this required.)
+- [x] Apply migrations from clean state. (`supabase db push --linked` applied through `20260812140000`; `supabase migration list --linked` confirms local/remote are in sync.)
+- [ ] Configure Google production redirects. (Manual step in Google Cloud Console + Supabase Auth provider settings — see `docs/SETUP_AND_ENV.md` §7.)
+- [ ] Configure Vercel production env. (Manual step: first-time project import, since no Vercel project exists yet for this repo — see `docs/SETUP_AND_ENV.md` §8.)
+- [ ] Set initial ADMIN and invite configuration. (Manual: promote a profile to `ADMIN` and rotate the first invite code at `/settings` once deployed — see Task 36.)
 - [ ] Run production smoke tests.
 - [ ] Verify RLS with two production-safe test accounts before real data entry.
-- [ ] Commit final deployment documentation updates.
+- [x] Commit final deployment documentation updates. (This entry; `docs/SETUP_AND_ENV.md` §8/9/11 updated with the Cron implementation and Vercel-specific notes.)
+
+**Decision:** the existing Supabase Cloud project (used for all dev/integration/E2E testing throughout Tasks 1–39) is reused as production rather than split into a separate project, since it already accumulated real usage/history the user wanted to keep. Before treating it as production:
+- Deleted all 319 leftover test users matching the `@example.test` pattern every test file in this repo uses (`admin.auth.admin.createUser({ email: "...@example.test", ... })`), which cascade-deleted their owned data. One real Google-authenticated account (not test data) was left untouched.
+- That cleanup surfaced a real schema bug: `transaction_tags.tag_id` had no `ON DELETE CASCADE` (only `transaction_id` did), so deleting a profile whose tags-cascade path and transactions-cascade path both touched `transaction_tags` failed with a live FK violation — meaning **any real user who had ever tagged a transaction could not delete their account**, including through the actual `POST /api/account/delete` route shipped in Task 37. Fixed in `supabase/migrations/20260812140000_cascade_transaction_tags_tag_id.sql`; `docs/DATABASE_SCHEMA.md` §12 corrected; regression coverage added to `tests/integration/account-delete.test.ts` (a tagged transaction is now part of the deletion fixture).
+
+**Also added — recurring transaction cron** (`docs/SETUP_AND_ENV.md` §9 previously unimplemented): `generate_due_recurring_transactions(date)` only ever processes the calling `auth.uid()`'s own rules, so a user who never opens the app would never get their recurring transactions generated. Added `generate_due_recurring_transactions_for_all_users(date)` (service-role only, `supabase/migrations/20260812130000_recurring_generation_for_all_users.sql`), `src/server/recurring/cron.ts`, `GET /api/cron/recurring` (guarded by `CRON_SECRET`), and `vercel.json` scheduling it daily at `0 15 * * *` UTC (00:00 Asia/Seoul). Tested in `tests/integration/recurring-cron.test.ts` (cross-user generation in one call, idempotent re-run, direct-RPC rejection for non-service-role callers, route auth rejection).
 
 # Completion Gate
 

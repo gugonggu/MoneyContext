@@ -222,11 +222,13 @@ Index:
 
 ```text
 transaction_id uuid not null references transactions(id) on delete cascade
-tag_id uuid not null references tags(id)
+tag_id uuid not null references tags(id) on delete cascade
 primary key(transaction_id, tag_id)
 ```
 
 RLS는 transaction 소유권과 tag 소유권이 동일 user임을 보장한다.
+
+> **2026-08-12 정정:** `tag_id`도 `on delete cascade`가 필요하다. 원래 문서에는 누락되어 있었고, 실제로 계정 삭제(profiles → tags cascade)가 `transactions`를 거치는 별도 cascade 경로와 겹치면서 "still referenced from table transaction_tags" 오류로 삭제 자체가 실패하는 문제가 실사용 중 발견되었다 (`supabase/migrations/20260812140000_cascade_transaction_tags_tag_id.sql`).
 
 # 13. installment_plans
 

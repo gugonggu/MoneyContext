@@ -110,23 +110,20 @@ Migration은 다음을 포함해야 한다.
 
 # 8. Vercel
 
-- Git 저장소 연결
+- Git 저장소 연결 (GitHub 저장소를 Vercel에 처음 Import)
 - Preview/Production env 분리
 - Supabase URL/key 설정
 - Production APP URL 설정
 - OAuth Redirect URL production 반영
+- `vercel.json`의 `crons` 항목이 배포와 함께 자동 등록됨 (Hobby 플랜은 프로젝트당 cron 1개까지 무료; Pro 이상 필요 시 확인)
 
 # 9. Cron
 
-반복 거래 자동 생성을 위해 Cron이 필요한 경우 실행 주기는 하루 1회 이상이면 충분하다.
+**구현 완료 (2026-08-12):** `vercel.json`에 `/api/cron/recurring`을 매일 `0 15 * * *`(UTC, = Asia/Seoul 00:00)에 실행하도록 등록되어 있다. 이 라우트는 `generate_due_recurring_transactions_for_all_users` DB 함수(service-role 전용, `supabase/migrations/20260812130000_recurring_generation_for_all_users.sql`)를 호출해 로그인 여부와 무관하게 전체 사용자의 반복 거래를 생성한다.
 
-추천: Asia/Seoul 자정 이후 실행.
-
-중요:
-
-- idempotent
-- 동일 occurrence unique
-- 실패 재실행 안전
+- idempotent — `recurring_transactions`/`transactions`의 occurrence unique key로 보장 (재실행해도 중복 생성 없음, `tests/integration/recurring-cron.test.ts`에서 검증)
+- 인증: `CRON_SECRET` 환경변수를 Vercel Production에 설정해야 함. Vercel이 이 이름의 env var를 감지하면 cron 호출 시 자동으로 `Authorization: Bearer <CRON_SECRET>` 헤더를 붙인다.
+- `CRON_SECRET`을 설정하지 않으면 라우트가 500을 반환하며 아무 것도 실행하지 않는다 (fail-closed).
 
 # 10. 개발 명령
 
@@ -152,6 +149,7 @@ test:e2e E2E
 - ADMIN 초기 계정 설정
 - signup enabled 확인
 - migration 최신
+- `CRON_SECRET` 설정 및 Vercel Cron 등록 확인
 - backup/restore smoke test
 - card/transfer golden test pass
 - Vercel build pass

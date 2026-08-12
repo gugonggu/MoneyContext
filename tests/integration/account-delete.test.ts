@@ -20,12 +20,42 @@ async function createTestUser(): Promise<TestUser> {
   return { id: data.user.id, email, password };
 }
 
+let tagId: string;
+
 beforeAll(async () => {
   user = await createTestUser();
   const { error } = await admin.from("profiles").insert({ id: user.id, display_name: "Account Delete User", salary_cycle_day: 1, base_currency: "KRW" });
   if (error) throw new Error(error.message);
-  const { error: accountError } = await admin.from("accounts").insert({ user_id: user.id, name: "account delete test account", type: "CASH" });
-  if (accountError) throw new Error(accountError.message);
+  const { data: account, error: accountError } = await admin.from("accounts").insert({ user_id: user.id, name: "account delete test account", type: "CASH" }).select("id").single();
+  if (accountError || !account) throw new Error(accountError?.message ?? "Missing account");
+
+  // A tagged transaction exercises the transaction_tags -> tags cascade path
+  // (previously missing ON DELETE CASCADE on tag_id — see migration
+  // 20260812140000_cascade_transaction_tags_tag_id.sql), not just the
+  // transaction_tags -> transactions path the original fixture covered.
+  const { data: tag, error: tagError } = await admin.from("tags").insert({ user_id: user.id, name: "account delete test tag" }).select("id").single();
+  if (tagError || !tag) throw new Error(tagError?.message ?? "Missing tag");
+  tagId = tag.id;
+
+  const { data: transaction, error: transactionError } = await admin
+    .from("transactions")
+    .insert({
+      user_id: user.id,
+      type: "EXPENSE",
+      status: "CONFIRMED",
+      transaction_at: "2026-08-10T00:00:00+09:00",
+      amount: 1000,
+      currency: "KRW",
+      base_amount: 1000,
+      base_currency: "KRW",
+      account_id: account.id,
+    })
+    .select("id")
+    .single();
+  if (transactionError || !transaction) throw new Error(transactionError?.message ?? "Missing transaction");
+
+  const { error: tagAssignError } = await admin.from("transaction_tags").insert({ transaction_id: transaction.id, tag_id: tagId });
+  if (tagAssignError) throw new Error(tagAssignError.message);
 });
 
 afterAll(async () => {
@@ -45,6 +75,9 @@ describe("account deletion", () => {
 
     const { data: accounts } = await admin.from("accounts").select("id").eq("user_id", user.id);
     expect(accounts).toEqual([]);
+
+    const { data: tags } = await admin.from("tags").select("id").eq("id", tagId);
+    expect(tags).toEqual([]);
 
     const { data: authUser } = await admin.auth.admin.getUserById(user.id);
     expect(authUser.user).toBeNull();
