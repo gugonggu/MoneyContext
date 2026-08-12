@@ -31,7 +31,7 @@ export default function OnboardingPage() {
       input_cards: cardName ? [{ account_key: "credit_card", payment_account_key: "primary_bank", payment_day: cardPaymentDay, credit_limit: cardLimit }] : [],
     });
     if (error) redirect("/onboarding?error=save");
-    redirect("/");
+    redirect("/home");
   }
   return (
     <main><h1>초기 금융 설정</h1><form action={complete}><label>이름<input name="displayName" required /></label><label>급여일<input name="salaryCycleDay" type="number" min="1" max="31" required /></label><label>첫 은행 계좌<input name="bankName" required /></label><label>현재 잔액<input name="bankBalance" inputMode="numeric" defaultValue="0" required /></label><label>현금 이름 (선택)<input name="cashName" /></label><label>현금 잔액<input name="cashBalance" inputMode="numeric" defaultValue="0" /></label><label>부채 이름 (선택)<input name="liabilityName" /></label><label>부채 잔액<input name="liabilityBalance" inputMode="numeric" defaultValue="0" /></label><label>신용카드 이름 (선택)<input name="cardName" /></label><label>카드 결제일<input name="cardPaymentDay" type="number" min="1" max="31" /></label><label>카드 한도<input name="cardLimit" inputMode="numeric" /></label><button type="submit">시작하기</button></form></main>
