@@ -49,6 +49,7 @@
 
   --radius-card: 1.25rem;
   --radius-tile: 1rem;
+  --radius-pill: 9999px;
 
   --shadow-card: var(--mc-shadow-card);
   --shadow-lifted: var(--mc-shadow-lifted);
