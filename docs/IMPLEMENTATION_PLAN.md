@@ -487,13 +487,13 @@
 
 다음을 모두 만족해야 프로젝트 완료로 본다.
 
-- [ ] `MONEY_CONTEXT_SPEC.md` Definition of Done 충족
-- [ ] 모든 Golden Test 통과
-- [ ] RLS/IDOR 테스트 통과
-- [ ] lint/typecheck/unit/integration/E2E/build 통과
-- [ ] card payment가 expense를 중복 생성하지 않음
-- [ ] installment 구매가 구매월에 한 번만 소비로 집계됨
-- [ ] transfer가 수입/지출에서 제외됨
-- [ ] backup → restore round trip 성공
-- [ ] GPT Markdown/JSON/CSV Export가 현재 사용자 데이터만 포함
-- [ ] 모바일/PC 핵심 사용 흐름 검증
+- [x] `MONEY_CONTEXT_SPEC.md` Definition of Done 충족 (§49 25개 항목 모두 Task 1–39 구현으로 커버됨; 미완료는 Task 40의 프로덕션 배포 작업뿐)
+- [x] 모든 Golden Test 통과 (TC-BAL/TRF/DEBIT/CC/INS/BUD/PLAN/SAV/SPEND 전부 유닛 테스트로 존재, 전체 스위트 통과)
+- [x] RLS/IDOR 테스트 통과 (Task 6, 38)
+- [x] lint/typecheck/unit/integration/E2E/build 통과 (2026-08-12 기준 유닛+통합 349/349, E2E 5/5, typecheck/lint/build 클린)
+- [x] card payment가 expense를 중복 생성하지 않음 (Task 12 도메인 테스트 + E2E-002 실브라우저 검증)
+- [x] installment 구매가 구매월에 한 번만 소비로 집계됨 (Task 13)
+- [x] transfer가 수입/지출에서 제외됨 (Task 18, Export 서식에도 명시)
+- [x] backup → restore round trip 성공 (Task 35)
+- [x] GPT Markdown/JSON/CSV Export가 현재 사용자 데이터만 포함 (Task 33/34/38 A/B 사용자 격리 테스트)
+- [ ] 모바일/PC 핵심 사용 흐름 검증 — **미완료.** Task 24에서 반응형 레이아웃/키보드 포커스는 검증했지만, `playwright.config.ts`에 데스크톱 Chromium 프로젝트만 있고 모바일 뷰포트 프로젝트가 없어 Task 39 E2E가 전부 데스크톱 기준으로만 실행됨. 모바일 뷰포트 E2E 또는 최소한 수동 모바일 점검이 필요.
