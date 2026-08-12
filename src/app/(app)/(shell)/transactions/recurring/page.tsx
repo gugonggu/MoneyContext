@@ -1,6 +1,9 @@
 import { revalidatePath } from "next/cache";
 
 import { RecurringRuleForm, type RecurringRuleFormState } from "@/components/transactions/RecurringRuleForm";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { listAccountsForCurrentUser } from "@/server/accounts";
 import { listCategoriesForCurrentUser } from "@/server/categories";
 import { createRecurringRuleForCurrentUser, deactivateRecurringRuleForCurrentUser, listRecurringRulesForCurrentUser } from "@/server/recurring";
@@ -65,28 +68,38 @@ export default async function RecurringTransactionsPage() {
   const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
 
   return (
-    <div>
-      <h1>반복 거래</h1>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="반복 거래" />
 
-      <section aria-labelledby="recurring-rules-heading">
-        <h2 id="recurring-rules-heading">등록된 반복 거래</h2>
+      <section aria-labelledby="recurring-rules-heading" className="flex flex-col gap-3">
+        <h2 id="recurring-rules-heading" className="text-base font-semibold text-slate-900">
+          등록된 반복 거래
+        </h2>
         {rules.length === 0 ? (
-          <p>등록된 반복 거래가 없습니다.</p>
+          <p className="text-sm text-slate-500">등록된 반복 거래가 없습니다.</p>
         ) : (
-          <ul>
+          <ul className="flex flex-col gap-3">
             {rules.map((rule) => (
               <li key={rule.id}>
-                <span>
-                  {rule.type === "INCOME" ? "수입" : "지출"} {rule.amount.toLocaleString("ko-KR")}원 · {accountNameById.get(rule.accountId) ?? "-"}
-                  {rule.categoryId ? ` · ${categoryNameById.get(rule.categoryId) ?? "-"}` : ""} · {FREQUENCY_LABELS[rule.frequency]} · {CONFIRMATION_LABELS[rule.confirmationMode]}
-                  {rule.isActive ? "" : " (비활성)"}
-                </span>
-                {rule.isActive ? (
-                  <form action={deactivateRule}>
-                    <input type="hidden" name="id" value={rule.id} />
-                    <button type="submit">비활성화</button>
-                  </form>
-                ) : null}
+                <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-sm text-slate-700">
+                    <span className={rule.type === "INCOME" ? "font-semibold text-positive-700" : "font-semibold text-slate-900"}>
+                      {rule.type === "INCOME" ? "수입" : "지출"} {rule.amount.toLocaleString("ko-KR")}원
+                    </span>{" "}
+                    · {accountNameById.get(rule.accountId) ?? "-"}
+                    {rule.categoryId ? ` · ${categoryNameById.get(rule.categoryId) ?? "-"}` : ""} · {FREQUENCY_LABELS[rule.frequency]} ·{" "}
+                    {CONFIRMATION_LABELS[rule.confirmationMode]}
+                    {rule.isActive ? "" : " (비활성)"}
+                  </span>
+                  {rule.isActive ? (
+                    <form action={deactivateRule}>
+                      <input type="hidden" name="id" value={rule.id} />
+                      <Button type="submit" variant="secondary">
+                        비활성화
+                      </Button>
+                    </form>
+                  ) : null}
+                </Card>
               </li>
             ))}
           </ul>

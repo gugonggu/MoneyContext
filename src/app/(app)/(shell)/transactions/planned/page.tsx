@@ -1,6 +1,9 @@
 import { revalidatePath } from "next/cache";
 
 import { PlannedTransactionForm, type PlannedTransactionFormState } from "@/components/transactions/PlannedTransactionForm";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { listAccountsForCurrentUser } from "@/server/accounts";
 import { listCategoriesForCurrentUser } from "@/server/categories";
 import { confirmPlannedTransactionForCurrentUser, createPlannedTransactionForCurrentUser, listPlannedTransactionsForCurrentUser, removePlannedTransactionForCurrentUser } from "@/server/planned";
@@ -59,34 +62,45 @@ export default async function PlannedTransactionsPage() {
   const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
 
   return (
-    <div>
-      <h1>예정 거래</h1>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="예정 거래" />
 
-      <section aria-labelledby="planned-transactions-heading">
-        <h2 id="planned-transactions-heading">등록된 예정 거래</h2>
+      <section aria-labelledby="planned-transactions-heading" className="flex flex-col gap-3">
+        <h2 id="planned-transactions-heading" className="text-base font-semibold text-slate-900">
+          등록된 예정 거래
+        </h2>
         {planned.length === 0 ? (
-          <p>등록된 예정 거래가 없습니다.</p>
+          <p className="text-sm text-slate-500">등록된 예정 거래가 없습니다.</p>
         ) : (
-          <ul>
+          <ul className="flex flex-col gap-3">
             {planned.map((item) => (
               <li key={item.id}>
-                <span>
-                  {item.scheduledDate} · {item.type === "INCOME" ? "수입" : "지출"} {item.amount.toLocaleString("ko-KR")}원
-                  {item.accountId ? ` · ${accountNameById.get(item.accountId) ?? "-"}` : ""}
-                  {item.categoryId ? ` · ${categoryNameById.get(item.categoryId) ?? "-"}` : ""} · {STATUS_LABELS[item.status]}
-                </span>
-                {item.status === "PLANNED" ? (
-                  <>
-                    <form action={confirmPlanned}>
-                      <input type="hidden" name="id" value={item.id} />
-                      <button type="submit">지금 확정</button>
-                    </form>
-                    <form action={removePlanned}>
-                      <input type="hidden" name="id" value={item.id} />
-                      <button type="submit">삭제</button>
-                    </form>
-                  </>
-                ) : null}
+                <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-sm text-slate-700">
+                    {item.scheduledDate} ·{" "}
+                    <span className={item.type === "INCOME" ? "font-semibold text-positive-700" : "font-semibold text-slate-900"}>
+                      {item.type === "INCOME" ? "수입" : "지출"} {item.amount.toLocaleString("ko-KR")}원
+                    </span>
+                    {item.accountId ? ` · ${accountNameById.get(item.accountId) ?? "-"}` : ""}
+                    {item.categoryId ? ` · ${categoryNameById.get(item.categoryId) ?? "-"}` : ""} · {STATUS_LABELS[item.status]}
+                  </span>
+                  {item.status === "PLANNED" ? (
+                    <div className="flex gap-2">
+                      <form action={confirmPlanned}>
+                        <input type="hidden" name="id" value={item.id} />
+                        <Button type="submit" variant="secondary">
+                          지금 확정
+                        </Button>
+                      </form>
+                      <form action={removePlanned}>
+                        <input type="hidden" name="id" value={item.id} />
+                        <Button type="submit" variant="ghost">
+                          삭제
+                        </Button>
+                      </form>
+                    </div>
+                  ) : null}
+                </Card>
               </li>
             ))}
           </ul>

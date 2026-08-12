@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function DeleteAccount() {
@@ -33,28 +37,38 @@ export function DeleteAccount() {
   }
 
   return (
-    <section aria-labelledby="delete-account-heading">
-      <h2 id="delete-account-heading">Delete account</h2>
-      <p role="status" aria-live="polite" aria-label="Delete account warning">
-        Deleting your account permanently removes all your financial data. This cannot be undone.
-      </p>
-      <p>
-        Consider <a href="/api/backup" download>downloading a full backup</a> first.
-      </p>
+    <section aria-labelledby="delete-account-heading" className="flex flex-col gap-4">
+      <h2 id="delete-account-heading" className="text-lg font-semibold text-slate-900">
+        Delete account
+      </h2>
 
-      <label>
-        <input type="checkbox" checked={isConfirmed} onChange={(event) => setIsConfirmed(event.target.checked)} />
-        I understand this will permanently delete my account and all my financial data
-      </label>
-      <button type="button" disabled={!isConfirmed || isDeleting} onClick={deleteAccount}>
-        {isDeleting ? "Deleting account..." : "Delete account"}
-      </button>
-
-      {error ? (
-        <p role="alert" aria-label="Delete account error">
-          {error}
+      <Card className="flex flex-col gap-3 border-negative-100">
+        <p role="status" aria-live="polite" aria-label="Delete account warning" className="text-sm text-slate-600">
+          Deleting your account permanently removes all your financial data. This cannot be undone.
         </p>
-      ) : null}
+        <p className="text-sm text-slate-600">
+          Consider{" "}
+          <a href="/api/backup" download className="font-medium text-brand-600 underline hover:text-brand-700">
+            downloading a full backup
+          </a>{" "}
+          first.
+        </p>
+
+        <Checkbox
+          label="I understand this will permanently delete my account and all my financial data"
+          checked={isConfirmed}
+          onChange={(event) => setIsConfirmed(event.target.checked)}
+        />
+        <Button variant="danger" type="button" disabled={!isConfirmed || isDeleting} onClick={deleteAccount} className="self-start">
+          {isDeleting ? "Deleting account..." : "Delete account"}
+        </Button>
+
+        {error ? (
+          <Alert kind="error" role="alert" aria-label="Delete account error">
+            {error}
+          </Alert>
+        ) : null}
+      </Card>
     </section>
   );
 }

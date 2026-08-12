@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 
 import { EditTransactionForm, type EditTransactionState } from "@/components/transactions/EditTransactionForm";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { listAccountsForCurrentUser } from "@/server/accounts";
 import { listCategoriesForCurrentUser } from "@/server/categories";
 import { getTransactionForCurrentUser, updateTransactionForCurrentUser } from "@/server/transactions";
@@ -67,7 +68,7 @@ export default async function EditTransactionPage({ params }: { params: Promise<
 
   return (
     <div>
-      <h1>거래 수정</h1>
+      <PageHeader title="거래 수정" />
       <EditTransactionForm
         transaction={{
           id: transaction.id,

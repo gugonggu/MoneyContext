@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Checkbox } from "@/components/ui/Checkbox";
+
 type Status = Readonly<{ signupEnabled: boolean; hasInviteCode: boolean }>;
 type Message = Readonly<{ kind: "error" | "success"; text: string }>;
 
@@ -60,49 +65,54 @@ export function AdminInviteSettings() {
 
   if (!status) {
     return message ? (
-      <p role={message.kind === "error" ? "alert" : "status"} aria-label={message.kind === "error" ? "Invite settings error" : undefined}>
+      <Alert kind={message.kind === "error" ? "error" : "success"} role={message.kind === "error" ? "alert" : "status"} aria-label={message.kind === "error" ? "Invite settings error" : undefined}>
         {message.text}
-      </p>
+      </Alert>
     ) : null;
   }
 
   return (
-    <section aria-labelledby="admin-invite-settings-heading">
-      <h2 id="admin-invite-settings-heading">Invite settings</h2>
+    <section aria-labelledby="admin-invite-settings-heading" className="flex flex-col gap-4">
+      <h2 id="admin-invite-settings-heading" className="text-lg font-semibold text-slate-900">
+        Invite settings
+      </h2>
 
-      <label>
-        Signup enabled
-        <input
-          type="checkbox"
+      <Card className="flex flex-col gap-4">
+        <Checkbox
+          label="Signup enabled"
           checked={status.signupEnabled}
           disabled={isBusy || !status.hasInviteCode}
           onChange={(event) => toggleSignup(event.target.checked)}
         />
-      </label>
-      {!status.hasInviteCode ? <p>Generate an invite code below before enabling signup.</p> : null}
+        {!status.hasInviteCode ? <p className="text-sm text-slate-600">Generate an invite code below before enabling signup.</p> : null}
 
-      <div>
-        <h3>Rotate invite code</h3>
-        <label>
-          <input type="checkbox" checked={isConfirmed} onChange={(event) => setIsConfirmed(event.target.checked)} />
-          I understand the previous invite code will stop working for new signups
-        </label>
-        <button type="button" disabled={!isConfirmed || isBusy} onClick={rotate}>
-          Generate new invite code
-        </button>
-      </div>
+        <div className="flex flex-col gap-3 border-t border-slate-200 pt-4">
+          <h3 className="text-sm font-semibold text-slate-900">Rotate invite code</h3>
+          <Checkbox
+            label="I understand the previous invite code will stop working for new signups"
+            checked={isConfirmed}
+            onChange={(event) => setIsConfirmed(event.target.checked)}
+          />
+          <Button variant="primary" type="button" disabled={!isConfirmed || isBusy} onClick={rotate} className="self-start">
+            Generate new invite code
+          </Button>
+        </div>
 
-      {rotatedCode ? (
-        <p role="status">
-          New invite code: <code>{rotatedCode}</code>. Copy it now — it will not be shown again.
-        </p>
-      ) : null}
+        {rotatedCode ? (
+          <div className="rounded-lg border border-brand-100 bg-brand-50 p-3">
+            <p role="status" className="text-sm text-brand-700">
+              New invite code: <code className="ml-1 rounded bg-white px-2 py-1 font-mono text-sm text-slate-900">{rotatedCode}</code>. Copy it now — it
+              will not be shown again.
+            </p>
+          </div>
+        ) : null}
 
-      {message ? (
-        <p role={message.kind === "error" ? "alert" : "status"} aria-label={message.kind === "error" ? "Invite settings error" : undefined}>
-          {message.text}
-        </p>
-      ) : null}
+        {message ? (
+          <Alert kind={message.kind === "error" ? "error" : "success"} role={message.kind === "error" ? "alert" : "status"} aria-label={message.kind === "error" ? "Invite settings error" : undefined}>
+            {message.text}
+          </Alert>
+        ) : null}
+      </Card>
     </section>
   );
 }

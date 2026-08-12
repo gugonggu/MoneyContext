@@ -2,6 +2,11 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Checkbox } from "@/components/ui/Checkbox";
+
 const RESTORE_SUCCESS_FRAGMENT = "#backup-restored";
 const RESTORE_SUCCESS_MESSAGE = "Backup restored. Your financial data has been refreshed.";
 
@@ -72,37 +77,64 @@ export function BackupRestore() {
   }
 
   return (
-    <section aria-labelledby="backup-restore-heading">
-      <h2 id="backup-restore-heading">Backup and restore</h2>
-      <p>Download a complete copy of your financial data, or restore a previously downloaded backup.</p>
-
-      <a href="/api/backup" download>
-        Download full backup
-      </a>
-
+    <section aria-labelledby="backup-restore-heading" className="flex flex-col gap-4">
       <div>
-        <h3>Restore from backup</h3>
-        <label>
-          Choose a JSON backup file
-          <input ref={fileInputRef} type="file" accept=".json,application/json" onChange={selectFile} />
-        </label>
-
-        {file ? (
-          <>
-            <p>{file.name}</p>
-            <p role="status" aria-live="polite" aria-label="Restore replacement warning">Restoring this backup will replace your current financial data. This cannot be undone.</p>
-            <label>
-              <input type="checkbox" checked={isConfirmed} onChange={(event) => setIsConfirmed(event.target.checked)} />
-              I understand that restoring replaces my current financial data
-            </label>
-            <button type="button" disabled={!isConfirmed || isRestoring} onClick={restore}>
-              {isRestoring ? "Restoring backup..." : "Restore backup"}
-            </button>
-          </>
-        ) : null}
+        <h2 id="backup-restore-heading" className="text-lg font-semibold text-slate-900">
+          Backup and restore
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">Download a complete copy of your financial data, or restore a previously downloaded backup.</p>
       </div>
 
-      {message || hasRestoreSuccess ? <p role={message?.kind === "error" ? "alert" : "status"} aria-label={message?.kind === "error" ? "Restore error" : undefined}>{message?.text ?? RESTORE_SUCCESS_MESSAGE}</p> : null}
+      <Card className="flex flex-col gap-4">
+        <a
+          href="/api/backup"
+          download
+          className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+        >
+          Download full backup
+        </a>
+
+        <div className="flex flex-col gap-3 border-t border-slate-200 pt-4">
+          <h3 className="text-sm font-semibold text-slate-900">Restore from backup</h3>
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
+            Choose a JSON backup file
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              onChange={selectFile}
+              className="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100"
+            />
+          </label>
+
+          {file ? (
+            <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-sm font-medium text-slate-700">{file.name}</p>
+              <p role="status" aria-live="polite" aria-label="Restore replacement warning" className="text-sm text-slate-600">
+                Restoring this backup will replace your current financial data. This cannot be undone.
+              </p>
+              <Checkbox
+                label="I understand that restoring replaces my current financial data"
+                checked={isConfirmed}
+                onChange={(event) => setIsConfirmed(event.target.checked)}
+              />
+              <Button variant="danger" type="button" disabled={!isConfirmed || isRestoring} onClick={restore} className="self-start">
+                {isRestoring ? "Restoring backup..." : "Restore backup"}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+
+        {message || hasRestoreSuccess ? (
+          <Alert
+            kind={message?.kind === "error" ? "error" : "success"}
+            role={message?.kind === "error" ? "alert" : "status"}
+            aria-label={message?.kind === "error" ? "Restore error" : undefined}
+          >
+            {message?.text ?? RESTORE_SUCCESS_MESSAGE}
+          </Alert>
+        ) : null}
+      </Card>
     </section>
   );
 }

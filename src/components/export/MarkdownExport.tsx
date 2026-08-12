@@ -2,6 +2,13 @@
 
 import { useRef, useState, useTransition } from "react";
 
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { cx } from "@/components/ui/cx";
+import { Select } from "@/components/ui/Select";
+import { TextField } from "@/components/ui/TextField";
+
 export type MarkdownExportRequest = Readonly<{
   preset: "SPENDING_REVIEW" | "BUDGET_REVIEW" | "FINANCIAL_HEALTH";
   period:
@@ -118,88 +125,130 @@ export function MarkdownExport({ initialMarkdown, onGenerate }: Readonly<{ initi
   }
 
   return (
-    <section aria-labelledby="markdown-export-heading">
-      <h1 id="markdown-export-heading">GPT Markdown 내보내기</h1>
-      <p>선택한 기간의 데이터를 GPT에 붙여 넣을 수 있는 Markdown으로 만듭니다.</p>
+    <section aria-labelledby="markdown-export-heading" className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mb-6">
+        <h1 id="markdown-export-heading" className="text-2xl font-bold tracking-tight text-slate-900">
+          GPT Markdown 내보내기
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">선택한 기간의 데이터를 GPT에 붙여 넣을 수 있는 Markdown으로 만듭니다.</p>
+      </div>
 
-      <label>
-        분석 목적
-        <select value={preset} onChange={(event) => setPreset(event.target.value as MarkdownExportRequest["preset"])}>
+      <Card className="flex flex-col gap-5">
+        <Select label="분석 목적" value={preset} onChange={(event) => setPreset(event.target.value as MarkdownExportRequest["preset"])}>
           {PRESETS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
-        </select>
-      </label>
+        </Select>
 
-      <div role="radiogroup" aria-label="기간 선택">
-        {PERIOD_OPTIONS.map((option, index) => (
-          <button
-            key={option.kind}
-            ref={(element) => { periodRadioRefs.current[index] = element; }}
-            type="button"
-            role="radio"
-            aria-checked={periodKind === option.kind}
-            tabIndex={periodKind === option.kind ? 0 : -1}
-            onClick={() => setPeriodKind(option.kind)}
-            onKeyDown={(event) => handlePeriodKeyDown(event, index)}
+        <div role="radiogroup" aria-label="기간 선택" className="flex flex-wrap gap-2">
+          {PERIOD_OPTIONS.map((option, index) => (
+            <button
+              key={option.kind}
+              ref={(element) => { periodRadioRefs.current[index] = element; }}
+              type="button"
+              role="radio"
+              aria-checked={periodKind === option.kind}
+              tabIndex={periodKind === option.kind ? 0 : -1}
+              onClick={() => setPeriodKind(option.kind)}
+              onKeyDown={(event) => handlePeriodKeyDown(event, index)}
+              className={cx(
+                "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                periodKind === option.kind
+                  ? "border-brand-600 bg-brand-600 text-white"
+                  : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50",
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        {periodKind === "RECENT" ? (
+          <Select
+            label="최근 기간"
+            value={recentMonths}
+            onChange={(event) => setRecentMonths(Number(event.target.value) as 1 | 3 | 6)}
+            className="max-w-xs"
           >
-            {option.label}
-          </button>
-        ))}
-      </div>
-
-      {periodKind === "RECENT" ? (
-        <label>
-          최근 기간
-          <select value={recentMonths} onChange={(event) => setRecentMonths(Number(event.target.value) as 1 | 3 | 6)}>
             <option value={1}>최근 1개월</option>
             <option value={3}>최근 3개월</option>
             <option value={6}>최근 6개월</option>
-          </select>
-        </label>
-      ) : null}
+          </Select>
+        ) : null}
 
-      {periodKind === "MONTH" ? (
-        <label>
-          월
-          <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
-        </label>
-      ) : null}
+        {periodKind === "MONTH" ? (
+          <TextField
+            label="월"
+            type="month"
+            value={month}
+            onChange={(event) => setMonth(event.target.value)}
+            className="max-w-xs"
+          />
+        ) : null}
 
-      {periodKind === "CUSTOM" ? (
-        <>
-          <label>
-            시작일
-            <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
-          </label>
-          <label>
-            종료일
-            <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
-          </label>
-        </>
-      ) : null}
+        {periodKind === "CUSTOM" ? (
+          <div className="flex flex-wrap gap-4">
+            <TextField
+              label="시작일"
+              type="date"
+              value={startDate}
+              onChange={(event) => setStartDate(event.target.value)}
+              className="max-w-xs"
+            />
+            <TextField
+              label="종료일"
+              type="date"
+              value={endDate}
+              onChange={(event) => setEndDate(event.target.value)}
+              className="max-w-xs"
+            />
+          </div>
+        ) : null}
 
-      <button type="button" onClick={refreshPreview} disabled={isPending}>
-        {isPending ? "생성 중..." : "미리보기 갱신"}
-      </button>
-      <button type="button" onClick={copyMarkdown}>
-        Markdown 복사
-      </button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" onClick={refreshPreview} disabled={isPending}>
+            {isPending ? "생성 중..." : "미리보기 갱신"}
+          </Button>
+          <Button type="button" variant="secondary" onClick={copyMarkdown}>
+            Markdown 복사
+          </Button>
+        </div>
 
-      {message ? <p role={message === "복사되었습니다." ? "status" : "alert"}>{message}</p> : null}
+        {message ? (
+          <Alert kind={message === "복사되었습니다." ? "success" : "error"} role={message === "복사되었습니다." ? "status" : "alert"}>
+            {message}
+          </Alert>
+        ) : null}
+      </Card>
 
-      <h2>Markdown 미리보기</h2>
-      <pre aria-label="Markdown 미리보기" tabIndex={0}>{markdown}</pre>
-      <div role="group" aria-label="분석 데이터 다운로드">
-        <a href={downloadHref("json")} download>
-          JSON 다운로드
-        </a>
-        <a href={downloadHref("csv")} download>
-          CSV 다운로드
-        </a>
-      </div>
+      <Card className="mt-6 flex flex-col gap-3">
+        <h2 className="text-base font-semibold text-slate-900">Markdown 미리보기</h2>
+        <pre
+          aria-label="Markdown 미리보기"
+          tabIndex={0}
+          className="max-h-96 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-xs whitespace-pre-wrap text-slate-800"
+        >
+          {markdown}
+        </pre>
+        <div role="group" aria-label="분석 데이터 다운로드" className="flex flex-wrap gap-2">
+          <a
+            href={downloadHref("json")}
+            download
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+          >
+            JSON 다운로드
+          </a>
+          <a
+            href={downloadHref("csv")}
+            download
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+          >
+            CSV 다운로드
+          </a>
+        </div>
+      </Card>
     </section>
   );
 }

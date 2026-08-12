@@ -1,4 +1,5 @@
 import { QuickEntryForm, type QuickEntryState } from "@/components/transactions/QuickEntryForm";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { listAccountsForCurrentUser } from "@/server/accounts";
 import { assignTagForCurrentUser, listCategoriesForCurrentUser, listTagsForCurrentUser } from "@/server/categories";
 import { createInstallmentPurchaseForCurrentUser } from "@/server/installments";
@@ -82,7 +83,7 @@ export default async function NewTransactionPage() {
 
   return (
     <div>
-      <h1>거래 입력</h1>
+      <PageHeader title="거래 입력" />
       <QuickEntryForm
         accounts={accounts.map((account) => ({ id: account.id, name: account.name, type: account.type }))}
         categories={categories.map((category) => ({ id: category.id, name: category.name, kind: category.kind }))}

@@ -7,6 +7,12 @@ import {
   rankFrequentCategoryAccountCombos,
   rankRecentAccounts,
 } from "@/domain/transactions/pattern-recommendations";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Select } from "@/components/ui/Select";
+import { TextField } from "@/components/ui/TextField";
+import { ToggleButton } from "@/components/ui/ToggleButton";
 
 export type QuickEntryAccount = Readonly<{
   id: string;
@@ -130,226 +136,228 @@ export function QuickEntryForm({
   }
 
   return (
-    <form action={formAction}>
+    <form action={formAction} className="flex flex-col gap-5">
       <input type="hidden" name="type" value={type} />
 
-      <div role="radiogroup" aria-label="거래 유형">
-        {(Object.keys(TYPE_LABELS) as TransactionTypeOption[]).map((value) => (
-          <button
-            key={value}
-            type="button"
-            role="radio"
-            aria-checked={type === value}
-            onClick={() => setType(value)}
-          >
-            {TYPE_LABELS[value]}
-          </button>
-        ))}
-      </div>
-
-      <label>
-        금액
-        <input
-          name="amount"
-          inputMode="numeric"
-          pattern="\d*"
-          required
-          autoFocus
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-        />
-      </label>
-
-      {hasSuggestions ? (
-        <div>
-          {recentAccountSuggestions.length > 0 ? (
-            <div>
-              <p>최근 사용 결제수단</p>
-              {recentAccountSuggestions.map((suggestion) => (
-                <button key={suggestion.id} type="button" onClick={() => setAccountId(suggestion.id)}>
-                  {suggestion.name}
-                </button>
-              ))}
-            </div>
-          ) : null}
-
-          {frequentCategorySuggestions.length > 0 ? (
-            <div>
-              <p>자주 쓰는 카테고리</p>
-              {frequentCategorySuggestions.map((suggestion) => (
-                <button key={suggestion.id} type="button" onClick={() => setCategoryId(suggestion.id)}>
-                  {suggestion.name}
-                </button>
-              ))}
-            </div>
-          ) : null}
-
-          {comboSuggestions.length > 0 ? (
-            <div>
-              <p>자주 쓰는 카테고리 + 결제수단 조합</p>
-              {comboSuggestions.map((suggestion) => (
-                <button
-                  key={`${suggestion.categoryId}:${suggestion.accountId}`}
-                  type="button"
-                  onClick={() => {
-                    setCategoryId(suggestion.categoryId);
-                    setAccountId(suggestion.accountId);
-                  }}
-                >
-                  {suggestion.categoryName} · {suggestion.accountName}
-                </button>
-              ))}
-            </div>
-          ) : null}
+      <Card className="flex flex-col gap-5">
+        <div role="radiogroup" aria-label="거래 유형" className="flex gap-1.5 rounded-full bg-slate-100 p-1">
+          {(Object.keys(TYPE_LABELS) as TransactionTypeOption[]).map((value) => (
+            <ToggleButton
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={type === value}
+              onClick={() => setType(value)}
+              className="flex-1 text-center"
+            >
+              {TYPE_LABELS[value]}
+            </ToggleButton>
+          ))}
         </div>
-      ) : null}
 
-      {type === "TRANSFER" ? (
-        <>
-          <label>
-            출금 계좌
-            <select name="fromAccountId" required value={fromAccountId} onChange={(event) => setFromAccountId(event.target.value)}>
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            입금 계좌
-            <select name="toAccountId" required value={toAccountId} onChange={(event) => setToAccountId(event.target.value)}>
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </>
-      ) : (
-        <>
-          <label>
-            카테고리
-            <select name="categoryId" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
-              <option value="">선택 안 함</option>
-              {visibleCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            결제수단
-            <select name="accountId" required value={accountId} onChange={(event) => setAccountId(event.target.value)}>
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </>
-      )}
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-slate-700">금액</span>
+          <input
+            name="amount"
+            inputMode="numeric"
+            pattern="\d*"
+            required
+            autoFocus
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            placeholder="0"
+            className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-3xl font-bold tracking-tight text-slate-900 outline-none transition-colors placeholder:text-slate-300 focus:border-brand-600 disabled:bg-slate-100 disabled:text-slate-400"
+          />
+        </label>
 
-      <button type="button" onClick={() => setShowDetails((value) => !value)} aria-expanded={showDetails}>
-        상세 옵션 {showDetails ? "숨기기" : "펼치기"}
-      </button>
+        {hasSuggestions ? (
+          <div className="flex flex-col gap-3">
+            {recentAccountSuggestions.length > 0 ? (
+              <div>
+                <p className="mb-1.5 text-xs font-semibold text-slate-500">최근 사용 결제수단</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {recentAccountSuggestions.map((suggestion) => (
+                    <ToggleButton key={suggestion.id} type="button" onClick={() => setAccountId(suggestion.id)}>
+                      {suggestion.name}
+                    </ToggleButton>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
-      {showDetails ? (
-        <div>
-          <label>
-            날짜/시간
-            <input
+            {frequentCategorySuggestions.length > 0 ? (
+              <div>
+                <p className="mb-1.5 text-xs font-semibold text-slate-500">자주 쓰는 카테고리</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {frequentCategorySuggestions.map((suggestion) => (
+                    <ToggleButton key={suggestion.id} type="button" onClick={() => setCategoryId(suggestion.id)}>
+                      {suggestion.name}
+                    </ToggleButton>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {comboSuggestions.length > 0 ? (
+              <div>
+                <p className="mb-1.5 text-xs font-semibold text-slate-500">자주 쓰는 카테고리 + 결제수단 조합</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {comboSuggestions.map((suggestion) => (
+                    <ToggleButton
+                      key={`${suggestion.categoryId}:${suggestion.accountId}`}
+                      type="button"
+                      onClick={() => {
+                        setCategoryId(suggestion.categoryId);
+                        setAccountId(suggestion.accountId);
+                      }}
+                    >
+                      {suggestion.categoryName} · {suggestion.accountName}
+                    </ToggleButton>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {type === "TRANSFER" ? (
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="flex-1">
+              <Select label="출금 계좌" name="fromAccountId" required value={fromAccountId} onChange={(event) => setFromAccountId(event.target.value)}>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="flex-1">
+              <Select label="입금 계좌" name="toAccountId" required value={toAccountId} onChange={(event) => setToAccountId(event.target.value)}>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="flex-1">
+              <Select label="카테고리" name="categoryId" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+                <option value="">선택 안 함</option>
+                {visibleCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="flex-1">
+              <Select label="결제수단" name="accountId" required value={accountId} onChange={(event) => setAccountId(event.target.value)}>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card className="flex flex-col gap-4">
+        <Button type="button" variant="ghost" onClick={() => setShowDetails((value) => !value)} aria-expanded={showDetails} className="self-start">
+          상세 옵션 {showDetails ? "숨기기" : "펼치기"}
+        </Button>
+
+        {showDetails ? (
+          <div className="flex flex-col gap-4 border-t border-slate-100 pt-4">
+            <TextField
+              label="날짜/시간"
               name="transactionAt"
               type="datetime-local"
               value={transactionAt}
               onChange={(event) => setTransactionAt(event.target.value)}
             />
-          </label>
 
-          <label>
-            메모
-            <input name="memo" type="text" value={memo} onChange={(event) => setMemo(event.target.value)} />
-          </label>
+            <TextField label="메모" name="memo" type="text" value={memo} onChange={(event) => setMemo(event.target.value)} />
 
-          <fieldset>
-            <legend>태그</legend>
-            {tags.map((tag) => (
-              <button
-                key={tag.id}
-                type="button"
-                role="checkbox"
-                aria-checked={selectedTagIds.has(tag.id)}
-                onClick={() => toggleTag(tag.id)}
-              >
-                {tag.name}
-              </button>
-            ))}
-            {Array.from(selectedTagIds).map((tagId) => (
-              <input key={tagId} type="hidden" name="tagIds" value={tagId} />
-            ))}
-          </fieldset>
-
-          <label>
-            통화
-            <select name="currency" value={currency} onChange={(event) => setCurrency(event.target.value)}>
-              {CURRENCIES.map((code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
+            <fieldset className="flex flex-col gap-2">
+              <legend className="text-sm font-medium text-slate-700">태그</legend>
+              <div className="flex flex-wrap gap-1.5">
+                {tags.map((tag) => (
+                  <ToggleButton key={tag.id} type="button" role="checkbox" aria-checked={selectedTagIds.has(tag.id)} onClick={() => toggleTag(tag.id)}>
+                    {tag.name}
+                  </ToggleButton>
+                ))}
+              </div>
+              {Array.from(selectedTagIds).map((tagId) => (
+                <input key={tagId} type="hidden" name="tagIds" value={tagId} />
               ))}
-            </select>
-          </label>
+            </fieldset>
 
-          {currency !== "KRW" ? (
-            <label>
-              환율
-              <input
-                name="exchangeRate"
-                inputMode="decimal"
-                required
-                value={exchangeRate}
-                onChange={(event) => setExchangeRate(event.target.value)}
-              />
-            </label>
-          ) : null}
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <div className="flex-1">
+                <Select label="통화" name="currency" value={currency} onChange={(event) => setCurrency(event.target.value)}>
+                  {CURRENCIES.map((code) => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
+                </Select>
+              </div>
 
-          {type === "EXPENSE" && hasCreditCardAccount ? (
-            <>
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked={installment}
-                onClick={() => setInstallment((value) => !value)}
-              >
-                할부로 결제
-              </button>
-              {installment ? <input type="hidden" name="installment" value="on" /> : null}
-              {installment ? (
-                <label>
-                  할부 개월
-                  <input
+              {currency !== "KRW" ? (
+                <div className="flex-1">
+                  <TextField
+                    label="환율"
+                    name="exchangeRate"
+                    inputMode="decimal"
+                    required
+                    value={exchangeRate}
+                    onChange={(event) => setExchangeRate(event.target.value)}
+                  />
+                </div>
+              ) : null}
+            </div>
+
+            {type === "EXPENSE" && hasCreditCardAccount ? (
+              <div className="flex flex-col gap-3">
+                <ToggleButton type="button" role="checkbox" aria-checked={installment} onClick={() => setInstallment((value) => !value)} className="self-start">
+                  할부로 결제
+                </ToggleButton>
+                {installment ? <input type="hidden" name="installment" value="on" /> : null}
+                {installment ? (
+                  <TextField
+                    label="할부 개월"
                     name="installmentCount"
                     inputMode="numeric"
                     pattern="\d*"
                     value={installmentCount}
                     onChange={(event) => setInstallmentCount(event.target.value)}
                   />
-                </label>
-              ) : null}
-            </>
-          ) : null}
-        </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </Card>
+
+      {state.status === "error" ? (
+        <Alert kind="error" role="alert">
+          {state.message}
+        </Alert>
+      ) : null}
+      {state.status === "success" ? (
+        <Alert kind="success" role="status">
+          저장했습니다.
+        </Alert>
       ) : null}
 
-      {state.status === "error" ? <p role="alert">{state.message}</p> : null}
-      {state.status === "success" ? <p role="status">저장했습니다.</p> : null}
-
-      <button type="submit" disabled={isPending}>
+      <Button type="submit" disabled={isPending} className="w-full">
         저장
-      </button>
+      </Button>
     </form>
   );
 }

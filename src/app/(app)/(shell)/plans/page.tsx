@@ -43,5 +43,15 @@ async function createGoal(_: { status: "idle" | "success" | "error"; message?: s
 
 export default async function PlansPage() {
   const [overview, categories] = await Promise.all([getPlanningOverviewForCurrentUser(), listCategoriesForCurrentUser()]);
-  return <><PlanningOverview overview={overview} /><MonthlyBudgetForm action={saveMonthlyBudget} /><CategoryBudgetForm categories={categories.map(({ id, name }) => ({ id, name }))} action={saveCategoryBudget} /><SavingsGoalForm action={createGoal} /><SavingsContributionForm goals={overview.goals.map(({ id, name }) => ({ id, name }))} action={addContribution} /></>;
+  return (
+    <div className="flex flex-col gap-8">
+      <PlanningOverview overview={overview} />
+      <div className="flex flex-col gap-4">
+        <MonthlyBudgetForm action={saveMonthlyBudget} />
+        <CategoryBudgetForm categories={categories.map(({ id, name }) => ({ id, name }))} action={saveCategoryBudget} />
+        <SavingsGoalForm action={createGoal} />
+        <SavingsContributionForm goals={overview.goals.map(({ id, name }) => ({ id, name }))} action={addContribution} />
+      </div>
+    </div>
+  );
 }

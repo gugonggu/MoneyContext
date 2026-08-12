@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/ui/Button";
+
 export function DeleteTransactionButton({
   id,
   query,
@@ -14,7 +16,9 @@ export function DeleteTransactionButton({
     >
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="query" value={query} />
-      <button type="submit">삭제</button>
+      <Button type="submit" variant="ghost">
+        삭제
+      </Button>
     </form>
   );
 }
