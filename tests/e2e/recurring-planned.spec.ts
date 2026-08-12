@@ -61,6 +61,6 @@ test.describe("critical path: planned transactions", () => {
     await expect(page.getByText("확정됨")).toBeVisible();
 
     await page.goto("/home");
-    await expect(page.getByText("Expense: 30,000")).toBeVisible();
+    await expect(page.getByText("지출 30,000원")).toBeVisible();
   });
 });

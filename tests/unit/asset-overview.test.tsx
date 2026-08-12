@@ -22,20 +22,20 @@ describe("AssetOverview", () => {
 
     expect(screen.getByText("Main bank")).toBeTruthy();
     expect(screen.getByText("Card")).toBeTruthy();
-    expect(screen.getByText(/Next payment: 2026-09-10/)).toBeTruthy();
+    expect(screen.getByText(/다음 결제일 2026-09-10/)).toBeTruthy();
     expect(screen.getByText(/2026-09-10.*50,000/)).toBeTruthy();
-    expect(screen.getByText("1,000,000")).toBeTruthy();
+    expect(screen.getAllByText(/1,000,000/).length).toBeGreaterThan(0);
   });
 
   it("submits a reconciliation balance and preserves it when the action fails", async () => {
-    const action = vi.fn(async () => ({ status: "error" as const, message: "Unable to reconcile" }));
+    const action = vi.fn(async () => ({ status: "error" as const, message: "잔액 조정에 실패했습니다" }));
     render(<AssetOverview overview={overview} action={action} />);
 
-    fireEvent.change(screen.getByLabelText("Actual balance for Main bank"), { target: { value: "950000" } });
-    fireEvent.submit(screen.getByLabelText("Reconcile Main bank").closest("form")!);
+    fireEvent.change(screen.getByLabelText("Main bank 실제 잔액"), { target: { value: "950000" } });
+    fireEvent.submit(screen.getByLabelText("Main bank 잔액 조정").closest("form")!);
 
     await waitFor(() => screen.getByRole("alert"));
-    expect(screen.getByRole("alert").textContent).toContain("Unable to reconcile");
-    expect((screen.getByLabelText("Actual balance for Main bank") as HTMLInputElement).value).toBe("950000");
+    expect(screen.getByRole("alert").textContent).toContain("잔액 조정에 실패했습니다");
+    expect((screen.getByLabelText("Main bank 실제 잔액") as HTMLInputElement).value).toBe("950000");
   });
 });

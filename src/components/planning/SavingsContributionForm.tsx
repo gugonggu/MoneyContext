@@ -10,18 +10,18 @@ type State = Readonly<{ status: "idle" | "success" | "error"; message?: string }
 export function SavingsContributionForm({ goals, action }: Readonly<{ goals: readonly { id: string; name: string }[]; action: (state: State, formData: FormData) => Promise<State> }>) {
   const [state, formAction] = useActionState(action, { status: "idle" });
   return (
-    <form action={formAction} className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <h2 className="text-base font-semibold text-slate-900">Add savings contribution</h2>
-      <Select label="Goal" name="goalId" required>
+    <form action={formAction} className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-800 dark:bg-slate-900">
+      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">저축 납입 추가</h2>
+      <Select label="목표" name="goalId" required>
         {goals.map((goal) => (
           <option key={goal.id} value={goal.id}>
             {goal.name}
           </option>
         ))}
       </Select>
-      <TextField label="Amount" name="amount" inputMode="numeric" required />
-      <TextField label="Date" name="contributionDate" type="date" required />
-      <Button type="submit">Add contribution</Button>
+      <TextField label="금액" name="amount" inputMode="numeric" required />
+      <TextField label="날짜" name="contributionDate" type="date" required />
+      <Button type="submit">납입 추가</Button>
       {state.status === "error" ? <Alert kind="error" role="alert">{state.message}</Alert> : null}
     </form>
   );

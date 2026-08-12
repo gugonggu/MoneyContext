@@ -37,7 +37,7 @@ test.describe("E2E-001: first user onboarding", () => {
     await expect(page.getByRole("status")).toHaveText("저장했습니다.");
 
     await page.goto("/home");
-    await expect(page.getByText("Expense: 15,000")).toBeVisible();
-    await expect(page.getByText("Liquid assets: 85,000")).toBeVisible();
+    await expect(page.getByText("지출 15,000원")).toBeVisible();
+    await expect(page.getByText("유동 자산 85,000원")).toBeVisible();
   });
 });
