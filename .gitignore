@@ -20,3 +20,4 @@
 # TypeScript build metadata
 *.tsbuildinfo
 .worktrees/
+.superpowers/sdd/
