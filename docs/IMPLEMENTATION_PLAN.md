@@ -423,11 +423,11 @@
 
 ### Task 36: Admin invite settings
 
-- [ ] Build ADMIN-only signup settings.
-- [ ] Implement invite code rotation using hash.
-- [ ] Implement signup enabled toggle.
-- [ ] Verify ADMIN cannot browse finance data of other users.
-- [ ] Commit: `feat: add invite administration`.
+- [x] Build ADMIN-only signup settings.
+- [x] Implement invite code rotation using hash.
+- [x] Implement signup enabled toggle.
+- [x] Verify ADMIN cannot browse finance data of other users.
+- [x] Commit: `feat: add invite administration`. (Delivered across commits `refactor: extract shared invite code hashing helper` .. `test: verify admin update attempt leaves account name unchanged`; see `docs/superpowers/plans/2026-08-12-admin-invite-settings.md`.)
 
 ### Task 37: Account deletion
 

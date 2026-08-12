@@ -1,16 +1,13 @@
 import { randomUUID } from "node:crypto";
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { getSupabasePublicConfig } from "@/lib/supabase/config";
 import { createSupabaseAdminClient } from "@/server/supabase/admin";
 
 type TestUser = Readonly<{ id: string; email: string; password: string }>;
 
 const testRunId = randomUUID();
 const admin = createSupabaseAdminClient();
-const { url, anonKey } = getSupabasePublicConfig();
 
 let adminUser: TestUser;
 let regularUser: TestUser;
