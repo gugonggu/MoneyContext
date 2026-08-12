@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Status reconciliation (2026-08-12):** The Task 7–9 implementation items below were reconciled against the committed code. Their dedicated auth/onboarding E2E coverage remains part of Task 39. Task 35 is in progress: schema validation, safe remapping, and user-scoped export are complete; restore is not yet implemented.
+
 **Goal:** Money Context의 전체 명세를 하나의 완성형 제품으로 구현하되, 독립적으로 테스트 가능한 작은 Task 단위로 순차 개발한다.
 
 **Architecture:** Next.js App Router와 Supabase를 사용하며, 재정 계산은 UI/DB에서 분리된 domain 계층에 둔다. PostgreSQL transaction과 RLS를 이용해 정합성과 사용자 격리를 보장한다.
@@ -129,35 +131,35 @@
 
 **Produces:** shared invite code → Google login.
 
-- [ ] Implement hashed invite code validation server-side.
-- [ ] Add signup_enabled check.
-- [ ] Configure Google provider.
-- [ ] Implement callback and profile bootstrap.
-- [ ] Test invalid invite, disabled signup, valid OAuth callback.
-- [ ] Commit: `feat: add invite-gated social authentication`.
+- [x] Implement hashed invite code validation server-side.
+- [x] Add signup_enabled check.
+- [x] Configure Google provider.
+- [x] Implement callback and profile bootstrap.
+- [ ] Test invalid invite, disabled signup, valid OAuth callback. (Dedicated coverage remains to be added in Task 39.)
+- [x] Commit: `feat: initialize money context application`.
 
 ### Task 8: Protected app shell and roles
 
 **Produces:** authenticated route group, USER/ADMIN server authorization.
 
-- [ ] Add authenticated layout.
-- [ ] Redirect unauthenticated users.
-- [ ] Add server helper to require current profile.
-- [ ] Add server helper to require ADMIN.
-- [ ] Ensure ADMIN cannot access other users' finance data through admin features.
-- [ ] Commit: `feat: add protected application shell`.
+- [x] Add authenticated layout.
+- [x] Redirect unauthenticated users.
+- [x] Add server helper to require current profile.
+- [x] Add server helper to require ADMIN.
+- [x] Ensure ADMIN cannot access other users' finance data through admin features. (Finance reads remain user-scoped; dedicated regression coverage remains in Task 38.)
+- [x] Commit: `feat: initialize money context application`.
 
 ### Task 9: Onboarding
 
 **Produces:** profile, salary cycle, initial accounts/cards/liabilities setup.
 
-- [ ] Build onboarding form and validation.
-- [ ] Create initial BANK/CASH/LIABILITY accounts.
-- [ ] Support initial CREDIT_CARD configuration.
-- [ ] Seed default categories for new user.
-- [ ] Mark onboarding complete transactionally.
-- [ ] Add E2E onboarding test.
-- [ ] Commit: `feat: add financial onboarding flow`.
+- [x] Build onboarding form and validation.
+- [x] Create initial BANK/CASH/LIABILITY accounts.
+- [x] Support initial CREDIT_CARD configuration.
+- [x] Seed default categories for new user.
+- [x] Mark onboarding complete transactionally.
+- [ ] Add E2E onboarding test. (Task 39 / E2E-001.)
+- [x] Commit: `feat: initialize money context application`.
 
 # Stage D — Domain Engine
 
@@ -411,13 +413,13 @@
 
 ### Task 35: Full backup and restore
 
-- [ ] Implement Backup JSON schema v1.
-- [ ] Implement full backup export.
-- [ ] Implement preflight schema validation.
-- [ ] Implement UUID/user ownership remapping.
+- [x] Implement Backup JSON schema v1.
+- [x] Implement full backup export.
+- [x] Implement preflight schema validation.
+- [x] Implement UUID/user ownership remapping.
 - [ ] Implement transactional restore.
-- [ ] Add TC-BACKUP tests.
-- [ ] Commit: `feat: add full backup and restore`.
+- [ ] Add TC-BACKUP tests. (Schema, remapping, and export coverage exists; restore round-trip and rollback coverage is pending.)
+- [ ] Commit: `feat: add full backup and restore`. (Partial commits: `feat: add backup schema validation`, `feat: add full backup export`.)
 
 ### Task 36: Admin invite settings
 

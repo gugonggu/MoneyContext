@@ -8,6 +8,8 @@
 
 **Tech Stack:** Next.js 16, TypeScript, Supabase Cloud/Postgres RPC, Vitest.
 
+> **Status reconciliation (2026-08-12):** Tasks 1 and 2 are complete and committed. Tasks 3 and 4 remain the scope of the active Task 35 work.
+
 ## Global Constraints
 
 - Backup schema is `money-context-backup` version `1`; include Seoul metadata.
@@ -21,18 +23,18 @@
 
 **Files:** Create `src/domain/backup/{schema,validate,remap}.ts`; tests `tests/unit/backup-schema.test.ts`, `tests/unit/backup-remap.test.ts`.
 
-- [ ] Write failing tests for v1 metadata, required collections, invalid enum/amount/date rejection, deterministic fresh-ID maps, payload user-id replacement, and dangling reference rejection.
-- [ ] Run focused tests; expect missing module failure.
-- [ ] Implement pure parse/validate/remap functions.
-- [ ] Re-run focused tests and commit `feat: add backup schema validation`.
+- [x] Write failing tests for v1 metadata, required collections, invalid enum/amount/date rejection, deterministic fresh-ID maps, payload user-id replacement, and dangling reference rejection.
+- [x] Run focused tests; expect missing module failure.
+- [x] Implement pure parse/validate/remap functions.
+- [x] Re-run focused tests and commit `feat: add backup schema validation`.
 
 ### Task 2: User-scoped backup export
 
 **Files:** Create `src/server/backup/{repository,service,index}.ts`, `src/app/api/backup/route.ts`; tests `tests/unit/backup-service.test.ts`, `tests/integration/backup-export.test.ts`.
 
-- [ ] Write failing tests for all collections, absent sensitive fields, attachment headers, and A/B user isolation.
-- [ ] Implement user-scoped reads and schema-v1 JSON attachment.
-- [ ] Re-run tests/typecheck and commit `feat: add full backup export`.
+- [x] Write failing tests for all collections, absent sensitive fields, attachment headers, and A/B user isolation.
+- [x] Implement user-scoped reads and schema-v1 JSON attachment.
+- [x] Re-run tests/typecheck and commit `feat: add full backup export`.
 
 ### Task 3: Atomic restore RPC and service
 
