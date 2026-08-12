@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BackupRestore } from "@/components/settings/BackupRestore";
@@ -18,8 +19,9 @@ afterEach(() => {
   cleanup();
   refresh.mockReset();
   reload.mockReset();
-  window.sessionStorage.clear();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  window.sessionStorage.clear();
 });
 
 function renderBackupRestore() {
@@ -27,6 +29,14 @@ function renderBackupRestore() {
 }
 
 describe("backup and restore controls", () => {
+  it("does not require browser storage while server rendering", () => {
+    vi.stubGlobal("window", undefined);
+
+    expect(() => renderToString(<BackupRestore />)).not.toThrow();
+
+    vi.unstubAllGlobals();
+  });
+
   it("announces a completed restore after reload and consumes the success flag", () => {
     window.sessionStorage.setItem("money-context.backup-restored", "1");
 
@@ -88,6 +98,24 @@ describe("backup and restore controls", () => {
     expect((await screen.findByRole("status")).textContent).toContain("Backup restored");
     expect(reload).toHaveBeenCalledTimes(1);
     expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("still reloads after a successful restore when saving the success marker fails", async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("Storage is unavailable");
+    });
+    renderBackupRestore();
+
+    const file = new File(['{"schema_version":1}'], "backup.json", { type: "application/json" });
+    fireEvent.change(screen.getByLabelText("Choose a JSON backup file"), { target: { files: [file] } });
+    fireEvent.click(screen.getByLabelText("I understand that restoring replaces my current financial data"));
+    fireEvent.click(screen.getByRole("button", { name: "Restore backup" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alert", { name: "Restore error" })).toBeNull();
   });
 
   it("clears the selected backup and confirmation after restore so it cannot submit again", async () => {
