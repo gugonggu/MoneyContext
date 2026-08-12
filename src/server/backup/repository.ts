@@ -88,5 +88,9 @@ export function createBackupRepository(supabase: SupabaseClient): BackupReposito
         savings_contributions: numericRows(savingsContributionsResult, ["amount"]) as BackupReadData["savings_contributions"],
       };
     },
+    async restoreBackup(payload): Promise<void> {
+      const { error } = await supabase.rpc("restore_backup", { input_backup: payload });
+      if (error) throw new Error(error.message);
+    },
   };
 }
