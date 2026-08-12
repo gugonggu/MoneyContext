@@ -37,7 +37,7 @@ describe("backup and restore controls", () => {
 
     expect(input.getAttribute("accept")).toBe(".json,application/json");
     expect(screen.getByText("backup.json")).toBeTruthy();
-    expect(screen.getByRole("alert").textContent).toContain("replace your current financial data");
+    expect(screen.getByText(/replace your current financial data/).textContent).toContain("replace your current financial data");
   });
 
   it("requires explicit replacement confirmation before restore is enabled", () => {
@@ -71,6 +71,37 @@ describe("backup and restore controls", () => {
     });
     expect((await screen.findByRole("status")).textContent).toContain("Backup restored");
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears the selected backup and confirmation after restore so it cannot submit again", async () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    renderBackupRestore();
+
+    const file = new File(['{"schema_version":1}'], "backup.json", { type: "application/json" });
+    fireEvent.change(screen.getByLabelText("Choose a JSON backup file"), { target: { files: [file] } });
+    fireEvent.click(screen.getByLabelText("I understand that restoring replaces my current financial data"));
+    fireEvent.click(screen.getByRole("button", { name: "Restore backup" }));
+
+    await screen.findByRole("status");
+    expect(screen.queryByText("backup.json")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Restore backup" })).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports invalid selected JSON through an accessible alert without losing the selected file", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    renderBackupRestore();
+
+    const file = new File(["not JSON"], "broken-backup.json", { type: "application/json" });
+    fireEvent.change(screen.getByLabelText("Choose a JSON backup file"), { target: { files: [file] } });
+    fireEvent.click(screen.getByLabelText("I understand that restoring replaces my current financial data"));
+    fireEvent.click(screen.getByRole("button", { name: "Restore backup" }));
+
+    expect((await screen.findByRole("alert", { name: "Restore error" })).textContent).toContain("not valid JSON");
+    expect(screen.getByText("broken-backup.json")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("retains the selected backup and reports an accessible error when restore fails", async () => {
