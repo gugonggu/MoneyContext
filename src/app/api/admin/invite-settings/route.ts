@@ -4,7 +4,7 @@ import { NoInviteCodeError } from "@/server/admin/invite-settings/errors";
 
 export async function GET(): Promise<Response> {
   await requireAdminProfile();
-  return Response.json(await getInviteSettingsStatus());
+  return Response.json(await getInviteSettingsStatus(), { headers: { "cache-control": "no-store" } });
 }
 
 export async function PATCH(request: Request): Promise<Response> {

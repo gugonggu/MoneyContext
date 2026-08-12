@@ -29,7 +29,7 @@ describe("AdminInviteSettings", () => {
     render(<AdminInviteSettings />);
     await screen.findByLabelText("Signup enabled");
 
-    fireEvent.click(screen.getByLabelText("I understand the previous invite code will stop working"));
+    fireEvent.click(screen.getByLabelText("I understand the previous invite code will stop working for new signups"));
     fireEvent.click(screen.getByRole("button", { name: "Generate new invite code" }));
 
     expect(await screen.findByText("FRESH-CODE-123")).toBeTruthy();
@@ -70,7 +70,7 @@ describe("AdminInviteSettings", () => {
     render(<AdminInviteSettings />);
     await screen.findByLabelText("Signup enabled");
 
-    fireEvent.click(screen.getByLabelText("I understand the previous invite code will stop working"));
+    fireEvent.click(screen.getByLabelText("I understand the previous invite code will stop working for new signups"));
     fireEvent.click(screen.getByRole("button", { name: "Generate new invite code" }));
 
     expect((await screen.findByRole("alert", { name: "Invite settings error" })).textContent).toContain("Unable to rotate invite code");

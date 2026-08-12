@@ -72,14 +72,20 @@ export function AdminInviteSettings() {
 
       <label>
         Signup enabled
-        <input type="checkbox" checked={status.signupEnabled} disabled={isBusy} onChange={(event) => toggleSignup(event.target.checked)} />
+        <input
+          type="checkbox"
+          checked={status.signupEnabled}
+          disabled={isBusy || !status.hasInviteCode}
+          onChange={(event) => toggleSignup(event.target.checked)}
+        />
       </label>
+      {!status.hasInviteCode ? <p>Generate an invite code below before enabling signup.</p> : null}
 
       <div>
         <h3>Rotate invite code</h3>
         <label>
           <input type="checkbox" checked={isConfirmed} onChange={(event) => setIsConfirmed(event.target.checked)} />
-          I understand the previous invite code will stop working
+          I understand the previous invite code will stop working for new signups
         </label>
         <button type="button" disabled={!isConfirmed || isBusy} onClick={rotate}>
           Generate new invite code
