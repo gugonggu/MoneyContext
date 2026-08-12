@@ -37,13 +37,14 @@ describe("backup and restore controls", () => {
     vi.unstubAllGlobals();
   });
 
-  it("announces a completed restore after reload and consumes the success flag", () => {
-    window.sessionStorage.setItem("money-context.backup-restored", "1");
+  it("announces a completed restore from a non-sensitive URL fragment and removes the fragment", async () => {
+    vi.unstubAllGlobals();
+    window.history.replaceState(null, "", "/settings#backup-restored");
 
     renderBackupRestore();
 
     expect(screen.getByRole("status").textContent).toContain("Backup restored");
-    expect(window.sessionStorage.getItem("money-context.backup-restored")).toBeNull();
+    await waitFor(() => expect(window.location.hash).toBe(""));
   });
 
   it("provides a backup download without retaining backup content in the page", () => {
@@ -100,7 +101,7 @@ describe("backup and restore controls", () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
-  it("still reloads after a successful restore when saving the success marker fails", async () => {
+  it("reloads with a non-sensitive completion fragment when session storage is unavailable", async () => {
     const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
@@ -115,6 +116,7 @@ describe("backup and restore controls", () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(reload).toHaveBeenCalledTimes(1);
+    expect(window.location.hash).toBe("#backup-restored");
     expect(screen.queryByRole("alert", { name: "Restore error" })).toBeNull();
   });
 

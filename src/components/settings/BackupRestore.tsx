@@ -1,9 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
-const RESTORE_SUCCESS_KEY = "money-context.backup-restored";
+const RESTORE_SUCCESS_FRAGMENT = "#backup-restored";
 const RESTORE_SUCCESS_MESSAGE = "Backup restored. Your financial data has been refreshed.";
+
+function subscribeToRestoreFragment(listener: () => void): () => void {
+  window.addEventListener("hashchange", listener);
+  return () => window.removeEventListener("hashchange", listener);
+}
+
+function hasRestoreFragment(): boolean {
+  return window.location.hash === RESTORE_SUCCESS_FRAGMENT;
+}
+
+function noRestoreFragmentOnServer(): boolean {
+  return false;
+}
 
 export function BackupRestore() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -11,16 +24,12 @@ export function BackupRestore() {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [message, setMessage] = useState<Readonly<{ kind: "error" | "success"; text: string }> | null>(null);
+  const hasRestoreSuccess = useSyncExternalStore(subscribeToRestoreFragment, hasRestoreFragment, noRestoreFragmentOnServer);
 
   useEffect(() => {
-    try {
-      if (window.sessionStorage.getItem(RESTORE_SUCCESS_KEY) !== "1") return;
-      window.sessionStorage.removeItem(RESTORE_SUCCESS_KEY);
-      setMessage({ kind: "success", text: RESTORE_SUCCESS_MESSAGE });
-    } catch {
-      // Storage is optional; a restore must not depend on it.
-    }
-  }, []);
+    if (!hasRestoreSuccess) return;
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+  }, [hasRestoreSuccess]);
 
   function selectFile(event: React.ChangeEvent<HTMLInputElement>) {
     setFile(event.target.files?.[0] ?? null);
@@ -49,12 +58,8 @@ export function BackupRestore() {
       setFile(null);
       setIsConfirmed(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      try {
-        window.sessionStorage.setItem(RESTORE_SUCCESS_KEY, "1");
-      } catch {
-        // Storage is optional; a restore must not depend on it.
-      }
       setMessage({ kind: "success", text: RESTORE_SUCCESS_MESSAGE });
+      window.location.hash = RESTORE_SUCCESS_FRAGMENT;
       window.location.reload();
     } catch (error) {
       setMessage({
@@ -97,7 +102,7 @@ export function BackupRestore() {
         ) : null}
       </div>
 
-      {message ? <p role={message.kind === "error" ? "alert" : "status"} aria-label={message.kind === "error" ? "Restore error" : undefined}>{message.text}</p> : null}
+      {message || hasRestoreSuccess ? <p role={message?.kind === "error" ? "alert" : "status"} aria-label={message?.kind === "error" ? "Restore error" : undefined}>{message?.text ?? RESTORE_SUCCESS_MESSAGE}</p> : null}
     </section>
   );
 }
