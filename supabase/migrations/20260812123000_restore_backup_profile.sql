@@ -1,4 +1,4 @@
-create or replace function public.restore_backup(input_backup jsonb)
+create or replace function public.restore_backup_for_current_user(input_backup jsonb)
 returns void
 language plpgsql
 security definer
@@ -19,7 +19,15 @@ begin
     raise exception 'profile not found' using errcode = 'P0002';
   end if;
 
-  -- Remove only the authenticated user's backup-owned financial graph.
+  update public.profiles
+  set
+    display_name = input_backup #>> '{profile,display_name}',
+    base_currency = input_backup #>> '{profile,base_currency}',
+    salary_cycle_day = (input_backup #>> '{profile,salary_cycle_day}')::smallint,
+    timezone = input_backup #>> '{profile,timezone}',
+    onboarding_completed = (input_backup #>> '{profile,onboarding_completed}')::boolean
+  where id = current_user_id;
+
   delete from public.transaction_tags
   where transaction_id in (select id from public.transactions where user_id = current_user_id);
   delete from public.savings_contributions where user_id = current_user_id;
@@ -161,4 +169,4 @@ begin
 end;
 $$;
 
-revoke all on function public.restore_backup(jsonb) from public;
+revoke all on function public.restore_backup_for_current_user(jsonb) from public, authenticated;

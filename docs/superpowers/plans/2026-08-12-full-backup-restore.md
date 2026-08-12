@@ -8,7 +8,7 @@
 
 **Tech Stack:** Next.js 16, TypeScript, Supabase Cloud/Postgres RPC, Vitest.
 
-> **Status reconciliation (2026-08-12):** Tasks 1 and 2 are complete and committed. Tasks 3 and 4 remain the scope of the active Task 35 work.
+> **Status reconciliation (2026-08-12):** Tasks 1, 2, and 3 are complete and committed. Task 4 remains the scope of the active Task 35 work.
 
 ## Global Constraints
 
@@ -40,9 +40,9 @@
 
 **Files:** Create Cloud migration `supabase/migrations/*_backup_restore.sql`; modify `src/server/backup/*`; tests `tests/integration/backup-restore.test.ts`.
 
-- [ ] Write failing round-trip, cross-user payload, and forced-failure rollback tests.
-- [ ] Implement authenticated preflight then RPC-based transactional replacement and remapped inserts.
-- [ ] Apply migration to linked Supabase Cloud, verify remote migration, run integration tests, commit `feat: add transactional backup restore`.
+- [x] Write failing round-trip, cross-user payload, forced-failure rollback, profile restore, and direct-RPC denial tests.
+- [x] Implement authenticated preflight then service-role-only RPC-based transactional replacement, safe profile-field restore, and remapped inserts.
+- [x] Apply migrations to linked Supabase Cloud, verify remote migrations, run integration tests, and commit transactional restore changes.
 
 ### Task 4: Settings backup/restore UI
 

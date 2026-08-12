@@ -138,6 +138,16 @@ function expectCollectionCounts(restored: BackupPayload, source: BackupPayload):
   }
 }
 
+async function safeProfile(userId: string) {
+  const { data, error } = await admin
+    .from("profiles")
+    .select("display_name,base_currency,salary_cycle_day,timezone,onboarding_completed,role")
+    .eq("id", userId)
+    .single();
+  if (error || !data) throw new Error(error?.message ?? "Missing profile");
+  return data;
+}
+
 beforeAll(async () => {
   [userA, userB] = await Promise.all([createTestUser("a"), createTestUser("b")]);
   const { error } = await admin.from("profiles").insert([
@@ -164,6 +174,14 @@ describe("full backup restore", () => {
     if (!debit || !bank) throw new Error("Missing seeded DEBIT or BANK account");
     const debitFirst = structuredClone(backup);
     debitFirst.accounts = [debit, ...backup.accounts.filter((account) => account.id !== debit.id)];
+    const { error: profileMutationError } = await admin.from("profiles").update({
+      display_name: "Changed after backup",
+      base_currency: "USD",
+      salary_cycle_day: 15,
+      timezone: "UTC",
+      onboarding_completed: true,
+    }).eq("id", userA.id);
+    if (profileMutationError) throw new Error(profileMutationError.message);
 
     await service.restore(userA.id, debitFirst);
 
@@ -182,6 +200,14 @@ describe("full backup restore", () => {
     expect(restored.category_budgets).toHaveLength(1);
     expect(restored.savings_goals).toHaveLength(1);
     expect(restored.savings_contributions).toHaveLength(1);
+    await expect(safeProfile(userA.id)).resolves.toEqual({
+      display_name: backup.profile.display_name,
+      base_currency: backup.profile.base_currency,
+      salary_cycle_day: backup.profile.salary_cycle_day,
+      timezone: backup.profile.timezone,
+      onboarding_completed: backup.profile.onboarding_completed,
+      role: "USER",
+    });
   });
 
   it("rejects direct authenticated RPC attempts without mutating another user's transaction tags", async () => {
@@ -195,6 +221,9 @@ describe("full backup restore", () => {
 
     const { error } = await userBClient.rpc("restore_backup", { target_user_id: userB.id, input_backup: backup });
     expect(error?.code).toBe("42501");
+
+    const { error: legacyError } = await userBClient.rpc("restore_backup_for_current_user", { input_backup: backup });
+    expect(legacyError?.code).toBe("42501");
 
     await expect(transactionTagPairs(userA.id)).resolves.toEqual(before);
   });
