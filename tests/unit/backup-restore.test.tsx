@@ -1,17 +1,23 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BackupRestore } from "@/components/settings/BackupRestore";
 
 const refresh = vi.fn();
+const reload = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh }),
 }));
 
+beforeEach(() => {
+  vi.stubGlobal("location", { reload });
+});
+
 afterEach(() => {
   cleanup();
   refresh.mockReset();
+  reload.mockReset();
   vi.unstubAllGlobals();
 });
 
@@ -37,7 +43,7 @@ describe("backup and restore controls", () => {
 
     expect(input.getAttribute("accept")).toBe(".json,application/json");
     expect(screen.getByText("backup.json")).toBeTruthy();
-    expect(screen.getByText(/replace your current financial data/).textContent).toContain("replace your current financial data");
+    expect(screen.getByRole("status", { name: "Restore replacement warning" }).textContent).toContain("replace your current financial data");
   });
 
   it("requires explicit replacement confirmation before restore is enabled", () => {
@@ -53,7 +59,7 @@ describe("backup and restore controls", () => {
     expect((restore as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("posts the selected JSON only after confirmation and refreshes data after a successful restore", async () => {
+  it("posts the selected JSON only after confirmation and immediately reloads data after a successful restore", async () => {
     const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
     renderBackupRestore();
@@ -70,7 +76,8 @@ describe("backup and restore controls", () => {
       body: '{"schema_version":1}',
     });
     expect((await screen.findByRole("status")).textContent).toContain("Backup restored");
-    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(refresh).not.toHaveBeenCalled();
   });
 
   it("clears the selected backup and confirmation after restore so it cannot submit again", async () => {

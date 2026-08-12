@@ -1,20 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 
 export function BackupRestore() {
-  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const reloadTimerRef = useRef<number | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [message, setMessage] = useState<Readonly<{ kind: "error" | "success"; text: string }> | null>(null);
-
-  useEffect(() => () => {
-    if (reloadTimerRef.current !== null) window.clearTimeout(reloadTimerRef.current);
-  }, []);
 
   function selectFile(event: React.ChangeEvent<HTMLInputElement>) {
     setFile(event.target.files?.[0] ?? null);
@@ -44,8 +37,7 @@ export function BackupRestore() {
       setIsConfirmed(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
       setMessage({ kind: "success", text: "Backup restored. Your financial data has been refreshed." });
-      router.refresh();
-      reloadTimerRef.current = window.setTimeout(() => window.location.reload(), 1_500);
+      window.location.reload();
     } catch (error) {
       setMessage({
         kind: "error",
@@ -75,7 +67,7 @@ export function BackupRestore() {
         {file ? (
           <>
             <p>{file.name}</p>
-            <p>Restoring this backup will replace your current financial data. This cannot be undone.</p>
+            <p role="status" aria-live="polite" aria-label="Restore replacement warning">Restoring this backup will replace your current financial data. This cannot be undone.</p>
             <label>
               <input type="checkbox" checked={isConfirmed} onChange={(event) => setIsConfirmed(event.target.checked)} />
               I understand that restoring replaces my current financial data
