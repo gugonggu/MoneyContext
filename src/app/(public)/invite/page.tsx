@@ -95,10 +95,10 @@ export default async function InvitePage({ searchParams }: Readonly<{ searchPara
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-16 dark:bg-slate-950">
-      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Money Context 시작하기</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">초대코드가 있어야 가입 또는 로그인할 수 있어요.</p>
+    <main className="flex min-h-screen items-center justify-center bg-surface-base px-6 py-16">
+      <div className="w-full max-w-sm rounded-card border border-border-subtle bg-surface-raised p-8 shadow-card">
+        <h1 className="text-2xl font-bold tracking-tight text-content-primary">Money Context 시작하기</h1>
+        <p className="mt-1 text-sm text-content-muted">초대코드가 있어야 가입 또는 로그인할 수 있어요.</p>
 
         <form className="mt-6 flex flex-col gap-4">
           <TextField label="초대코드" name="inviteCode" required autoFocus />
@@ -119,8 +119,8 @@ export default async function InvitePage({ searchParams }: Readonly<{ searchPara
           </Button>
 
           <div className="relative py-1 text-center">
-            <span className="relative bg-white px-2 text-xs text-slate-400 dark:bg-slate-900 dark:text-slate-500">또는 이메일로</span>
-            <div className="absolute inset-x-0 top-1/2 -z-10 border-t border-slate-200 dark:border-slate-800" />
+            <span className="relative bg-surface-raised px-2 text-xs text-content-muted">또는 이메일로</span>
+            <div className="absolute inset-x-0 top-1/2 -z-10 border-t border-border-subtle" />
           </div>
 
           <TextField label="이메일" name="email" type="email" autoComplete="email" />

@@ -79,38 +79,38 @@ export function BackupRestore() {
   return (
     <section aria-labelledby="backup-restore-heading" className="flex flex-col gap-4">
       <div>
-        <h2 id="backup-restore-heading" className="text-lg font-semibold text-slate-900">
+        <h2 id="backup-restore-heading" className="text-lg font-semibold text-content-primary">
           Backup and restore
         </h2>
-        <p className="mt-1 text-sm text-slate-500">Download a complete copy of your financial data, or restore a previously downloaded backup.</p>
+        <p className="mt-1 text-sm text-content-muted">Download a complete copy of your financial data, or restore a previously downloaded backup.</p>
       </div>
 
       <Card className="flex flex-col gap-4">
         <a
           href="/api/backup"
           download
-          className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+          className="inline-flex w-fit items-center gap-1.5 rounded-tile border border-border-strong bg-surface-raised px-4 py-2 text-sm font-semibold text-content-secondary shadow-card transition-colors hover:bg-surface-base"
         >
           Download full backup
         </a>
 
-        <div className="flex flex-col gap-3 border-t border-slate-200 pt-4">
-          <h3 className="text-sm font-semibold text-slate-900">Restore from backup</h3>
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-slate-700">
+        <div className="flex flex-col gap-3 border-t border-border-subtle pt-4">
+          <h3 className="text-sm font-semibold text-content-primary">Restore from backup</h3>
+          <label className="flex flex-col gap-1.5 text-sm font-medium text-content-secondary">
             Choose a JSON backup file
             <input
               ref={fileInputRef}
               type="file"
               accept=".json,application/json"
               onChange={selectFile}
-              className="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100"
+              className="text-sm text-content-secondary file:mr-3 file:rounded-tile file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100"
             />
           </label>
 
           {file ? (
-            <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="text-sm font-medium text-slate-700">{file.name}</p>
-              <p role="status" aria-live="polite" aria-label="Restore replacement warning" className="text-sm text-slate-600">
+            <div className="flex flex-col gap-3 rounded-tile border border-border-subtle bg-surface-base p-3">
+              <p className="text-sm font-medium text-content-secondary">{file.name}</p>
+              <p role="status" aria-live="polite" aria-label="Restore replacement warning" className="text-sm text-content-secondary">
                 Restoring this backup will replace your current financial data. This cannot be undone.
               </p>
               <Checkbox

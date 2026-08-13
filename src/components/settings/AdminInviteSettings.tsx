@@ -73,7 +73,7 @@ export function AdminInviteSettings() {
 
   return (
     <section aria-labelledby="admin-invite-settings-heading" className="flex flex-col gap-4">
-      <h2 id="admin-invite-settings-heading" className="text-lg font-semibold text-slate-900">
+      <h2 id="admin-invite-settings-heading" className="text-lg font-semibold text-content-primary">
         Invite settings
       </h2>
 
@@ -84,10 +84,10 @@ export function AdminInviteSettings() {
           disabled={isBusy || !status.hasInviteCode}
           onChange={(event) => toggleSignup(event.target.checked)}
         />
-        {!status.hasInviteCode ? <p className="text-sm text-slate-600">Generate an invite code below before enabling signup.</p> : null}
+        {!status.hasInviteCode ? <p className="text-sm text-content-secondary">Generate an invite code below before enabling signup.</p> : null}
 
-        <div className="flex flex-col gap-3 border-t border-slate-200 pt-4">
-          <h3 className="text-sm font-semibold text-slate-900">Rotate invite code</h3>
+        <div className="flex flex-col gap-3 border-t border-border-subtle pt-4">
+          <h3 className="text-sm font-semibold text-content-primary">Rotate invite code</h3>
           <Checkbox
             label="I understand the previous invite code will stop working for new signups"
             checked={isConfirmed}
@@ -99,9 +99,9 @@ export function AdminInviteSettings() {
         </div>
 
         {rotatedCode ? (
-          <div className="rounded-lg border border-brand-100 bg-brand-50 p-3">
+          <div className="rounded-tile border border-brand-100 bg-brand-50 p-3">
             <p role="status" className="text-sm text-brand-700">
-              New invite code: <code className="ml-1 rounded bg-white px-2 py-1 font-mono text-sm text-slate-900">{rotatedCode}</code>. Copy it now — it
+              New invite code: <code className="ml-1 rounded bg-surface-raised px-2 py-1 font-mono text-sm text-content-primary">{rotatedCode}</code>. Copy it now — it
               will not be shown again.
             </p>
           </div>

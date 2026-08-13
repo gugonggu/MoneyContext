@@ -38,7 +38,7 @@ export function ThemeToggle({ className }: Readonly<{ className?: string }>) {
       type="button"
       onClick={toggle}
       aria-label={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
-      className={className ?? "inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"}
+      className={className ?? "inline-flex h-9 w-9 items-center justify-center rounded-tile text-content-muted transition-colors hover:bg-surface-base hover:text-content-primary"}
     >
       <span aria-hidden="true" className="text-base">
         {theme === "dark" ? "🌙" : "☀️"}

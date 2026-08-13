@@ -60,7 +60,7 @@ export function EditTransactionForm({
 
       <Card className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">금액</span>
+          <span className="text-sm font-medium text-content-secondary">금액</span>
           <input
             name="amount"
             inputMode="numeric"
@@ -68,7 +68,7 @@ export function EditTransactionForm({
             required
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
-            className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-3xl font-bold tracking-tight text-slate-900 outline-none transition-colors focus:border-brand-600 disabled:bg-slate-100 disabled:text-slate-400"
+            className="rounded-tile border border-border-strong bg-surface-raised px-4 py-3 text-3xl font-bold tracking-tight text-content-primary outline-none transition-colors focus:border-brand-600 disabled:bg-surface-base disabled:text-content-muted"
           />
         </label>
 

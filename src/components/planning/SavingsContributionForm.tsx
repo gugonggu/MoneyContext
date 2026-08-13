@@ -10,8 +10,8 @@ type State = Readonly<{ status: "idle" | "success" | "error"; message?: string }
 export function SavingsContributionForm({ goals, action }: Readonly<{ goals: readonly { id: string; name: string }[]; action: (state: State, formData: FormData) => Promise<State> }>) {
   const [state, formAction] = useActionState(action, { status: "idle" });
   return (
-    <form action={formAction} className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-800 dark:bg-slate-900">
-      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">저축 납입 추가</h2>
+    <form action={formAction} className="flex flex-col gap-4 rounded-card border border-border-subtle bg-surface-raised p-4 shadow-card sm:p-5">
+      <h2 className="text-base font-semibold text-content-primary">저축 납입 추가</h2>
       <Select label="목표" name="goalId" required>
         {goals.map((goal) => (
           <option key={goal.id} value={goal.id}>

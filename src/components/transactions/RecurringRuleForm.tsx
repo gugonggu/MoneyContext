@@ -24,18 +24,18 @@ export function RecurringRuleForm({
 
   return (
     <Card className="flex flex-col gap-5">
-      <h2 className="text-base font-semibold text-slate-900">반복 거래 추가</h2>
+      <h2 className="text-base font-semibold text-content-primary">반복 거래 추가</h2>
 
       <form action={formAction} className="flex flex-col gap-4">
         <fieldset className="flex flex-col gap-2">
-          <legend className="text-sm font-medium text-slate-700">유형</legend>
+          <legend className="text-sm font-medium text-content-secondary">유형</legend>
           <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input type="radio" name="type" value="EXPENSE" defaultChecked required className="h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-600" />
+            <label className="flex items-center gap-2 text-sm text-content-secondary">
+              <input type="radio" name="type" value="EXPENSE" defaultChecked required className="h-4 w-4 border-border-strong text-brand-600 focus:ring-brand-600" />
               지출
             </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input type="radio" name="type" value="INCOME" className="h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-600" />
+            <label className="flex items-center gap-2 text-sm text-content-secondary">
+              <input type="radio" name="type" value="INCOME" className="h-4 w-4 border-border-strong text-brand-600 focus:ring-brand-600" />
               수입
             </label>
           </div>
@@ -92,21 +92,21 @@ export function RecurringRuleForm({
         </div>
 
         <fieldset className="flex flex-col gap-2">
-          <legend className="text-sm font-medium text-slate-700">확정 방식</legend>
+          <legend className="text-sm font-medium text-content-secondary">확정 방식</legend>
           <div className="flex gap-4">
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-content-secondary">
               <input
                 type="radio"
                 name="confirmationMode"
                 value="AUTO_CONFIRM"
                 defaultChecked
                 required
-                className="h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-600"
+                className="h-4 w-4 border-border-strong text-brand-600 focus:ring-brand-600"
               />
               자동 확정
             </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input type="radio" name="confirmationMode" value="REQUIRE_CONFIRMATION" className="h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-600" />
+            <label className="flex items-center gap-2 text-sm text-content-secondary">
+              <input type="radio" name="confirmationMode" value="REQUIRE_CONFIRMATION" className="h-4 w-4 border-border-strong text-brand-600 focus:ring-brand-600" />
               확인 후 확정
             </label>
           </div>

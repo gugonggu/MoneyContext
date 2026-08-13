@@ -15,7 +15,7 @@ export function ReconciliationForm({ accountId, accountName, action }: Readonly<
     <form action={formAction} className="flex flex-col gap-1.5 sm:items-end">
       <input type="hidden" name="accountId" value={accountId} />
       <div className="flex items-center gap-2">
-        <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+        <label className="flex items-center gap-1.5 text-xs text-content-muted">
           {accountName} 실제 잔액
           <input
             name="actualBalance"
@@ -24,7 +24,7 @@ export function ReconciliationForm({ accountId, accountName, action }: Readonly<
             required
             value={actualBalance}
             onChange={(event) => setActualBalance(event.target.value)}
-            className="w-28 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="w-28 rounded-md border border-border-strong bg-surface-raised px-2 py-1 text-sm text-content-primary placeholder:text-content-muted"
           />
         </label>
         <Button

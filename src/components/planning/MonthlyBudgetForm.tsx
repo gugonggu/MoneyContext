@@ -9,8 +9,8 @@ export type BudgetFormState = Readonly<{ status: "idle" | "success" | "error"; m
 export function MonthlyBudgetForm({ action }: Readonly<{ action: (state: BudgetFormState, formData: FormData) => Promise<BudgetFormState> }>) {
   const [state, formAction] = useActionState(action, { status: "idle" });
   return (
-    <form action={formAction} className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-800 dark:bg-slate-900">
-      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">월 예산</h2>
+    <form action={formAction} className="flex flex-col gap-4 rounded-card border border-border-subtle bg-surface-raised p-4 shadow-card sm:p-5">
+      <h2 className="text-base font-semibold text-content-primary">월 예산</h2>
       <TextField label="연도" name="year" inputMode="numeric" required />
       <TextField label="월" name="month" inputMode="numeric" required />
       <TextField label="총 예산" name="totalBudget" inputMode="numeric" required />

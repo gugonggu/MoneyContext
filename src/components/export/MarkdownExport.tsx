@@ -127,10 +127,10 @@ export function MarkdownExport({ initialMarkdown, onGenerate }: Readonly<{ initi
   return (
     <section aria-labelledby="markdown-export-heading" className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="mb-6">
-        <h1 id="markdown-export-heading" className="text-2xl font-bold tracking-tight text-slate-900">
+        <h1 id="markdown-export-heading" className="text-2xl font-bold tracking-tight text-content-primary">
           GPT Markdown 내보내기
         </h1>
-        <p className="mt-1 text-sm text-slate-500">선택한 기간의 데이터를 GPT에 붙여 넣을 수 있는 Markdown으로 만듭니다.</p>
+        <p className="mt-1 text-sm text-content-muted">선택한 기간의 데이터를 GPT에 붙여 넣을 수 있는 Markdown으로 만듭니다.</p>
       </div>
 
       <Card className="flex flex-col gap-5">
@@ -157,7 +157,7 @@ export function MarkdownExport({ initialMarkdown, onGenerate }: Readonly<{ initi
                 "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
                 periodKind === option.kind
                   ? "border-brand-600 bg-brand-600 text-white"
-                  : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50",
+                  : "border-border-strong bg-surface-raised text-content-secondary hover:bg-surface-base",
               )}
             >
               {option.label}
@@ -224,11 +224,11 @@ export function MarkdownExport({ initialMarkdown, onGenerate }: Readonly<{ initi
       </Card>
 
       <Card className="mt-6 flex flex-col gap-3">
-        <h2 className="text-base font-semibold text-slate-900">Markdown 미리보기</h2>
+        <h2 className="text-base font-semibold text-content-primary">Markdown 미리보기</h2>
         <pre
           aria-label="Markdown 미리보기"
           tabIndex={0}
-          className="max-h-96 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-xs whitespace-pre-wrap text-slate-800"
+          className="max-h-96 overflow-auto rounded-tile border border-border-subtle bg-surface-base p-4 font-mono text-xs whitespace-pre-wrap text-content-primary"
         >
           {markdown}
         </pre>
@@ -236,14 +236,14 @@ export function MarkdownExport({ initialMarkdown, onGenerate }: Readonly<{ initi
           <a
             href={downloadHref("json")}
             download
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            className="inline-flex items-center justify-center gap-1.5 rounded-tile border border-border-strong bg-surface-raised px-4 py-2 text-sm font-semibold text-content-secondary shadow-card transition-colors hover:bg-surface-base"
           >
             JSON 다운로드
           </a>
           <a
             href={downloadHref("csv")}
             download
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            className="inline-flex items-center justify-center gap-1.5 rounded-tile border border-border-strong bg-surface-raised px-4 py-2 text-sm font-semibold text-content-secondary shadow-card transition-colors hover:bg-surface-base"
           >
             CSV 다운로드
           </a>

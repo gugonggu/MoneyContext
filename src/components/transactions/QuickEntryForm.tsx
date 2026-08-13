@@ -142,7 +142,7 @@ export function QuickEntryForm({
       <input type="hidden" name="type" value={type} />
 
       <Card className="flex flex-col gap-5">
-        <div role="radiogroup" aria-label="거래 유형" className="flex gap-1.5 rounded-full bg-slate-100 p-1">
+        <div role="radiogroup" aria-label="거래 유형" className="flex gap-1.5 rounded-full bg-surface-base p-1">
           {(Object.keys(TYPE_LABELS) as TransactionTypeOption[]).map((value) => (
             <ToggleButton
               key={value}
@@ -158,7 +158,7 @@ export function QuickEntryForm({
         </div>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">금액</span>
+          <span className="text-sm font-medium text-content-secondary">금액</span>
           <input
             name="amount"
             inputMode="numeric"
@@ -168,7 +168,7 @@ export function QuickEntryForm({
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
             placeholder="0"
-            className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-3xl font-bold tracking-tight text-slate-900 outline-none transition-colors placeholder:text-slate-300 focus:border-brand-600 disabled:bg-slate-100 disabled:text-slate-400"
+            className="rounded-tile border border-border-strong bg-surface-raised px-4 py-3 text-3xl font-bold tracking-tight text-content-primary outline-none transition-colors placeholder:text-content-muted focus:border-brand-600 disabled:bg-surface-base disabled:text-content-muted"
           />
         </label>
 
@@ -176,7 +176,7 @@ export function QuickEntryForm({
           <div className="flex flex-col gap-3">
             {recentAccountSuggestions.length > 0 ? (
               <div>
-                <p className="mb-1.5 text-xs font-semibold text-slate-500">최근 사용 결제수단</p>
+                <p className="mb-1.5 text-xs font-semibold text-content-muted">최근 사용 결제수단</p>
                 <div className="flex flex-wrap gap-1.5">
                   {recentAccountSuggestions.map((suggestion) => (
                     <ToggleButton key={suggestion.id} type="button" onClick={() => setAccountId(suggestion.id)}>
@@ -189,7 +189,7 @@ export function QuickEntryForm({
 
             {frequentCategorySuggestions.length > 0 ? (
               <div>
-                <p className="mb-1.5 text-xs font-semibold text-slate-500">자주 쓰는 카테고리</p>
+                <p className="mb-1.5 text-xs font-semibold text-content-muted">자주 쓰는 카테고리</p>
                 <div className="flex flex-wrap gap-1.5">
                   {frequentCategorySuggestions.map((suggestion) => (
                     <ToggleButton key={suggestion.id} type="button" onClick={() => setCategoryId(suggestion.id)}>
@@ -202,7 +202,7 @@ export function QuickEntryForm({
 
             {comboSuggestions.length > 0 ? (
               <div>
-                <p className="mb-1.5 text-xs font-semibold text-slate-500">자주 쓰는 카테고리 + 결제수단 조합</p>
+                <p className="mb-1.5 text-xs font-semibold text-content-muted">자주 쓰는 카테고리 + 결제수단 조합</p>
                 <div className="flex flex-wrap gap-1.5">
                   {comboSuggestions.map((suggestion) => (
                     <ToggleButton
@@ -274,7 +274,7 @@ export function QuickEntryForm({
         </Button>
 
         {showDetails ? (
-          <div className="flex flex-col gap-4 border-t border-slate-100 pt-4">
+          <div className="flex flex-col gap-4 border-t border-border-subtle pt-4">
             <TextField
               label="날짜/시간"
               name="transactionAt"
@@ -286,7 +286,7 @@ export function QuickEntryForm({
             <TextField label="메모" name="memo" type="text" value={memo} onChange={(event) => setMemo(event.target.value)} />
 
             <fieldset className="flex flex-col gap-2">
-              <legend className="text-sm font-medium text-slate-700">태그</legend>
+              <legend className="text-sm font-medium text-content-secondary">태그</legend>
               <div className="flex flex-wrap gap-1.5">
                 {tags.map((tag) => (
                   <ToggleButton key={tag.id} type="button" role="checkbox" aria-checked={selectedTagIds.has(tag.id)} onClick={() => toggleTag(tag.id)}>

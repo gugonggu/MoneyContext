@@ -10,8 +10,8 @@ export function SavingsGoalForm({ action }: Readonly<{ action: (state: GoalFormS
   const [state, formAction] = useActionState(action, { status: "idle" });
   const [name, setName] = useState("");
   return (
-    <form action={formAction} className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 dark:border-slate-800 dark:bg-slate-900">
-      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">저축 목표 만들기</h2>
+    <form action={formAction} className="flex flex-col gap-4 rounded-card border border-border-subtle bg-surface-raised p-4 shadow-card sm:p-5">
+      <h2 className="text-base font-semibold text-content-primary">저축 목표 만들기</h2>
       <TextField label="이름" name="name" value={name} onChange={(event) => setName(event.target.value)} required />
       <TextField label="목표 금액" name="targetAmount" inputMode="numeric" required />
       <TextField label="목표일" name="targetDate" type="date" required />

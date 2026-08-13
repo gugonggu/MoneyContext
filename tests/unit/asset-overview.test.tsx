@@ -25,6 +25,8 @@ describe("AssetOverview", () => {
     expect(screen.getByText(/다음 결제일 2026-09-10/)).toBeTruthy();
     expect(screen.getByText(/2026-09-10.*50,000/)).toBeTruthy();
     expect(screen.getAllByText(/1,000,000/).length).toBeGreaterThan(0);
+    expect(screen.getByRole("img", { name: "한도 사용률 10%" })).toBeTruthy();
+    expect(screen.getByText("남은 한도 900,000원")).toBeTruthy();
   });
 
   it("submits a reconciliation balance and preserves it when the action fails", async () => {

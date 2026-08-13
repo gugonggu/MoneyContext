@@ -38,15 +38,15 @@ export function DeleteAccount() {
 
   return (
     <section aria-labelledby="delete-account-heading" className="flex flex-col gap-4">
-      <h2 id="delete-account-heading" className="text-lg font-semibold text-slate-900">
+      <h2 id="delete-account-heading" className="text-lg font-semibold text-content-primary">
         Delete account
       </h2>
 
       <Card className="flex flex-col gap-3 border-negative-100">
-        <p role="status" aria-live="polite" aria-label="Delete account warning" className="text-sm text-slate-600">
+        <p role="status" aria-live="polite" aria-label="Delete account warning" className="text-sm text-content-secondary">
           Deleting your account permanently removes all your financial data. This cannot be undone.
         </p>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-content-secondary">
           Consider{" "}
           <a href="/api/backup" download className="font-medium text-brand-600 underline hover:text-brand-700">
             downloading a full backup

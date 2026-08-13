@@ -61,31 +61,31 @@ export default async function OnboardingPage({ searchParams }: Readonly<{ search
 
       <form action={complete} className="flex flex-col gap-6">
         <Card className="flex flex-col gap-4">
-          <h2 className="text-base font-semibold text-slate-900">기본 정보</h2>
+          <h2 className="text-base font-semibold text-content-primary">기본 정보</h2>
           <TextField label="이름" name="displayName" required />
           <TextField label="급여일" name="salaryCycleDay" type="number" min="1" max="31" required hint="매월 급여를 받는 날짜 (1~31)" />
         </Card>
 
         <Card className="flex flex-col gap-4">
-          <h2 className="text-base font-semibold text-slate-900">첫 은행 계좌</h2>
+          <h2 className="text-base font-semibold text-content-primary">첫 은행 계좌</h2>
           <TextField label="첫 은행 계좌" name="bankName" required />
           <TextField label="현재 잔액" name="bankBalance" inputMode="numeric" defaultValue="0" required />
         </Card>
 
         <Card className="flex flex-col gap-4">
-          <h2 className="text-base font-semibold text-slate-900">현금 (선택)</h2>
+          <h2 className="text-base font-semibold text-content-primary">현금 (선택)</h2>
           <TextField label="현금 이름 (선택)" name="cashName" />
           <TextField label="현금 잔액" name="cashBalance" inputMode="numeric" defaultValue="0" />
         </Card>
 
         <Card className="flex flex-col gap-4">
-          <h2 className="text-base font-semibold text-slate-900">부채 (선택)</h2>
+          <h2 className="text-base font-semibold text-content-primary">부채 (선택)</h2>
           <TextField label="부채 이름 (선택)" name="liabilityName" />
           <TextField label="부채 잔액" name="liabilityBalance" inputMode="numeric" defaultValue="0" />
         </Card>
 
         <Card className="flex flex-col gap-4">
-          <h2 className="text-base font-semibold text-slate-900">신용카드 (선택)</h2>
+          <h2 className="text-base font-semibold text-content-primary">신용카드 (선택)</h2>
           <TextField label="신용카드 이름 (선택)" name="cardName" />
           <TextField label="카드 결제일" name="cardPaymentDay" type="number" min="1" max="31" hint="매월 결제일 (1~31)" />
           <TextField label="카드 한도" name="cardLimit" inputMode="numeric" />

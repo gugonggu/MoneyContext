@@ -18,15 +18,15 @@ export default function MorePage() {
     <div>
       <PageHeader title="더보기" />
       <Card className="p-0">
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-border-subtle">
           {MORE_LINKS.map((item) => (
             <li key={item.href}>
               <Link
                 href={item.href}
-                className="flex items-center justify-between px-4 py-3.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900"
+                className="flex items-center justify-between px-4 py-3.5 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-base hover:text-content-primary"
               >
                 {item.label}
-                <span aria-hidden="true" className="text-slate-400">
+                <span aria-hidden="true" className="text-content-muted">
                   ›
                 </span>
               </Link>

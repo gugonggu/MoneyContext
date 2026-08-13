@@ -15,7 +15,7 @@ const TYPE_BADGES: Record<NotificationType, { label: string; className: string }
   BUDGET_THRESHOLD: { label: "예산 임계치", className: "bg-negative-50 text-negative-700" },
   RECURRING_CONFIRMATION: { label: "반복 거래 확인", className: "bg-brand-50 text-brand-700" },
   PLANNED_DUE: { label: "예정 거래", className: "bg-brand-50 text-brand-700" },
-  CARD_PAYMENT_DUE: { label: "카드 결제일", className: "bg-slate-100 text-slate-700" },
+  CARD_PAYMENT_DUE: { label: "카드 결제일", className: "bg-surface-base text-content-secondary" },
   SAVINGS_RISK: { label: "저축 위험", className: "bg-negative-50 text-negative-700" },
 };
 
@@ -43,21 +43,21 @@ function NotificationRow({ notification, onMarkRead }: Readonly<{ notification: 
           aria-hidden="true"
           className={cx(
             "mt-1.5 h-2 w-2 shrink-0 rounded-full",
-            notification.isRead ? "bg-slate-300" : "bg-brand-500",
+            notification.isRead ? "bg-border-strong" : "bg-brand-500",
           )}
         />
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-sm font-semibold text-slate-900">{notification.title}</h2>
+            <h2 className="text-sm font-semibold text-content-primary">{notification.title}</h2>
             {badge ? (
               <span className={cx("rounded-full px-2 py-0.5 text-xs font-medium", badge.className)}>{badge.label}</span>
             ) : null}
           </div>
-          <p className="text-sm text-slate-600">{notification.message}</p>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+          <p className="text-sm text-content-secondary">{notification.message}</p>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-content-muted">
             <time dateTime={notification.createdAt}>{formatSeoulTimestamp(notification.createdAt)}</time>
             <span aria-hidden="true">·</span>
-            <span className={notification.isRead ? "text-slate-400" : "font-medium text-brand-600"}>
+            <span className={notification.isRead ? "text-content-muted" : "font-medium text-brand-600"}>
               {notification.isRead ? "읽음" : "읽지 않음"}
             </span>
           </div>
@@ -85,7 +85,7 @@ export function NotificationCenter({ notifications, onMarkRead }: Readonly<{ not
         <PageHeader title="알림" />
       </div>
       {notifications.length === 0 ? (
-        <Card className="text-sm text-slate-500">새 알림이 없습니다.</Card>
+        <Card className="text-sm text-content-muted">새 알림이 없습니다.</Card>
       ) : (
         <div className="flex flex-col gap-3">
           {notifications.map((notification) => (
