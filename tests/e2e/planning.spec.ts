@@ -37,6 +37,7 @@ test.describe("critical path: budget and savings", () => {
     // keystrokes race the remount and land on a form that no longer exists.
     await page.waitForLoadState("networkidle");
 
+    await page.getByRole("radio", { name: "저축 목표" }).click();
     await page.getByLabel("이름").fill("E2E Goal");
     await page.getByLabel("목표 금액").fill("1000000");
     await page.getByLabel("목표일").fill("2026-12-31");

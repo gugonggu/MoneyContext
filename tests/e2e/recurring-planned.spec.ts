@@ -61,6 +61,7 @@ test.describe("critical path: planned transactions", () => {
     await expect(page.getByText("확정됨")).toBeVisible();
 
     await page.goto("/home");
-    await expect(page.getByText("지출 30,000원")).toBeVisible();
+    const expenseStat = page.getByText("지출", { exact: true }).locator("..");
+    await expect(expenseStat.getByText("30,000원", { exact: true })).toBeVisible();
   });
 });

@@ -47,7 +47,7 @@ test.describe("E2E-002: credit card lifecycle", () => {
 
     await page.goto("/assets");
     await expect(page.getByText("미결제액 200,000원")).toBeVisible();
-    await expect(page.getByText("사용 가능 한도 1,800,000원")).toBeVisible();
+    await expect(page.getByText("남은 한도 1,800,000원")).toBeVisible();
 
     // Pay the card bill: a transfer into the card account settles outstanding
     await page.goto("/transactions/new");
@@ -60,10 +60,11 @@ test.describe("E2E-002: credit card lifecycle", () => {
 
     await page.goto("/assets");
     await expect(page.getByText("미결제액 0원")).toBeVisible();
-    await expect(page.getByText("사용 가능 한도 2,000,000원")).toBeVisible();
+    await expect(page.getByText("남은 한도 2,000,000원")).toBeVisible();
 
     // The settlement transfer must not be double-counted as expense
     await page.goto("/home");
-    await expect(page.getByText("지출 200,000원")).toBeVisible();
+    const expenseStat = page.getByText("지출", { exact: true }).locator("..");
+    await expect(expenseStat.getByText("200,000원", { exact: true })).toBeVisible();
   });
 });
