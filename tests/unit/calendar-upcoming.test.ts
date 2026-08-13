@@ -190,6 +190,33 @@ describe("collectUpcomingMarkers", () => {
     }
   });
 
+  it("keeps a recurrence that lands on the upper ISO date boundary", () => {
+    const markers = collectUpcomingMarkers({
+      ...EMPTY,
+      rangeStart: "9999-12-31",
+      rangeEnd: "9999-12-31",
+      recurringRules: [
+        { id: "rule-1", memo: "boundary", type: "EXPENSE", amount: 50_000, frequency: "DAILY", intervalCount: 1, nextRunDate: "9999-12-31" },
+      ],
+    });
+
+    expect(markers.get("9999-12-31")?.[0]).toMatchObject({ kind: "RECURRING", label: "boundary" });
+  });
+
+  it("reaches a future range for a daily rule that started more than 4,000 days earlier", () => {
+    const markers = collectUpcomingMarkers({
+      ...EMPTY,
+      rangeStart: "2037-01-01",
+      rangeEnd: "2037-01-02",
+      recurringRules: [
+        { id: "rule-1", memo: "daily", type: "EXPENSE", amount: 50_000, frequency: "DAILY", intervalCount: 1, nextRunDate: "2026-01-01" },
+      ],
+    });
+
+    expect(markers.get("2037-01-01")?.[0]).toMatchObject({ kind: "RECURRING", label: "daily" });
+    expect(markers.get("2037-01-02")?.[0]).toMatchObject({ kind: "RECURRING", label: "daily" });
+  });
+
   it("sorts several markers on one day by kind", () => {
     const markers = collectUpcomingMarkers({
       ...EMPTY,

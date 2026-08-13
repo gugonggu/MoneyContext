@@ -3,10 +3,6 @@ import { assertIsoDate } from "@/lib/dates/seoul";
 
 import type { UpcomingKind, UpcomingMarker } from "./types";
 
-// DAILY 규칙이 아주 오래 전에 시작한 경우를 대비한 안전장치.
-// 정상 범위(6주 그리드)에서는 닿을 수 없는 값이다.
-const MAX_RECURRENCE_STEPS = 4_000;
-
 export type UpcomingPlanned = Readonly<{
   scheduledDate: string;
   type: "INCOME" | "EXPENSE";
@@ -76,17 +72,20 @@ function recurrenceDates(rule: UpcomingRecurringRule, rangeStart: string, rangeE
   const dates: string[] = [];
   let cursor = rule.nextRunDate;
 
-  for (let step = 0; step < MAX_RECURRENCE_STEPS; step += 1) {
+  for (;;) {
     if (cursor > rangeEnd) break;
     if (rule.endDate && cursor > rule.endDate) break;
     if (cursor >= rangeStart) dates.push(cursor);
+    if (cursor === rangeEnd || cursor === rule.endDate) break;
 
-    cursor = nextOccurrenceDate({
+    const next = nextOccurrenceDate({
       frequency: rule.frequency,
       intervalCount: rule.intervalCount,
       dayOfMonth: rule.dayOfMonth,
       occurrenceDate: cursor,
     });
+    if (next <= cursor) throw new RangeError("recurrence date must advance");
+    cursor = next;
   }
 
   return dates;
