@@ -1,5 +1,6 @@
 import { QuickEntryForm, type QuickEntryState } from "@/components/transactions/QuickEntryForm";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { parseDefaultTransactionDate } from "@/domain/transactions/default-date";
 import { listAccountsForCurrentUser } from "@/server/accounts";
 import { assignTagForCurrentUser, listCategoriesForCurrentUser, listTagsForCurrentUser } from "@/server/categories";
 import { createInstallmentPurchaseForCurrentUser } from "@/server/installments";
@@ -73,7 +74,16 @@ async function submitQuickEntry(_previous: QuickEntryState, formData: FormData):
   }
 }
 
-export default async function NewTransactionPage() {
+export default async function NewTransactionPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const raw = params.date;
+  const requested = Array.isArray(raw) ? raw[0] : raw;
+  const defaultDate = parseDefaultTransactionDate(requested);
+
   const [accounts, categories, tags, recentTransactions] = await Promise.all([
     listAccountsForCurrentUser(),
     listCategoriesForCurrentUser(),
@@ -95,6 +105,7 @@ export default async function NewTransactionPage() {
           occurredAt: transaction.transactionAt,
         }))}
         action={submitQuickEntry}
+        defaultDate={defaultDate}
       />
     </div>
   );

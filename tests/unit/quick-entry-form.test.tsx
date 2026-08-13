@@ -20,6 +20,7 @@ const today = "2026-08-11";
 function renderForm(
   action = vi.fn(async () => ({ status: "idle" as const })),
   recentTransactions: Array<{ accountId: string; categoryId?: string; type: "INCOME" | "EXPENSE"; occurredAt: string }> = [],
+  defaultDate?: string,
 ) {
   render(
     <QuickEntryForm
@@ -29,6 +30,7 @@ function renderForm(
       action={action}
       recentTransactions={recentTransactions}
       today={today}
+      defaultDate={defaultDate}
     />,
   );
   return action;
@@ -78,6 +80,13 @@ describe("QuickEntryForm", () => {
     expect(screen.getByLabelText("날짜/시간")).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: "업무" })).toBeTruthy();
     expect(screen.getByLabelText("통화")).toBeTruthy();
+  });
+
+  it("opens details and seeds noon when a calendar date is provided", () => {
+    renderForm(undefined, [], "2026-08-05");
+
+    expect(screen.getByRole("button", { name: "상세 옵션 숨기기" }).getAttribute("aria-expanded")).toBe("true");
+    expect((screen.getByLabelText("날짜/시간") as HTMLInputElement).value).toBe("2026-08-05T12:00");
   });
 
   it("only offers installment for EXPENSE transactions on a CREDIT_CARD account", () => {

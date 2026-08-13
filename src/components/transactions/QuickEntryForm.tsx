@@ -49,6 +49,7 @@ export function QuickEntryForm({
   action,
   recentTransactions = [],
   today = new Date().toISOString().slice(0, 10),
+  defaultDate,
 }: Readonly<{
   accounts: readonly QuickEntryAccount[];
   categories: readonly QuickEntryCategory[];
@@ -56,6 +57,7 @@ export function QuickEntryForm({
   action: QuickEntryAction;
   recentTransactions?: readonly QuickEntryRecentTransaction[];
   today?: string;
+  defaultDate?: string;
 }>) {
   const [state, formAction, isPending] = useActionState(action, { status: "idle" });
 
@@ -66,8 +68,8 @@ export function QuickEntryForm({
   const [fromAccountId, setFromAccountId] = useState(accounts[0]?.id ?? "");
   const [toAccountId, setToAccountId] = useState(accounts[1]?.id ?? accounts[0]?.id ?? "");
 
-  const [showDetails, setShowDetails] = useState(false);
-  const [transactionAt, setTransactionAt] = useState("");
+  const [showDetails, setShowDetails] = useState(Boolean(defaultDate));
+  const [transactionAt, setTransactionAt] = useState(defaultDate ? `${defaultDate}T12:00` : "");
   const [memo, setMemo] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<ReadonlySet<string>>(new Set());
   const [currency, setCurrency] = useState("KRW");
