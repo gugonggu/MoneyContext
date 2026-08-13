@@ -33,7 +33,8 @@ export async function createE2EUser(label: string): Promise<E2EUser> {
 }
 
 export async function deleteE2EUser(user: E2EUser): Promise<void> {
-  await adminClient().auth.admin.deleteUser(user.id).catch(() => undefined);
+  const { error } = await adminClient().auth.admin.deleteUser(user.id);
+  if (error) throw new Error(`Unable to delete e2e test user (${user.email}): ${error.message}`);
 }
 
 export async function signInAsE2EUser(page: Page, user: E2EUser): Promise<void> {

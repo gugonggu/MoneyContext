@@ -10,6 +10,13 @@ test.afterEach(async () => {
 
 test.describe("critical path: calendar", () => {
   test("a recorded expense shows on the calendar and opens in the day sheet", async ({ page }) => {
+    const selectedDate = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+
     user = await createE2EUser("calendar");
     await signInAsE2EUser(page, user);
 
@@ -24,6 +31,7 @@ test.describe("critical path: calendar", () => {
     await page.goto("/transactions/new");
     await page.getByLabel("금액").fill("47000");
     await page.getByRole("button", { name: /상세 옵션/ }).click();
+    await page.getByLabel("날짜/시간").fill(`${selectedDate}T12:00`);
     await page.getByLabel("메모").fill("E2E 점심");
     await page.getByRole("button", { name: "저장" }).click();
     await expect(page.getByText("저장했습니다.")).toBeVisible();
@@ -46,6 +54,11 @@ test.describe("critical path: calendar", () => {
     const sheet = page.getByRole("dialog");
     await expect(sheet).toBeVisible();
     await expect(sheet.getByText("E2E 점심")).toBeVisible();
-    await expect(sheet.getByRole("link", { name: "이 날짜로 기록" })).toBeVisible();
+    const dateEntryLink = sheet.getByRole("link", { name: "이 날짜로 기록" });
+    await expect(dateEntryLink).toHaveAttribute("href", `/transactions/new?date=${selectedDate}`);
+
+    await dateEntryLink.click();
+    await expect(page).toHaveURL(`/transactions/new?date=${selectedDate}`);
+    await expect(page.getByLabel("날짜/시간")).toHaveValue(`${selectedDate}T12:00`);
   });
 });
