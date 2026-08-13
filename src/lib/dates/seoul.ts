@@ -3,16 +3,24 @@ const SEOUL_UTC_OFFSET_HOURS = 9;
 
 const SEOUL_FORMATTER = new Intl.DateTimeFormat("en-US", {
   timeZone: "Asia/Seoul",
+  era: "short",
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
 });
 
+function formatIsoDate(year: number, month: number, day: number): string {
+  if (!Number.isInteger(year) || year < 0 || year > 9999) throw new RangeError("date must be within ISO year range");
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 function formatSeoulDate(instant: Date): string {
   if (Number.isNaN(instant.getTime())) throw new RangeError("timestamp must be parseable");
   const parts = SEOUL_FORMATTER.formatToParts(instant);
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value;
-  return `${part("year")?.padStart(4, "0")}-${part("month")}-${part("day")}`;
+  const eraYear = Number(part("year"));
+  const year = part("era") === "BC" ? 1 - eraYear : eraYear;
+  return formatIsoDate(year, Number(part("month")), Number(part("day")));
 }
 
 function utcDate(year: number, month: number, day: number, hours = 0): Date {
@@ -50,5 +58,5 @@ export function addIsoDays(date: string, days: number): string {
   const [year, month, day] = assertIsoDate(date);
   const shifted = utcDate(year, month, day);
   shifted.setUTCDate(shifted.getUTCDate() + days);
-  return shifted.toISOString().slice(0, 10);
+  return formatIsoDate(shifted.getUTCFullYear(), shifted.getUTCMonth() + 1, shifted.getUTCDate());
 }

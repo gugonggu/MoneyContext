@@ -27,6 +27,10 @@ describe("toSeoulDate", () => {
     expect(toSeoulDate("0099-08-05T03:00:00Z")).toBe("0099-08-05");
   });
 
+  it("preserves ISO year zero instead of Intl's year-of-era value", () => {
+    expect(toSeoulDate("0000-08-05T03:00:00Z")).toBe("0000-08-05");
+  });
+
   it("rejects an unparseable timestamp", () => {
     expect(() => toSeoulDate("not-a-timestamp")).toThrow(RangeError);
   });
@@ -65,6 +69,14 @@ describe("addIsoDays", () => {
 
   it("carries an early year into the next ISO year", () => {
     expect(addIsoDays("0099-12-31", 1)).toBe("0100-01-01");
+  });
+
+  it("rejects a result before the supported ISO year range", () => {
+    expect(() => addIsoDays("0000-01-01", -1)).toThrow(RangeError);
+  });
+
+  it("rejects a result after the supported ISO year range", () => {
+    expect(() => addIsoDays("9999-12-31", 1)).toThrow(RangeError);
   });
 });
 
