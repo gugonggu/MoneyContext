@@ -21,6 +21,10 @@ export type InstallmentPaymentSchedule = {
   feeAmount: number;
 };
 
+export function calculateInstallmentPaymentAmount(principalAmount: number, feeAmount: number): number {
+  return principalAmount + feeAmount;
+}
+
 export function createInstallmentSchedule(input: InstallmentScheduleInput): InstallmentPaymentSchedule[] {
   const { totalAmount, installmentCount, firstPaymentDate, feeAmounts } = input;
   if (feeAmounts && feeAmounts.length !== installmentCount) throw new RangeError("feeAmounts must match installmentCount");

@@ -70,7 +70,7 @@ export function AssetOverview({ overview, action }: Readonly<{ overview: AssetOv
                       <ul className="flex flex-col gap-1 border-t border-white/20 pt-2 text-sm text-white/80">
                         {card.installmentSchedule.map((payment) => (
                           <li key={payment.id}>
-                            {payment.scheduledDate} · {format(payment.principalAmount + payment.feeAmount)}원
+                            {payment.scheduledDate} · {format(payment.paymentAmount)}원
                           </li>
                         ))}
                       </ul>

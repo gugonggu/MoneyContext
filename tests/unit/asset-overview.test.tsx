@@ -13,7 +13,7 @@ const overview = {
     bank: [{ id: "bank-a", name: "Main bank", type: "BANK" as const, balance: 1_000_000, linkedAccountId: null }],
     cash: [], debit: [], liability: [{ id: "loan-a", name: "Loan", type: "LIABILITY" as const, balance: 200_000, linkedAccountId: null }],
   },
-  cards: [{ id: "card-a", name: "Card", outstanding: 100_000, availableLimit: 900_000, nextPaymentDate: "2026-09-10", installmentSchedule: [{ id: "installment-a", sequence: 1, scheduledDate: "2026-09-10", principalAmount: 50_000, feeAmount: 0, status: "SCHEDULED" as const }] }],
+  cards: [{ id: "card-a", name: "Card", outstanding: 100_000, availableLimit: 900_000, nextPaymentDate: "2026-09-10", installmentSchedule: [{ id: "installment-a", sequence: 1, scheduledDate: "2026-09-10", principalAmount: 50_000, feeAmount: 0, paymentAmount: 60_000, status: "SCHEDULED" as const }] }],
 };
 
 describe("AssetOverview", () => {
@@ -23,7 +23,7 @@ describe("AssetOverview", () => {
     expect(screen.getByText("Main bank")).toBeTruthy();
     expect(screen.getByText("Card")).toBeTruthy();
     expect(screen.getByText(/다음 결제일 2026-09-10/)).toBeTruthy();
-    expect(screen.getByText(/2026-09-10.*50,000/)).toBeTruthy();
+    expect(screen.getByText(/2026-09-10.*60,000/)).toBeTruthy();
     expect(screen.getAllByText(/1,000,000/).length).toBeGreaterThan(0);
     expect(screen.getByRole("img", { name: "한도 사용률 10%" })).toBeTruthy();
     expect(screen.getByText("남은 한도 900,000원")).toBeTruthy();
@@ -39,5 +39,16 @@ describe("AssetOverview", () => {
     await waitFor(() => screen.getByRole("alert"));
     expect(screen.getByRole("alert").textContent).toContain("잔액 조정에 실패했습니다");
     expect((screen.getByLabelText("Main bank 실제 잔액") as HTMLInputElement).value).toBe("950000");
+  });
+
+  it("does not render a usage ring when the card limit is unknown", () => {
+    render(
+      <AssetOverview
+        overview={{ ...overview, cards: [{ ...overview.cards[0], availableLimit: null }] }}
+        action={async () => ({ status: "idle" })}
+      />,
+    );
+
+    expect(screen.queryByRole("img", { name: /한도 사용률/ })).toBeNull();
   });
 });

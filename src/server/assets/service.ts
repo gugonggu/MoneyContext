@@ -2,6 +2,7 @@ import "server-only";
 
 import { calculateAccountBalance, calculateLiquidAssets, type BalanceEvent } from "@/domain/accounts/balance";
 import { calculateNetWorth } from "@/domain/accounts/net-worth";
+import { calculateInstallmentPaymentAmount } from "@/domain/cards/installments";
 import { calculateCreditCardOutstanding, type CardOutstandingEvent } from "@/domain/cards/outstanding";
 
 export type AssetAccountType = "BANK" | "CASH" | "DEBIT" | "CREDIT_CARD" | "LIABILITY";
@@ -78,6 +79,7 @@ export type AssetInstallmentScheduleItem = Readonly<{
   scheduledDate: string;
   principalAmount: number;
   feeAmount: number;
+  paymentAmount: number;
   status: InstallmentPaymentStatus;
 }>;
 
@@ -151,6 +153,7 @@ function sortSchedule(payments: readonly AssetInstallmentPaymentRecord[]): Asset
       scheduledDate,
       principalAmount,
       feeAmount,
+      paymentAmount: calculateInstallmentPaymentAmount(principalAmount, feeAmount),
       status,
     }))
     .sort((left, right) => left.scheduledDate.localeCompare(right.scheduledDate) || left.sequence - right.sequence);

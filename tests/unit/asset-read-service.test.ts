@@ -92,9 +92,9 @@ describe("asset read service", () => {
       availableLimit: 1_600,
       nextPaymentDate: "2026-09-10",
       installmentSchedule: [
-        { id: "paid-payment", sequence: 0, scheduledDate: "2026-08-10", principalAmount: 100, feeAmount: 0, status: "PAID" },
-        { id: "payment-1", sequence: 1, scheduledDate: "2026-09-10", principalAmount: 250, feeAmount: 10, status: "SCHEDULED" },
-        { id: "payment-2", sequence: 2, scheduledDate: "2026-10-10", principalAmount: 250, feeAmount: 0, status: "SCHEDULED" },
+        { id: "paid-payment", sequence: 0, scheduledDate: "2026-08-10", principalAmount: 100, feeAmount: 0, paymentAmount: 100, status: "PAID" },
+        { id: "payment-1", sequence: 1, scheduledDate: "2026-09-10", principalAmount: 250, feeAmount: 10, paymentAmount: 260, status: "SCHEDULED" },
+        { id: "payment-2", sequence: 2, scheduledDate: "2026-10-10", principalAmount: 250, feeAmount: 0, paymentAmount: 250, status: "SCHEDULED" },
       ],
     }]);
   });

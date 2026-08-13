@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { createInstallmentSchedule, splitInstallmentPrincipal } from "@/domain/cards/installments";
+import { calculateInstallmentPaymentAmount, createInstallmentSchedule, splitInstallmentPrincipal } from "@/domain/cards/installments";
 
 it("allocates installment remainders deterministically", () => {
   expect(splitInstallmentPrincipal(1_000, 3)).toEqual([334, 333, 333]);
@@ -19,4 +19,8 @@ it("rejects feeAmounts that do not match installmentCount", () => {
   expect(() =>
     createInstallmentSchedule({ totalAmount: 100, installmentCount: 2, firstPaymentDate: "2026-01-01", feeAmounts: [1] })
   ).toThrow("feeAmounts must match installmentCount");
+});
+
+it("adds principal and fee for the displayed installment cashflow", () => {
+  expect(calculateInstallmentPaymentAmount(250_000, 10_000)).toBe(260_000);
 });

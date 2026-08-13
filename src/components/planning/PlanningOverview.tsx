@@ -19,7 +19,13 @@ export function PlanningOverview({
   budgetForms,
   savingsForms,
 }: Readonly<{
-  overview: { budget: { actualUsage: number; forecastUsage: number }; freeSpendable: number; futureCashflowCount: number; goals: readonly { id: string; name: string; contributedAmount: number; remainingAmount: number; requiredMonthlyAmount: number }[] };
+  overview: {
+    budget: { actualUsage: number; forecastUsage: number };
+    freeSpendable: number;
+    futureCashflowCount: number;
+    futureCashflows: readonly { id: string; label: string; amount: number; status: "CONFIRMED" | "PLANNED" }[];
+    goals: readonly { id: string; name: string; contributedAmount: number; remainingAmount: number; requiredMonthlyAmount: number; progressPercent: number }[];
+  };
   budgetForms?: ReactNode;
   savingsForms?: ReactNode;
 }>) {
@@ -54,34 +60,55 @@ export function PlanningOverview({
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold text-content-primary">저축 목표</h2>
           <div className="flex flex-col gap-3">
-            {overview.goals.map((goal) => {
-              const total = goal.contributedAmount + goal.remainingAmount;
-              const progress = total > 0 ? Math.min(100, Math.round((goal.contributedAmount / total) * 100)) : 0;
-              return (
-                <Card key={goal.id} className="flex flex-col gap-3">
-                  <h3 className="text-base font-semibold text-content-primary">{goal.name}</h3>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-surface-base">
-                    <div className="h-full rounded-full bg-brand-600" style={{ width: `${progress}%` }} />
-                  </div>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-content-secondary">
-                    <p>저축액 {money(goal.contributedAmount)}원</p>
-                    <p>남은 금액 {money(goal.remainingAmount)}원</p>
-                    <p>월 필요액 {money(goal.requiredMonthlyAmount)}원</p>
-                  </div>
-                </Card>
-              );
-            })}
+            {overview.goals.map((goal) => (
+              <Card key={goal.id} className="flex flex-col gap-3">
+                <h3 className="text-base font-semibold text-content-primary">{goal.name}</h3>
+                <div
+                  role="progressbar"
+                  aria-label={`${goal.name} 진행률`}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={goal.progressPercent}
+                  className="h-2 w-full overflow-hidden rounded-full bg-surface-base"
+                >
+                  <div className="h-full rounded-full bg-brand-600" style={{ width: `${goal.progressPercent}%` }} />
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-content-secondary">
+                  <p>저축액 {money(goal.contributedAmount)}원</p>
+                  <p>남은 금액 {money(goal.remainingAmount)}원</p>
+                  <p>월 필요액 {money(goal.requiredMonthlyAmount)}원</p>
+                </div>
+              </Card>
+            ))}
           </div>
           {savingsForms}
         </section>
       ) : null}
 
       {section === "cashflow" ? (
-        <Card variant="gradient">
-          <h2 className="text-sm font-medium text-white/80">여유 지출액</h2>
-          <p className="mt-2 text-3xl font-bold tracking-tight tabular-nums">{money(overview.freeSpendable)}원</p>
-          <p className="mt-3 border-t border-white/20 pt-3 text-sm text-white/80">예정된 현금흐름 {overview.futureCashflowCount}건</p>
-        </Card>
+        <section className="flex flex-col gap-4">
+          <Card variant="gradient">
+            <h2 className="text-sm font-medium text-white/80">여유 지출액</h2>
+            <p className="mt-2 text-3xl font-bold tracking-tight tabular-nums">{money(overview.freeSpendable)}원</p>
+            <p className="mt-3 border-t border-white/20 pt-3 text-sm text-white/80">예정된 현금흐름 {overview.futureCashflowCount}건</p>
+          </Card>
+          <Card>
+            <ul className="flex flex-col gap-2">
+              {overview.futureCashflows.map((item) => (
+                <li
+                  key={`${item.status}:${item.id}`}
+                  className={`flex items-center justify-between gap-3 rounded-tile border p-3 ${item.status === "CONFIRMED" ? "border-solid border-border-strong" : "border-dashed border-border-subtle"}`}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-content-primary">{item.label}</p>
+                    <p className="text-xs text-content-muted">{item.status === "CONFIRMED" ? "확정" : "예정"}</p>
+                  </div>
+                  <p className="shrink-0 text-sm font-semibold tabular-nums text-content-primary">-{money(item.amount)}원</p>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </section>
       ) : null}
     </div>
   );

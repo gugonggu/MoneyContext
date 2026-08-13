@@ -7,6 +7,12 @@ export function calculateRequiredMonthlySavings(remainingAmount: number, remaini
   return Math.ceil(remainingAmount / remainingContributions);
 }
 
+export function calculateSavingsProgressRatio(contributedAmount: number, remainingAmount: number): number {
+  const total = contributedAmount + remainingAmount;
+  if (total <= 0) return 0;
+  return Math.min(1, Math.max(0, contributedAmount / total));
+}
+
 export type SavingsProjectionStatus = "ACHIEVED" | "ON_TRACK" | "AT_RISK" | "OVERDUE";
 
 export function projectSavingsGoal(input: Readonly<{
