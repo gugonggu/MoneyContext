@@ -12,7 +12,14 @@ function formatSeoulDate(instant: Date): string {
   if (Number.isNaN(instant.getTime())) throw new RangeError("timestamp must be parseable");
   const parts = SEOUL_FORMATTER.formatToParts(instant);
   const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value;
-  return `${part("year")}-${part("month")}-${part("day")}`;
+  return `${part("year")?.padStart(4, "0")}-${part("month")}-${part("day")}`;
+}
+
+function utcDate(year: number, month: number, day: number, hours = 0): Date {
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  date.setUTCHours(hours, 0, 0, 0);
+  return date;
 }
 
 export function toSeoulDate(isoTimestamp: string): string {
@@ -36,12 +43,12 @@ export function assertIsoDate(value: string): [number, number, number] {
 
 export function seoulDayStartUtcIso(date: string): string {
   const [year, month, day] = assertIsoDate(date);
-  return new Date(Date.UTC(year, month - 1, day, -SEOUL_UTC_OFFSET_HOURS)).toISOString();
+  return utcDate(year, month, day, -SEOUL_UTC_OFFSET_HOURS).toISOString();
 }
 
 export function addIsoDays(date: string, days: number): string {
   const [year, month, day] = assertIsoDate(date);
-  const shifted = new Date(Date.UTC(year, month - 1, day));
+  const shifted = utcDate(year, month, day);
   shifted.setUTCDate(shifted.getUTCDate() + days);
   return shifted.toISOString().slice(0, 10);
 }

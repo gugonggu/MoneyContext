@@ -23,6 +23,10 @@ describe("toSeoulDate", () => {
     expect(toSeoulDate("2026-12-31T15:00:00Z")).toBe("2027-01-01");
   });
 
+  it("pads an early year to the declared ISO date width", () => {
+    expect(toSeoulDate("0099-08-05T03:00:00Z")).toBe("0099-08-05");
+  });
+
   it("rejects an unparseable timestamp", () => {
     expect(() => toSeoulDate("not-a-timestamp")).toThrow(RangeError);
   });
@@ -31,6 +35,10 @@ describe("toSeoulDate", () => {
 describe("seoulDayStartUtcIso", () => {
   it("maps Seoul midnight to 15:00 UTC on the previous day", () => {
     expect(seoulDayStartUtcIso("2026-08-05")).toBe("2026-08-04T15:00:00.000Z");
+  });
+
+  it("preserves an early year instead of applying Date.UTC's 1900 offset", () => {
+    expect(seoulDayStartUtcIso("0099-08-05")).toBe("0099-08-04T15:00:00.000Z");
   });
 
   it("rejects a malformed date", () => {
@@ -53,6 +61,10 @@ describe("addIsoDays", () => {
 
   it("handles a leap day", () => {
     expect(addIsoDays("2028-02-28", 1)).toBe("2028-02-29");
+  });
+
+  it("carries an early year into the next ISO year", () => {
+    expect(addIsoDays("0099-12-31", 1)).toBe("0100-01-01");
   });
 });
 
