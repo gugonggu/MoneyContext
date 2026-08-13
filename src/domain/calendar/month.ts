@@ -115,7 +115,7 @@ export function parseYearMonth(
   if (match) {
     const year = Number(match[1]);
     const month = Number(match[2]);
-    if (month >= 1 && month <= 12) return { year, month };
+    if (year >= 1970 && year <= 9999 && month >= 1 && month <= 12) return { year, month };
   }
   const [year, month] = assertIsoDate(referenceDate);
   return { year, month };

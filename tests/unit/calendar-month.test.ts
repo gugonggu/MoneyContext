@@ -180,6 +180,11 @@ describe("parseYearMonth", () => {
     expect(parseYearMonth("2026-13", "2026-11-20")).toEqual({ year: 2026, month: 11 });
   });
 
+  it("falls back when the year is outside the calendar service range", () => {
+    expect(parseYearMonth("1969-12", "2026-11-20")).toEqual({ year: 2026, month: 11 });
+    expect(parseYearMonth("10000-01", "2026-11-20")).toEqual({ year: 2026, month: 11 });
+  });
+
   it("falls back on a malformed value", () => {
     expect(parseYearMonth("아무거나", "2026-11-20")).toEqual({ year: 2026, month: 11 });
   });

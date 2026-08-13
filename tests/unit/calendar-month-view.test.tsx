@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitForElementToBeRemoved } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -159,5 +159,36 @@ describe("CalendarMonthView", () => {
 
     expect(screen.getByRole("gridcell", { name: /9월 17일/ })).toBeTruthy();
     expect(screen.queryByRole("gridcell", { name: /8월 5일/ })).toBeNull();
+  });
+
+  it("closes the day sheet when the selected date becomes a neighbour cell after navigation", async () => {
+    const { rerender } = render(<CalendarMonthView month={month()} />);
+    fireEvent.click(screen.getByLabelText(/8월 31일/));
+    expect(screen.getByRole("dialog", { name: "2026년 8월 31일" })).toBeTruthy();
+
+    const septemberCells = buildMonthGrid(2026, 9, "2026-09-17").map((day) => cell(day));
+    rerender(
+      <CalendarMonthView
+        month={{ year: 2026, month: 9, cells: septemberCells, summary: { income: 0, expense: 0, net: 0 } }}
+      />,
+    );
+
+    await waitForElementToBeRemoved(() => screen.queryByRole("dialog"));
+  });
+
+  it("does not anchor week view to a stale selection that is a neighbour cell in the new month", () => {
+    const { rerender } = render(<CalendarMonthView month={month()} />);
+    fireEvent.click(screen.getByLabelText(/8월 31일/));
+
+    const septemberCells = buildMonthGrid(2026, 9, "2026-09-17").map((day) => cell(day));
+    rerender(
+      <CalendarMonthView
+        month={{ year: 2026, month: 9, cells: septemberCells, summary: { income: 0, expense: 0, net: 0 } }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "주" }));
+
+    expect(screen.getByRole("gridcell", { name: /9월 17일/ })).toBeTruthy();
+    expect(screen.queryByRole("gridcell", { name: /8월 31일/ })).toBeNull();
   });
 });

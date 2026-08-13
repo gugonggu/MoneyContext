@@ -33,12 +33,18 @@ export function CalendarMonthView({ month }: Readonly<{ month: CalendarMonth }>)
       ? 1
       : -1;
 
-  const activeSelectedDate = selectedDate && month.cells.some((cell) => cell.date === selectedDate) ? selectedDate : null;
+  const activeSelectedDate = selectedDate && month.cells.some(
+    (cell) => cell.date === selectedDate && cell.inCurrentMonth,
+  )
+    ? selectedDate
+    : null;
   const selectedCell = activeSelectedDate
     ? (month.cells.find((cell) => cell.date === activeSelectedDate) ?? null)
     : null;
   const hasRecords = month.cells.some((cell) => cell.inCurrentMonth && (cell.income > 0 || cell.expense > 0));
-  const anchorDate = activeSelectedDate ?? month.cells.find((cell) => cell.isToday)?.date;
+  const anchorDate = activeSelectedDate
+    ?? month.cells.find((cell) => cell.inCurrentMonth && cell.isToday)?.date
+    ?? month.cells.find((cell) => cell.inCurrentMonth)?.date;
   const anchorIndex = anchorDate ? month.cells.findIndex((cell) => cell.date === anchorDate) : 0;
   const weekStart = Math.floor(Math.max(0, anchorIndex) / 7) * 7;
   const visibleCells = view === "week" ? month.cells.slice(weekStart, weekStart + 7) : month.cells;
