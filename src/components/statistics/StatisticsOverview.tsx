@@ -67,10 +67,12 @@ export function StatisticsOverview({ statistics }: Readonly<{ statistics: Statis
           </p>
         </Card>
         <Card className="flex flex-col gap-1">
-          {statistics.savingsRate === null ? (
+          {statistics.savingsRate === null || statistics.savingsRate < 0 ? (
             <>
               <p className="text-xs font-medium text-content-muted">저축률</p>
-              <p className="text-lg font-semibold text-content-primary">계산 불가</p>
+              <p className={cx("text-lg font-semibold", statistics.savingsRate === null ? "text-content-primary" : "text-negative-600")}>
+                {statistics.savingsRate === null ? "계산 불가" : `${statistics.savingsRate}%`}
+              </p>
             </>
           ) : (
             <Ring
