@@ -81,7 +81,16 @@ export function CalendarDayCell({
         {cell.expense > 0 ? (
           <span className="truncate text-content-primary">-{cell.expense.toLocaleString("ko-KR")}</span>
         ) : null}
-        {hasUpcoming ? <span className="truncate text-content-muted">예정 {cell.upcoming.length}</span> : null}
+        {hasUpcoming ? (
+          <span className="inline-flex items-center gap-1 truncate text-content-muted">
+            <span
+              data-testid="calendar-upcoming-dot"
+              aria-hidden="true"
+              className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500"
+            />
+            <span>예정 {cell.upcoming.length}</span>
+          </span>
+        ) : null}
       </span>
     </div>
   );

@@ -62,6 +62,24 @@ describe("formatDayAriaLabel", () => {
 });
 
 describe("CalendarDayCell", () => {
+  it("renders an aria-hidden token dot for upcoming items", () => {
+    render(
+      <CalendarDayCell
+        cell={cell({
+          date: "2026-08-12",
+          upcoming: [{ kind: "PLANNED", label: "치과", direction: "EXPENSE" }],
+        })}
+        selected={false}
+        tabIndex={0}
+        onSelect={() => {}}
+      />,
+    );
+
+    const dot = screen.getByTestId("calendar-upcoming-dot");
+    expect(dot.getAttribute("aria-hidden")).toBe("true");
+    expect(dot.className).toContain("bg-brand-500");
+  });
+
   it("uses a dashed token border only when upcoming items are present", () => {
     const { rerender } = render(
       <CalendarDayCell
