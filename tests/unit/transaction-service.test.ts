@@ -11,7 +11,7 @@ function repository(accounts = [bank, bankB], categories = [category]): Transact
   return {
     findAccount: async (_userId, id) => accounts.find((account) => account.id === id) ?? null,
     findCategory: async (_userId, id) => categories.find((item) => item.id === id) ?? null,
-    create: async (_userId, input) => ({ id: "transaction-a", userId, ...input }),
+    create: async (_userId, input) => ({ id: "transaction-a", userId, status: "CONFIRMED", ...input }),
     list: async () => [], update: async () => null, remove: async () => false,
     listRecentForPatterns: vi.fn(async () => []),
     search: vi.fn(async () => ({ items: [], hasMore: false })),
@@ -104,7 +104,7 @@ describe("transaction service", () => {
 
   it("returns a transaction owned by the current user", async () => {
     const repo = repository();
-    repo.get.mockImplementation(async () => ({ id: "transaction-a", userId, type: "EXPENSE", amount: 1, baseAmount: 1, currency: "KRW", transactionAt: "2026-08-11T00:00:00.000Z" }));
+    repo.get.mockImplementation(async () => ({ id: "transaction-a", userId, status: "CONFIRMED", type: "EXPENSE", amount: 1, baseAmount: 1, currency: "KRW", transactionAt: "2026-08-11T00:00:00.000Z" }));
     const service = createTransactionService(repo);
 
     await expect(service.get(userId, "transaction-a")).resolves.toMatchObject({ id: "transaction-a" });

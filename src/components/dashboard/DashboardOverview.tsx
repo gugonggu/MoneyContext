@@ -1,55 +1,59 @@
-import type { DashboardData } from "@/server/dashboard/service";
+import { CalendarStrip } from "@/components/calendar/CalendarStrip";
+import { Stagger } from "@/components/motion/Stagger";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Sparkline } from "@/components/ui/Sparkline";
+import { StatTile } from "@/components/ui/StatTile";
+import type { DashboardData } from "@/server/dashboard/service";
+
+const won = (value: number) => `${value.toLocaleString("ko-KR")}원`;
 
 export function DashboardOverview({ overview }: Readonly<{ overview: DashboardData }>) {
-  const n = (x: number) => x.toLocaleString("ko-KR");
+  const spendTrend = overview.recentDays.map((day) => day.expense);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <div className="flex flex-col gap-5">
       <PageHeader title="대시보드" />
 
-      <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Card className="border-brand-100 bg-gradient-to-br from-brand-50 to-brand-100/60 dark:border-brand-500/20 dark:from-brand-500/10 dark:to-brand-500/5">
-          <h2 className="text-sm font-medium text-brand-700 dark:text-brand-300">여유 지출액</h2>
-          <p className="mt-1 text-3xl font-bold tracking-tight text-brand-700 sm:text-4xl dark:text-brand-300">{n(overview.freeSpendable)}원</p>
+      <Stagger className="flex flex-col gap-5">
+        <Card variant="gradient" className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <h2 className="text-sm font-medium text-white/80">여유 지출액</h2>
+              <p className="mt-1 text-3xl font-bold tracking-tight tabular-nums sm:text-4xl">{won(overview.freeSpendable)}</p>
+            </div>
+            <div>
+              <h2 className="text-sm font-medium text-white/80">일일 지출 가능액</h2>
+              <p className="mt-1 text-3xl font-bold tracking-tight tabular-nums sm:text-4xl">{won(overview.dailySpendable)}</p>
+            </div>
+          </div>
+          {spendTrend.length > 0 ? (
+            <div className="text-white/70">
+              <Sparkline values={spendTrend} label={`최근 ${spendTrend.length}일 지출 추세`} />
+            </div>
+          ) : null}
         </Card>
-        <Card className="border-brand-100 bg-gradient-to-br from-brand-50 to-brand-100/60 dark:border-brand-500/20 dark:from-brand-500/10 dark:to-brand-500/5">
-          <h2 className="text-sm font-medium text-brand-700 dark:text-brand-300">일일 지출 가능액</h2>
-          <p className="mt-1 text-3xl font-bold tracking-tight text-brand-700 sm:text-4xl dark:text-brand-300">{n(overview.dailySpendable)}원</p>
-        </Card>
-      </section>
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Card>
-          <p className="text-sm font-semibold text-positive-600 dark:text-positive-500">수입 {n(overview.income)}원</p>
-        </Card>
-        <Card>
-          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">지출 {n(overview.expense)}원</p>
-        </Card>
-        <Card>
-          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">예산 사용액 {n(overview.budgetUsage)}원</p>
-        </Card>
-        <Card>
-          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">유동 자산 {n(overview.liquidAssets)}원</p>
-        </Card>
-        <Card>
-          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">순자산 {n(overview.netWorth)}원</p>
-        </Card>
-        <Card>
-          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">카드 미결제액 {n(overview.cardOutstanding)}원</p>
-        </Card>
-        <Card className="flex flex-col items-start gap-1">
-          <span className="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
-            저축 목표 {overview.savingsGoals}개
-          </span>
-        </Card>
-        <Card className="flex flex-col items-start gap-1">
-          <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-            예정된 일정 {overview.upcomingEvents}건
-          </span>
-        </Card>
-      </section>
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <StatTile label="수입" value={won(overview.income)} tone="positive" />
+          <StatTile label="지출" value={won(overview.expense)} />
+          <StatTile label="예산 사용액" value={won(overview.budgetUsage)} />
+          <StatTile label="유동 자산" value={won(overview.liquidAssets)} />
+          <StatTile label="순자산" value={won(overview.netWorth)} />
+          <StatTile label="카드 미결제액" value={won(overview.cardOutstanding)} />
+        </section>
+
+        <CalendarStrip days={overview.recentDays} />
+
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Card>
+            <p className="text-sm font-semibold text-content-primary">저축 목표 {overview.savingsGoals}개</p>
+          </Card>
+          <Card>
+            <p className="text-sm font-semibold text-content-primary">예정된 일정 {overview.upcomingEvents}건</p>
+          </Card>
+        </section>
+      </Stagger>
     </div>
   );
 }
