@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { NotificationCandidate, NotificationType } from "@/domain/notifications/rules";
+import { toSeoulDate } from "@/lib/dates/seoul";
 import type { NotificationRecord, NotificationRepository } from "@/server/notifications/service";
 
 type NotificationRow = Readonly<{
@@ -49,17 +50,6 @@ function addDays(value: string, days: number): string {
   const date = new Date(Date.UTC(year, month - 1, day));
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
-}
-
-function seoulDate(value: string): string {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date(value));
-  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value;
-  return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
 function cardDueDates(today: string, paymentDay: number): string[] {
@@ -158,7 +148,7 @@ export function createNotificationRepository(supabase: SupabaseClient): Notifica
         transactions: (transactions.data ?? []).map((row) => ({
           type: row.type as "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT",
           status: row.status as "PENDING" | "CONFIRMED" | "CANCELLED",
-          transactionDate: seoulDate(String(row.transaction_at)),
+          transactionDate: toSeoulDate(String(row.transaction_at)),
           baseAmount: toSafeInteger(row.base_amount, "transaction base_amount"),
         })),
         savingsGoals: (goals.data ?? []).map((row) => ({
