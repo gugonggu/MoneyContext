@@ -15,6 +15,28 @@ type AccountRow = {
   sort_order: number;
 };
 
+type CreditCardSettingsRow = {
+  id: string;
+  user_id: string;
+  account_id: string;
+  payment_account_id: string;
+  payment_day: number;
+  credit_limit: number | string | null;
+  first_payment_date: string | null;
+};
+
+function toCreditCardSettingsRecord(row: CreditCardSettingsRow): CreditCardSettingsRecord {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    accountId: row.account_id,
+    paymentAccountId: row.payment_account_id,
+    paymentDay: row.payment_day,
+    creditLimit: row.credit_limit === null ? null : Number(row.credit_limit),
+    firstPaymentDate: row.first_payment_date,
+  };
+}
+
 function toAccountRecord(row: AccountRow): AccountRecord {
   const initialBalance = Number(row.initial_balance);
   if (!Number.isSafeInteger(initialBalance)) throw new Error("account initial_balance must be a safe integer");
@@ -84,17 +106,32 @@ export function createAccountRepository(supabase: SupabaseClient): AccountReposi
         payment_account_id: input.paymentAccountId,
         payment_day: input.paymentDay,
         credit_limit: input.creditLimit,
+        first_payment_date: input.firstPaymentDate,
         billing_cycle_rule: {},
-      }).select("id, user_id, account_id, payment_account_id, payment_day, credit_limit").single();
+      }).select("id, user_id, account_id, payment_account_id, payment_day, credit_limit, first_payment_date").single();
       if (error) throw new Error(error.message);
-      return {
-        id: data.id,
-        userId: data.user_id,
-        accountId: data.account_id,
-        paymentAccountId: data.payment_account_id,
-        paymentDay: data.payment_day,
-        creditLimit: data.credit_limit === null ? null : Number(data.credit_limit),
-      };
+      return toCreditCardSettingsRecord(data as CreditCardSettingsRow);
+    },
+
+    async updateCreditCardSettings(userId, accountId, input) {
+      const { data, error } = await supabase
+        .from("credit_card_settings")
+        .update({ payment_account_id: input.paymentAccountId, payment_day: input.paymentDay, credit_limit: input.creditLimit, first_payment_date: input.firstPaymentDate })
+        .eq("user_id", userId)
+        .eq("account_id", accountId)
+        .select("id, user_id, account_id, payment_account_id, payment_day, credit_limit, first_payment_date")
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return data ? toCreditCardSettingsRecord(data as CreditCardSettingsRow) : null;
+    },
+
+    async listCreditCardSettings(userId) {
+      const { data, error } = await supabase
+        .from("credit_card_settings")
+        .select("id, user_id, account_id, payment_account_id, payment_day, credit_limit, first_payment_date")
+        .eq("user_id", userId);
+      if (error) throw new Error(error.message);
+      return (data as CreditCardSettingsRow[]).map(toCreditCardSettingsRecord);
     },
   };
 }

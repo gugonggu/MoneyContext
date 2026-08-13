@@ -13,12 +13,16 @@ const overview = {
     bank: [{ id: "bank-a", name: "Main bank", type: "BANK" as const, balance: 1_000_000, linkedAccountId: null }],
     cash: [], debit: [], liability: [{ id: "loan-a", name: "Loan", type: "LIABILITY" as const, balance: 200_000, linkedAccountId: null }],
   },
-  cards: [{ id: "card-a", name: "Card", outstanding: 100_000, availableLimit: 900_000, nextPaymentDate: "2026-09-10", installmentSchedule: [{ id: "installment-a", sequence: 1, scheduledDate: "2026-09-10", principalAmount: 50_000, feeAmount: 0, paymentAmount: 60_000, status: "SCHEDULED" as const }] }],
+  cards: [{
+    id: "card-a", name: "Card", outstanding: 100_000, availableLimit: 900_000, nextPaymentDate: "2026-09-10",
+    paymentAccountId: "bank-a", paymentDay: 25, creditLimit: 1_000_000, firstPaymentDate: null,
+    installmentSchedule: [{ id: "installment-a", sequence: 1, scheduledDate: "2026-09-10", principalAmount: 50_000, feeAmount: 0, paymentAmount: 60_000, status: "SCHEDULED" as const }],
+  }],
 };
 
 describe("AssetOverview", () => {
   it("renders account groups and card outstanding with its upcoming installment", () => {
-    render(<AssetOverview overview={overview} action={async () => ({ status: "idle" })} />);
+    render(<AssetOverview overview={overview} action={async () => ({ status: "idle" })} addAccountAction={async () => ({ status: "idle" })} editAccountAction={async () => ({ status: "idle" })} editCreditCardAction={async () => ({ status: "idle" })} />);
 
     expect(screen.getByText("Main bank")).toBeTruthy();
     expect(screen.getByText("Card")).toBeTruthy();
@@ -31,7 +35,7 @@ describe("AssetOverview", () => {
 
   it("submits a reconciliation balance and preserves it when the action fails", async () => {
     const action = vi.fn(async () => ({ status: "error" as const, message: "잔액 조정에 실패했습니다" }));
-    render(<AssetOverview overview={overview} action={action} />);
+    render(<AssetOverview overview={overview} action={action} addAccountAction={async () => ({ status: "idle" })} editAccountAction={async () => ({ status: "idle" })} editCreditCardAction={async () => ({ status: "idle" })} />);
 
     fireEvent.change(screen.getByLabelText("Main bank 실제 잔액"), { target: { value: "950000" } });
     fireEvent.submit(screen.getByLabelText("Main bank 잔액 조정").closest("form")!);
@@ -46,6 +50,7 @@ describe("AssetOverview", () => {
       <AssetOverview
         overview={{ ...overview, cards: [{ ...overview.cards[0], availableLimit: null }] }}
         action={async () => ({ status: "idle" })}
+        addAccountAction={async () => ({ status: "idle" })} editAccountAction={async () => ({ status: "idle" })} editCreditCardAction={async () => ({ status: "idle" })}
       />,
     );
 

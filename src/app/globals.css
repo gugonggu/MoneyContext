@@ -78,6 +78,8 @@
 
   --mc-ease-soft: cubic-bezier(0.32, 0.72, 0, 1);
   --mc-ease-snappy: cubic-bezier(0.2, 0.9, 0.3, 1);
+
+  color-scheme: light;
 }
 
 html[data-theme="dark"] {
@@ -100,10 +102,6 @@ html[data-theme="dark"] {
     0 2px 4px rgb(0 0 0 / 0.45),
     0 8px 24px rgb(0 0 0 / 0.45),
     0 24px 56px rgb(0 0 0 / 0.4);
-}
-
-:root {
-  color-scheme: light;
 }
 
 html[data-theme="dark"] {

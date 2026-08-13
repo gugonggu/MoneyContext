@@ -33,6 +33,14 @@ export type CreateCreditCardSettingsInput = Readonly<{
   paymentAccountId: string;
   paymentDay: number;
   creditLimit?: number;
+  firstPaymentDate?: string;
+}>;
+
+export type UpdateCreditCardSettingsInput = Readonly<{
+  paymentAccountId: string;
+  paymentDay: number;
+  creditLimit?: number;
+  firstPaymentDate?: string;
 }>;
 
 export type CreditCardSettingsRecord = Readonly<{
@@ -42,6 +50,7 @@ export type CreditCardSettingsRecord = Readonly<{
   paymentAccountId: string;
   paymentDay: number;
   creditLimit: number | null;
+  firstPaymentDate: string | null;
 }>;
 
 type AccountChanges = {
@@ -58,6 +67,8 @@ export interface AccountRepository {
   update(userId: string, accountId: string, input: AccountChanges): Promise<AccountRecord | null>;
   deactivate(userId: string, accountId: string): Promise<boolean>;
   createCreditCardSettings(userId: string, input: Omit<CreditCardSettingsRecord, "id" | "userId">): Promise<CreditCardSettingsRecord>;
+  updateCreditCardSettings(userId: string, accountId: string, input: { paymentAccountId: string; paymentDay: number; creditLimit: number | null; firstPaymentDate: string | null }): Promise<CreditCardSettingsRecord | null>;
+  listCreditCardSettings(userId: string): Promise<CreditCardSettingsRecord[]>;
 }
 
 function invalid(message: string): never {
@@ -80,6 +91,12 @@ function assertSortOrder(value: number): void {
 
 function assertPaymentDay(value: number): void {
   if (!Number.isInteger(value) || value < 1 || value > 31) invalid("paymentDay must be between 1 and 31");
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+function assertFirstPaymentDate(value: string): void {
+  if (!ISO_DATE.test(value)) invalid("firstPaymentDate must be a YYYY-MM-DD date");
 }
 
 async function requireLinkedBank(userId: string, linkedAccountId: string | undefined, repository: AccountRepository): Promise<string> {
@@ -143,6 +160,7 @@ export function createAccountService(repository: AccountRepository) {
     async createCreditCardSettings(userId: string, input: CreateCreditCardSettingsInput): Promise<CreditCardSettingsRecord> {
       assertPaymentDay(input.paymentDay);
       if (input.creditLimit !== undefined) assertNonNegativeInteger(input.creditLimit, "creditLimit");
+      if (input.firstPaymentDate !== undefined) assertFirstPaymentDate(input.firstPaymentDate);
       const [card, paymentAccount] = await Promise.all([
         repository.findById(userId, input.accountId),
         repository.findById(userId, input.paymentAccountId),
@@ -156,7 +174,34 @@ export function createAccountService(repository: AccountRepository) {
         paymentAccountId: paymentAccount.id,
         paymentDay: input.paymentDay,
         creditLimit: input.creditLimit ?? null,
+        firstPaymentDate: input.firstPaymentDate ?? null,
       });
+    },
+
+    async updateCreditCardSettings(userId: string, accountId: string, input: UpdateCreditCardSettingsInput): Promise<CreditCardSettingsRecord> {
+      assertPaymentDay(input.paymentDay);
+      if (input.creditLimit !== undefined) assertNonNegativeInteger(input.creditLimit, "creditLimit");
+      if (input.firstPaymentDate !== undefined) assertFirstPaymentDate(input.firstPaymentDate);
+      const [card, paymentAccount] = await Promise.all([
+        repository.findById(userId, accountId),
+        repository.findById(userId, input.paymentAccountId),
+      ]);
+      if (!card || !card.isActive || card.type !== "CREDIT_CARD") invalid("accountId must reference an active CREDIT_CARD account");
+      if (!paymentAccount || !paymentAccount.isActive || paymentAccount.type !== "BANK") {
+        invalid("paymentAccountId must reference an active BANK account owned by the current user");
+      }
+      const updated = await repository.updateCreditCardSettings(userId, accountId, {
+        paymentAccountId: paymentAccount.id,
+        paymentDay: input.paymentDay,
+        creditLimit: input.creditLimit ?? null,
+        firstPaymentDate: input.firstPaymentDate ?? null,
+      });
+      if (!updated) invalid("credit card settings not found");
+      return updated;
+    },
+
+    listCreditCardSettings(userId: string): Promise<CreditCardSettingsRecord[]> {
+      return repository.listCreditCardSettings(userId);
     },
   };
 }

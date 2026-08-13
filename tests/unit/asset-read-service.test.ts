@@ -32,8 +32,8 @@ const transactions: readonly AssetTransactionRecord[] = [
 ];
 
 const cardSettings: readonly AssetCardSettingsRecord[] = [
-  { id: "settings-a", userId, accountId: "card-a", paymentAccountId: "bank-a", paymentDay: 25, creditLimit: 2_000 },
-  { id: "settings-b", userId: "user-b", accountId: "other-card", paymentAccountId: "other-bank", paymentDay: 20, creditLimit: 1_000 },
+  { id: "settings-a", userId, accountId: "card-a", paymentAccountId: "bank-a", paymentDay: 25, creditLimit: 2_000, firstPaymentDate: null },
+  { id: "settings-b", userId: "user-b", accountId: "other-card", paymentAccountId: "other-bank", paymentDay: 20, creditLimit: 1_000, firstPaymentDate: null },
 ];
 
 const installments: readonly AssetInstallmentPaymentRecord[] = [
@@ -91,6 +91,10 @@ describe("asset read service", () => {
       outstanding: 400,
       availableLimit: 1_600,
       nextPaymentDate: "2026-09-10",
+      paymentAccountId: "bank-a",
+      paymentDay: 25,
+      creditLimit: 2_000,
+      firstPaymentDate: null,
       installmentSchedule: [
         { id: "paid-payment", sequence: 0, scheduledDate: "2026-08-10", principalAmount: 100, feeAmount: 0, paymentAmount: 100, status: "PAID" },
         { id: "payment-1", sequence: 1, scheduledDate: "2026-09-10", principalAmount: 250, feeAmount: 10, paymentAmount: 260, status: "SCHEDULED" },

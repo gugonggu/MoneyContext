@@ -38,6 +38,7 @@ export type AssetCardSettingsRecord = Readonly<{
   paymentAccountId: string;
   paymentDay: number;
   creditLimit: number | null;
+  firstPaymentDate: string | null;
 }>;
 
 export type AssetInstallmentPaymentRecord = Readonly<{
@@ -90,6 +91,10 @@ export type AssetCardModel = Readonly<{
   availableLimit: number | null;
   nextPaymentDate: string | null;
   installmentSchedule: readonly AssetInstallmentScheduleItem[];
+  paymentAccountId: string | null;
+  paymentDay: number | null;
+  creditLimit: number | null;
+  firstPaymentDate: string | null;
 }>;
 
 export type AssetOverview = Readonly<{
@@ -219,6 +224,10 @@ export function createAssetReadService(repository: AssetReadRepository) {
             availableLimit: settings?.creditLimit === null || settings === undefined ? null : settings.creditLimit - outstanding,
             nextPaymentDate: schedule.find((payment) => payment.status === "SCHEDULED")?.scheduledDate ?? null,
             installmentSchedule: schedule,
+            paymentAccountId: settings?.paymentAccountId ?? null,
+            paymentDay: settings?.paymentDay ?? null,
+            creditLimit: settings?.creditLimit ?? null,
+            firstPaymentDate: settings?.firstPaymentDate ?? null,
           };
         });
 

@@ -1,12 +1,21 @@
 import { revalidatePath } from "next/cache";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { RecurringRuleForm, type RecurringRuleFormState } from "@/components/transactions/RecurringRuleForm";
+import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { todayInSeoul } from "@/lib/dates/seoul";
 import { listAccountsForCurrentUser } from "@/server/accounts";
 import { listCategoriesForCurrentUser } from "@/server/categories";
-import { createRecurringRuleForCurrentUser, deactivateRecurringRuleForCurrentUser, listRecurringRulesForCurrentUser } from "@/server/recurring";
+import {
+  createRecurringRuleForCurrentUser,
+  deactivateRecurringRuleForCurrentUser,
+  generateDueRecurringTransactionsForCurrentUser,
+  listRecurringRulesForCurrentUser,
+} from "@/server/recurring";
 
 const FREQUENCY_LABELS = { DAILY: "매일", WEEKLY: "매주", MONTHLY: "매월" } as const;
 const CONFIRMATION_LABELS = { AUTO_CONFIRM: "자동 확정", REQUIRE_CONFIRMATION: "확인 후 확정" } as const;
@@ -57,7 +66,22 @@ async function deactivateRule(formData: FormData): Promise<void> {
   revalidatePath("/transactions/recurring");
 }
 
-export default async function RecurringTransactionsPage() {
+async function generateDueNow(): Promise<void> {
+  "use server";
+  // Occurrences otherwise only materialize once a day via the cron job at
+  // /api/cron/recurring - this lets the current user pull due rules into real
+  // transactions right now instead of waiting for that to run.
+  const generated = await generateDueRecurringTransactionsForCurrentUser(todayInSeoul());
+  const confirmed = generated.filter((item) => item.status === "CONFIRMED").length;
+  const pending = generated.filter((item) => item.status === "PENDING").length;
+  revalidatePath("/transactions/recurring");
+  redirect(`/transactions/recurring?generated=${generated.length}&confirmed=${confirmed}&pending=${pending}`);
+}
+
+export default async function RecurringTransactionsPage({
+  searchParams,
+}: Readonly<{ searchParams: Promise<{ generated?: string; confirmed?: string; pending?: string }> }>) {
+  const { generated, confirmed, pending } = await searchParams;
   const [rules, accounts, categories] = await Promise.all([
     listRecurringRulesForCurrentUser(),
     listAccountsForCurrentUser(),
@@ -71,10 +95,34 @@ export default async function RecurringTransactionsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader title="반복 거래" />
 
+      {generated !== undefined ? (
+        <Alert kind={Number(generated) > 0 ? "success" : "info"} role="status">
+          {Number(generated) > 0 ? (
+            <>
+              {generated}건 생성됨 (확정 {confirmed ?? 0}건, 확인 대기 {pending ?? 0}건).{" "}
+              {Number(pending) > 0 ? (
+                <Link href="/transactions" className="font-semibold underline">
+                  거래내역에서 확정하기
+                </Link>
+              ) : null}
+            </>
+          ) : (
+            "오늘 기준으로 새로 생성할 반복 거래가 없어요. 아직 발생 예정일이 안 됐거나, 이번 회차는 이미 생성됐어요."
+          )}
+        </Alert>
+      ) : null}
+
       <section aria-labelledby="recurring-rules-heading" className="flex flex-col gap-3">
-        <h2 id="recurring-rules-heading" className="text-base font-semibold text-content-primary">
-          등록된 반복 거래
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="recurring-rules-heading" className="text-base font-semibold text-content-primary">
+            등록된 반복 거래
+          </h2>
+          <form action={generateDueNow}>
+            <Button type="submit" variant="secondary" size="sm">
+              오늘 기준으로 지금 생성
+            </Button>
+          </form>
+        </div>
         {rules.length === 0 ? (
           <p className="text-sm text-content-muted">등록된 반복 거래가 없습니다.</p>
         ) : (

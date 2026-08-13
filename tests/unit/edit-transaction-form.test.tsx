@@ -19,6 +19,7 @@ const expenseTransaction = {
   accountId: "bank-a",
   categoryId: "cat-food",
   memo: "점심",
+  transactionAtLocal: "2026-08-11T13:30",
 };
 
 const transferTransaction = {
@@ -29,6 +30,7 @@ const transferTransaction = {
   fromAccountId: "bank-a",
   toAccountId: "bank-b",
   memo: "",
+  transactionAtLocal: "2026-08-11T13:30",
 };
 
 function renderForm(transaction = expenseTransaction, action = vi.fn(async () => ({ status: "idle" as const }))) {
@@ -44,6 +46,19 @@ describe("EditTransactionForm", () => {
     expect((screen.getByLabelText("메모") as HTMLInputElement).value).toBe("점심");
     expect((screen.getByLabelText("카테고리") as HTMLSelectElement).value).toBe("cat-food");
     expect((screen.getByLabelText("결제수단") as HTMLSelectElement).value).toBe("bank-a");
+    expect((screen.getByLabelText("날짜/시간") as HTMLInputElement).value).toBe("2026-08-11T13:30");
+  });
+
+  it("submits an edited date and time", async () => {
+    const action = vi.fn(async () => ({ status: "idle" as const }));
+    renderForm(expenseTransaction, action);
+
+    fireEvent.change(screen.getByLabelText("날짜/시간"), { target: { value: "2026-08-12T09:00" } });
+    fireEvent.submit(screen.getByLabelText("날짜/시간").closest("form")!);
+
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
+    const submitted = action.mock.calls[0][1] as FormData;
+    expect(submitted.get("transactionAt")).toBe("2026-08-12T09:00");
   });
 
   it("shows source/destination accounts instead of category for a TRANSFER", () => {

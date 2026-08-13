@@ -24,7 +24,16 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   const pathname = usePathname();
 
   return (
-    <div className="flex min-h-screen bg-surface-base">
+    <div className="flex min-h-screen">
+      {/* Decorative wash the glass surfaces blur against — glassmorphism reads as
+          "frosted" only when there's color behind it to blur; a flat body color
+          gives it nothing to do. */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-brand-500/30 blur-3xl dark:bg-brand-500/25" />
+        <div className="absolute -right-20 top-1/4 h-96 w-96 rounded-full bg-sky-400/25 blur-3xl dark:bg-sky-400/20" />
+        <div className="absolute bottom-0 left-1/3 h-72 w-72 rounded-full bg-positive-500/15 blur-3xl dark:bg-positive-500/10" />
+      </div>
+
       <a
         className="fixed -left-[999px] -top-[999px] z-100 rounded-tile bg-surface-raised px-4 py-2 font-medium text-brand-700 shadow-lifted focus:left-4 focus:top-4 dark:text-brand-300"
         href="#main-content"
@@ -33,7 +42,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
       </a>
 
       <nav
-        className="hidden w-60 shrink-0 border-r border-border-subtle bg-surface-raised p-3 md:flex md:flex-col dark:bg-surface-base"
+        className="sticky top-0 hidden h-screen w-60 shrink-0 overflow-y-auto border-r border-border-subtle bg-surface-raised p-3 md:flex md:flex-col dark:bg-surface-base"
         aria-label="주 메뉴"
       >
         <div className="mb-6 flex items-center gap-2 px-2 pt-2">

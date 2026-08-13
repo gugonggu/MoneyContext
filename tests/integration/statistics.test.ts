@@ -57,4 +57,46 @@ describe("statistics repository", () => {
     expect(transactions).toHaveLength(1);
     expect(transactions[0]).toMatchObject({ type: "EXPENSE", baseAmount: 15000, accountName: "statistics test account" });
   });
+
+  it("counts a one-sided TRANSFER out as an EXPENSE, and a one-sided TRANSFER in as INCOME", async () => {
+    const { data: account, error: accountError } = await admin.from("accounts").insert({ user_id: user.id, name: "one-sided transfer account", type: "CASH" }).select("id").single();
+    if (accountError || !account) throw new Error(accountError?.message ?? "Missing account");
+
+    const { error: outError } = await admin.from("transactions").insert({
+      user_id: user.id, type: "TRANSFER", status: "CONFIRMED", transaction_at: "2026-08-10T00:00:00+09:00",
+      amount: 5000, currency: "KRW", base_amount: 5000, base_currency: "KRW", from_account_id: account.id,
+    });
+    if (outError) throw new Error(outError.message);
+
+    const { error: inError } = await admin.from("transactions").insert({
+      user_id: user.id, type: "TRANSFER", status: "CONFIRMED", transaction_at: "2026-08-11T00:00:00+09:00",
+      amount: 7000, currency: "KRW", base_amount: 7000, base_currency: "KRW", to_account_id: account.id,
+    });
+    if (inError) throw new Error(inError.message);
+
+    const transactions = await listStatisticsTransactions(admin, user.id);
+    const outRow = transactions.find((row) => row.baseAmount === 5000);
+    const inRow = transactions.find((row) => row.baseAmount === 7000);
+
+    expect(outRow).toMatchObject({ type: "EXPENSE", accountName: "one-sided transfer account" });
+    expect(inRow).toMatchObject({ type: "INCOME", accountName: "one-sided transfer account" });
+  });
+
+  it("excludes a two-sided TRANSFER between the user's own accounts", async () => {
+    const { data: accounts, error: accountsError } = await admin.from("accounts").insert([
+      { user_id: user.id, name: "internal transfer source", type: "CASH" },
+      { user_id: user.id, name: "internal transfer destination", type: "CASH" },
+    ]).select("id");
+    if (accountsError || !accounts) throw new Error(accountsError?.message ?? "Missing accounts");
+
+    const { error: transferError } = await admin.from("transactions").insert({
+      user_id: user.id, type: "TRANSFER", status: "CONFIRMED", transaction_at: "2026-08-12T00:00:00+09:00",
+      amount: 9999, currency: "KRW", base_amount: 9999, base_currency: "KRW", from_account_id: accounts[0].id, to_account_id: accounts[1].id,
+    });
+    if (transferError) throw new Error(transferError.message);
+
+    const transactions = await listStatisticsTransactions(admin, user.id);
+
+    expect(transactions.find((row) => row.baseAmount === 9999)).toMatchObject({ type: "TRANSFER" });
+  });
 });

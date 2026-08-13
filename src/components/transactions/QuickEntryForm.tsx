@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 
+import { suggestFirstInstallmentPaymentDate } from "@/domain/cards/installments";
 import {
   rankFrequentCategories,
   rankFrequentCategoryAccountCombos,
@@ -18,6 +19,9 @@ export type QuickEntryAccount = Readonly<{
   id: string;
   name: string;
   type: "BANK" | "CASH" | "DEBIT" | "CREDIT_CARD" | "LIABILITY";
+  /** CREDIT_CARD only - lets installment purchases suggest a first payment date off the card's own billing day rather than the purchase date. */
+  paymentDay?: number;
+  firstPaymentDate?: string | null;
 }>;
 
 export type QuickEntryCategory = Readonly<{ id: string; name: string; kind: "INCOME" | "EXPENSE" | "BOTH" }>;
@@ -40,13 +44,24 @@ const TYPE_LABELS: Record<TransactionTypeOption, string> = {
   TRANSFER: "이체",
 };
 
+type TransferDirection = "INTERNAL" | "OUT" | "IN";
+
+const TRANSFER_DIRECTION_LABELS: Record<TransferDirection, string> = {
+  INTERNAL: "내 계좌 간",
+  OUT: "외부로 송금",
+  IN: "외부에서 받음",
+};
+
 const CURRENCIES = ["KRW", "USD", "JPY", "EUR"];
+
+const NEW_CATEGORY_VALUE = "__new__";
 
 export function QuickEntryForm({
   accounts,
   categories,
   tags,
   action,
+  onCreateCategory,
   recentTransactions = [],
   today = new Date().toISOString().slice(0, 10),
   defaultDate,
@@ -55,6 +70,7 @@ export function QuickEntryForm({
   categories: readonly QuickEntryCategory[];
   tags: readonly QuickEntryTag[];
   action: QuickEntryAction;
+  onCreateCategory?: (name: string, kind: "INCOME" | "EXPENSE" | "BOTH") => Promise<QuickEntryCategory>;
   recentTransactions?: readonly QuickEntryRecentTransaction[];
   today?: string;
   defaultDate?: string;
@@ -67,8 +83,13 @@ export function QuickEntryForm({
   const [categoryId, setCategoryId] = useState("");
   const [fromAccountId, setFromAccountId] = useState(accounts[0]?.id ?? "");
   const [toAccountId, setToAccountId] = useState(accounts[1]?.id ?? accounts[0]?.id ?? "");
+  const [transferDirection, setTransferDirection] = useState<TransferDirection>("INTERNAL");
+  const [extraCategories, setExtraCategories] = useState<readonly QuickEntryCategory[]>([]);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [newCategoryError, setNewCategoryError] = useState<string | null>(null);
 
-  const [showDetails, setShowDetails] = useState(Boolean(defaultDate));
+  const [showDetails, setShowDetails] = useState(true);
   const [transactionAt, setTransactionAt] = useState(defaultDate ? `${defaultDate}T12:00` : "");
   const [memo, setMemo] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<ReadonlySet<string>>(new Set());
@@ -76,8 +97,24 @@ export function QuickEntryForm({
   const [exchangeRate, setExchangeRate] = useState("");
   const [installment, setInstallment] = useState(false);
   const [installmentCount, setInstallmentCount] = useState("3");
+  const [installmentFirstPaymentDate, setInstallmentFirstPaymentDate] = useState("");
 
-  const visibleCategories = categories.filter((category) => category.kind === "BOTH" || category.kind === type);
+  // Reset the form after a successful save. Adjusting state during render
+  // (rather than in an effect) avoids an extra commit with the stale values
+  // still showing; see https://react.dev/learn/you-might-not-need-an-effect.
+  const [lastHandledState, setLastHandledState] = useState(state);
+  if (state !== lastHandledState) {
+    setLastHandledState(state);
+    if (state.status === "success") {
+      setAmount("");
+      setCategoryId("");
+      setTransactionAt(defaultDate ? `${defaultDate}T12:00` : "");
+      setMemo("");
+    }
+  }
+
+  const allCategories = [...categories, ...extraCategories];
+  const visibleCategories = type === "TRANSFER" ? allCategories : allCategories.filter((category) => category.kind === "BOTH" || category.kind === type);
   const hasCreditCardAccount = accounts.some((account) => account.type === "CREDIT_CARD");
 
   const accountNameById = useMemo(() => new Map(accounts.map((account) => [account.id, account.name])), [accounts]);
@@ -128,6 +165,26 @@ export function QuickEntryForm({
 
   const hasSuggestions = recentAccountSuggestions.length > 0 || frequentCategorySuggestions.length > 0 || comboSuggestions.length > 0;
 
+  async function handleCreateCategory() {
+    if (!onCreateCategory) return;
+    const name = newCategoryName.trim();
+    if (!name) return;
+
+    setIsCreatingCategory(true);
+    setNewCategoryError(null);
+    try {
+      const kind = type === "TRANSFER" ? "BOTH" : type;
+      const created = await onCreateCategory(name, kind);
+      setExtraCategories((current) => [...current, created]);
+      setCategoryId(created.id);
+      setNewCategoryName("");
+    } catch (error) {
+      setNewCategoryError(error instanceof Error ? error.message : "카테고리를 추가하지 못했습니다");
+    } finally {
+      setIsCreatingCategory(false);
+    }
+  }
+
   function toggleTag(tagId: string) {
     setSelectedTagIds((current) => {
       const next = new Set(current);
@@ -136,6 +193,47 @@ export function QuickEntryForm({
       return next;
     });
   }
+
+  const categoryPicker = (
+    <div className="flex-1">
+      <Select label="카테고리" name="categoryId" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+        <option value="">선택 안 함</option>
+        {visibleCategories.map((category) => (
+          <option key={category.id} value={category.id}>
+            {category.name}
+          </option>
+        ))}
+        {onCreateCategory ? <option value={NEW_CATEGORY_VALUE}>+ 새 카테고리 추가</option> : null}
+      </Select>
+
+      {categoryId === NEW_CATEGORY_VALUE ? (
+        <div className="mt-2 flex items-center gap-2">
+          <input
+            aria-label="새 카테고리 이름"
+            value={newCategoryName}
+            onChange={(event) => setNewCategoryName(event.target.value)}
+            placeholder="카테고리 이름"
+            className="w-full rounded-tile border border-border-strong bg-surface-raised px-3 py-2 text-sm text-content-primary placeholder:text-content-muted"
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={isCreatingCategory || !newCategoryName.trim()}
+            onClick={handleCreateCategory}
+            className="shrink-0"
+          >
+            {isCreatingCategory ? "추가 중..." : "추가"}
+          </Button>
+        </div>
+      ) : null}
+      {newCategoryError ? (
+        <Alert kind="error" role="alert" className="mt-2 py-1 text-xs">
+          {newCategoryError}
+        </Alert>
+      ) : null}
+    </div>
+  );
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
@@ -223,38 +321,58 @@ export function QuickEntryForm({
         ) : null}
 
         {type === "TRANSFER" ? (
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <div className="flex-1">
-              <Select label="출금 계좌" name="fromAccountId" required value={fromAccountId} onChange={(event) => setFromAccountId(event.target.value)}>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
-                  </option>
-                ))}
-              </Select>
+          <div className="flex flex-col gap-4">
+            <div role="radiogroup" aria-label="이체 대상" className="flex gap-1.5 rounded-full bg-surface-base p-1">
+              {(Object.keys(TRANSFER_DIRECTION_LABELS) as TransferDirection[]).map((value) => (
+                <ToggleButton
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={transferDirection === value}
+                  onClick={() => setTransferDirection(value)}
+                  className="flex-1 text-center"
+                >
+                  {TRANSFER_DIRECTION_LABELS[value]}
+                </ToggleButton>
+              ))}
             </div>
-            <div className="flex-1">
-              <Select label="입금 계좌" name="toAccountId" required value={toAccountId} onChange={(event) => setToAccountId(event.target.value)}>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
-                  </option>
-                ))}
-              </Select>
+
+            <div className="flex flex-col gap-4 sm:flex-row">
+              {transferDirection !== "IN" ? (
+                <div className="flex-1">
+                  <Select label="출금 계좌" name="fromAccountId" required value={fromAccountId} onChange={(event) => setFromAccountId(event.target.value)}>
+                    {accounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              ) : null}
+              {transferDirection !== "OUT" ? (
+                <div className="flex-1">
+                  <Select label="입금 계좌" name="toAccountId" required value={toAccountId} onChange={(event) => setToAccountId(event.target.value)}>
+                    {accounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              ) : null}
             </div>
+            {transferDirection !== "INTERNAL" ? (
+              <p className="text-xs text-content-muted">
+                {transferDirection === "OUT"
+                  ? "외부로 나가는 돈이라 순자산에서 바로 빠져요. 상세 옵션의 메모에 누구에게 보냈는지 남겨두면 좋아요."
+                  : "외부에서 들어온 돈이라 순자산에 바로 더해져요. 상세 옵션의 메모에 누가 보냈는지 남겨두면 좋아요."}
+              </p>
+            ) : null}
+            {categoryPicker}
           </div>
         ) : (
           <div className="flex flex-col gap-4 sm:flex-row">
-            <div className="flex-1">
-              <Select label="카테고리" name="categoryId" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
-                <option value="">선택 안 함</option>
-                {visibleCategories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
+            {categoryPicker}
             <div className="flex-1">
               <Select label="결제수단" name="accountId" required value={accountId} onChange={(event) => setAccountId(event.target.value)}>
                 {accounts.map((account) => (
@@ -326,19 +444,50 @@ export function QuickEntryForm({
 
             {type === "EXPENSE" && hasCreditCardAccount ? (
               <div className="flex flex-col gap-3">
-                <ToggleButton type="button" role="checkbox" aria-checked={installment} onClick={() => setInstallment((value) => !value)} className="self-start">
+                <ToggleButton
+                  type="button"
+                  role="checkbox"
+                  aria-checked={installment}
+                  onClick={() =>
+                    setInstallment((value) => {
+                      const next = !value;
+                      if (next) {
+                        const account = accounts.find((item) => item.id === accountId);
+                        const purchaseDate = (transactionAt || today).slice(0, 10);
+                        setInstallmentFirstPaymentDate(
+                          account?.paymentDay
+                            ? suggestFirstInstallmentPaymentDate(purchaseDate, account.paymentDay, account.firstPaymentDate ?? null)
+                            : purchaseDate,
+                        );
+                      }
+                      return next;
+                    })
+                  }
+                  className="self-start"
+                >
                   할부로 결제
                 </ToggleButton>
                 {installment ? <input type="hidden" name="installment" value="on" /> : null}
                 {installment ? (
-                  <TextField
-                    label="할부 개월"
-                    name="installmentCount"
-                    inputMode="numeric"
-                    pattern="\d*"
-                    value={installmentCount}
-                    onChange={(event) => setInstallmentCount(event.target.value)}
-                  />
+                  <>
+                    <TextField
+                      label="할부 개월"
+                      name="installmentCount"
+                      inputMode="numeric"
+                      pattern="\d*"
+                      value={installmentCount}
+                      onChange={(event) => setInstallmentCount(event.target.value)}
+                    />
+                    <TextField
+                      label="첫 결제일"
+                      name="installmentFirstPaymentDate"
+                      type="date"
+                      required
+                      value={installmentFirstPaymentDate}
+                      onChange={(event) => setInstallmentFirstPaymentDate(event.target.value)}
+                      hint="카드 결제일을 등록해뒀다면 그 날짜로 추천해드려요. 필요하면 직접 바꾸세요."
+                    />
+                  </>
                 ) : null}
               </div>
             ) : null}
@@ -357,7 +506,7 @@ export function QuickEntryForm({
         </Alert>
       ) : null}
 
-      <Button type="submit" disabled={isPending} className="w-full">
+      <Button type="submit" disabled={isPending || categoryId === NEW_CATEGORY_VALUE} className="w-full">
         저장
       </Button>
     </form>

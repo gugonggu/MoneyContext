@@ -5,7 +5,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { createInviteSession } from "@/server/auth/invite-session";
-import { isInviteCodeValid } from "@/server/auth/invite";
+import { isSignupInviteCodeValid } from "@/server/auth/invite";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -21,14 +21,14 @@ const NOTICE_MESSAGES: Record<string, string> = {
   check_email: "가입 확인 메일을 보냈어요. 메일함에서 링크를 눌러 가입을 완료해주세요.",
 };
 
-async function requireInviteCode(formData: FormData): Promise<void> {
+function requireSignupInviteCode(formData: FormData): void {
   const inviteCode = formData.get("inviteCode");
-  if (typeof inviteCode !== "string" || !(await isInviteCodeValid(inviteCode))) redirect("/invite?error=invalid");
+  if (typeof inviteCode !== "string" || !isSignupInviteCodeValid(inviteCode)) redirect("/invite?error=invalid");
 }
 
-async function markInviteSessionCookie(): Promise<void> {
+async function markInviteSessionCookie(valid: boolean): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.set("money_context_invite", createInviteSession(), {
+  cookieStore.set("money_context_invite", createInviteSession(valid), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -51,8 +51,12 @@ export default async function InvitePage({ searchParams }: Readonly<{ searchPara
   async function startOAuth(formData: FormData) {
     "use server";
 
-    await requireInviteCode(formData);
-    await markInviteSessionCookie();
+    // Google sign-in serves both returning users (no code needed) and brand-new
+    // signups (code required) through the same button. We can't tell which
+    // this is until /auth/callback sees whether a profile already exists, so
+    // stash whether the typed code was valid and let the callback decide.
+    const inviteCode = formData.get("inviteCode");
+    await markInviteSessionCookie(typeof inviteCode === "string" && isSignupInviteCodeValid(inviteCode));
 
     const { data, error: oauthError } = await (await createSupabaseServerClient()).auth.signInWithOAuth({
       provider: "google",
@@ -65,7 +69,6 @@ export default async function InvitePage({ searchParams }: Readonly<{ searchPara
   async function signInWithEmail(formData: FormData) {
     "use server";
 
-    await requireInviteCode(formData);
     const email = formData.get("email");
     const password = formData.get("password");
     if (typeof email !== "string" || typeof password !== "string" || !email || !password) redirect("/invite?error=email_signin");
@@ -78,13 +81,15 @@ export default async function InvitePage({ searchParams }: Readonly<{ searchPara
   async function signUpWithEmail(formData: FormData) {
     "use server";
 
-    await requireInviteCode(formData);
+    requireSignupInviteCode(formData);
     const email = formData.get("email");
     const password = formData.get("password");
     if (typeof email !== "string" || typeof password !== "string" || !email) redirect("/invite?error=email_signup");
     if (password.length < 6) redirect("/invite?error=weak_password");
 
-    await markInviteSessionCookie();
+    // Email confirmation also lands on /auth/callback, which only creates a
+    // profile once it sees a valid invite session cookie.
+    await markInviteSessionCookie(true);
     const { error: signUpError } = await (await createSupabaseServerClient()).auth.signUp({
       email,
       password,
@@ -98,10 +103,10 @@ export default async function InvitePage({ searchParams }: Readonly<{ searchPara
     <main className="flex min-h-screen items-center justify-center bg-surface-base px-6 py-16">
       <div className="w-full max-w-sm rounded-card border border-border-subtle bg-surface-raised p-8 shadow-card">
         <h1 className="text-2xl font-bold tracking-tight text-content-primary">Money Context 시작하기</h1>
-        <p className="mt-1 text-sm text-content-muted">초대코드가 있어야 가입 또는 로그인할 수 있어요.</p>
+        <p className="mt-1 text-sm text-content-muted">이미 계정이 있다면 초대코드 없이 로그인할 수 있어요. 회원가입에만 초대코드가 필요해요.</p>
 
         <form className="mt-6 flex flex-col gap-4">
-          <TextField label="초대코드" name="inviteCode" required autoFocus />
+          <TextField label="초대코드" name="inviteCode" hint="회원가입 시에만 필요해요" autoFocus />
 
           {errorMessage ? (
             <Alert kind="error" role="alert">

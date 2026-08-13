@@ -11,7 +11,7 @@ export type UpcomingPlanned = Readonly<{
   memo?: string;
 }>;
 
-export type UpcomingCard = Readonly<{ accountId: string; accountName: string; paymentDay: number }>;
+export type UpcomingCard = Readonly<{ accountId: string; accountName: string; paymentDay: number; firstPaymentDate?: string }>;
 
 export type UpcomingRecurringRule = Readonly<{
   id: string;
@@ -50,7 +50,7 @@ function lastDayOfMonth(year: number, month: number): number {
   return date.getUTCDate();
 }
 
-function cardPaymentDates(rangeStart: string, rangeEnd: string, paymentDay: number): string[] {
+function cardPaymentDates(rangeStart: string, rangeEnd: string, paymentDay: number, firstPaymentDate?: string): string[] {
   const [startYear, startMonth] = assertIsoDate(rangeStart);
   const [endYear, endMonth] = assertIsoDate(rangeEnd);
   const dates: string[] = [];
@@ -62,6 +62,7 @@ function cardPaymentDates(rangeStart: string, rangeEnd: string, paymentDay: numb
     }
     const day = Math.min(paymentDay, lastDayOfMonth(year, month));
     const date = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    if (firstPaymentDate && date < firstPaymentDate) continue;
     if (date >= rangeStart && date <= rangeEnd) dates.push(date);
   }
 
@@ -109,7 +110,7 @@ export function collectUpcomingMarkers(input: UpcomingInput): ReadonlyMap<string
   }
 
   for (const card of input.cards) {
-    for (const date of cardPaymentDates(input.rangeStart, input.rangeEnd, card.paymentDay)) {
+    for (const date of cardPaymentDates(input.rangeStart, input.rangeEnd, card.paymentDay, card.firstPaymentDate)) {
       // 금액은 청구 확정 시점까지 알 수 없으므로 표시하지 않는다.
       // 카드대금 납부는 소비가 아닌 현금흐름이므로 실제 지출 통계에는 포함되지 않는다.
       push(markers, date, { kind: "CARD_PAYMENT", label: `${card.accountName} 결제`, direction: "EXPENSE" });

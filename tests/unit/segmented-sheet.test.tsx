@@ -34,6 +34,31 @@ describe("Segmented", () => {
 
     expect(screen.getByRole("radiogroup", { name: "보기 방식" })).toBeTruthy();
   });
+
+  it("moves selection to the next option with ArrowRight, wrapping past the last", () => {
+    const onChange = vi.fn();
+    render(<Segmented label="보기 방식" options={OPTIONS} value="week" onChange={onChange} />);
+
+    fireEvent.keyDown(screen.getByRole("radio", { name: "주" }), { key: "ArrowRight" });
+
+    expect(onChange).toHaveBeenCalledWith("month");
+  });
+
+  it("moves selection to the previous option with ArrowLeft, wrapping past the first", () => {
+    const onChange = vi.fn();
+    render(<Segmented label="보기 방식" options={OPTIONS} value="month" onChange={onChange} />);
+
+    fireEvent.keyDown(screen.getByRole("radio", { name: "월" }), { key: "ArrowLeft" });
+
+    expect(onChange).toHaveBeenCalledWith("week");
+  });
+
+  it("keeps only the selected option in the tab order", () => {
+    render(<Segmented label="보기 방식" options={OPTIONS} value="month" onChange={() => {}} />);
+
+    expect(screen.getByRole("radio", { name: "월" }).getAttribute("tabindex")).toBe("0");
+    expect(screen.getByRole("radio", { name: "주" }).getAttribute("tabindex")).toBe("-1");
+  });
 });
 
 describe("Sheet", () => {

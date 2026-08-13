@@ -44,6 +44,7 @@ export interface TransactionRepository {
   list(userId: string): Promise<TransactionRecord[]>;
   update(userId: string, id: string, input: TransactionInput): Promise<TransactionRecord | null>;
   remove(userId: string, id: string): Promise<boolean>;
+  confirm(userId: string, id: string): Promise<TransactionRecord | null>;
   listRecentForPatterns(userId: string, limit: number): Promise<PatternTransaction[]>;
   search(userId: string, filters: TransactionSearchFilters): Promise<TransactionSearchPage>;
   get(userId: string, id: string): Promise<TransactionRecord | null>;
@@ -100,8 +101,18 @@ async function validate(repository: TransactionRepository, userId: string, input
   validAmount(input.amount, "amount", isAdjustment); validAmount(input.baseAmount, "baseAmount", isAdjustment); validCurrency(input);
   if (Number.isNaN(Date.parse(input.transactionAt))) fail("transactionAt must be an ISO timestamp");
   if (input.type === "TRANSFER") {
-    if (!input.fromAccountId || !input.toAccountId || input.fromAccountId === input.toAccountId) fail("TRANSFER requires distinct source and destination accounts");
-    return { ...input, accountId: undefined, categoryId: undefined, fromAccountId: await active(repository, userId, input.fromAccountId), toAccountId: await active(repository, userId, input.toAccountId) };
+    // Both sides are required only for a transfer between two of the user's own
+    // accounts. Money sent to or received from someone outside the tracked
+    // accounts (e.g. paying a friend back) only has one real, trackable side.
+    if (!input.fromAccountId && !input.toAccountId) fail("TRANSFER requires at least one of a source or destination account");
+    if (input.fromAccountId && input.toAccountId && input.fromAccountId === input.toAccountId) fail("TRANSFER requires distinct source and destination accounts");
+    return {
+      ...input,
+      accountId: undefined,
+      categoryId: await activeCategory(repository, userId, input.categoryId),
+      fromAccountId: input.fromAccountId ? await active(repository, userId, input.fromAccountId) : undefined,
+      toAccountId: input.toAccountId ? await active(repository, userId, input.toAccountId) : undefined,
+    };
   }
   return { ...input, accountId: await active(repository, userId, input.accountId), categoryId: await activeCategory(repository, userId, input.categoryId), fromAccountId: undefined, toAccountId: undefined };
 }
@@ -110,6 +121,11 @@ export function createTransactionService(repository: TransactionRepository) { re
   create: async (userId: string, input: TransactionInput) => repository.create(userId, await validate(repository, userId, input)),
   update: async (userId: string, id: string, input: TransactionInput) => { const row = await repository.update(userId, id, await validate(repository, userId, input)); if (!row) fail("transaction not found"); return row; },
   remove: async (userId: string, id: string) => { if (!await repository.remove(userId, id)) fail("transaction not found"); },
+  // Manual confirm covers PENDING transactions from any source (e.g. a
+  // REQUIRE_CONFIRMATION recurring rule) - there's no separate path tied to
+  // "auto-confirm" specifically, since AUTO_CONFIRM rules never produce a
+  // PENDING row in the first place.
+  confirm: async (userId: string, id: string) => { const row = await repository.confirm(userId, id); if (!row) fail("pending transaction not found"); return row; },
   listRecentForPatterns: (userId: string, limit: number = DEFAULT_PATTERN_LIMIT) => repository.listRecentForPatterns(userId, clampPatternLimit(limit)),
   search: async (userId: string, filters: TransactionSearchFilters) => repository.search(userId, validateSearchFilters(filters)),
   get: async (userId: string, id: string) => { const row = await repository.get(userId, id); if (!row) throw new Error("transaction not found"); return row; },

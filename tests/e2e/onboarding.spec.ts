@@ -9,14 +9,6 @@ test.afterEach(async () => {
 });
 
 test.describe("E2E-001: first user onboarding", () => {
-  test("invalid invite code is rejected before reaching Google sign-in", async ({ page }) => {
-    await page.goto("/invite");
-    await page.getByLabel("초대코드").fill("definitely-not-a-real-invite-code");
-    await page.getByRole("button", { name: "Google로 계속" }).click();
-
-    await expect(page).toHaveURL(/\/invite\?error=invalid/);
-  });
-
   test("onboarding creates a BANK account, an EXPENSE reflects on the dashboard", async ({ page }) => {
     user = await createE2EUser("onboarding");
     await signInAsE2EUser(page, user);

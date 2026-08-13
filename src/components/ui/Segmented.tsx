@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useId } from "react";
+import { useId, type KeyboardEvent } from "react";
 
 import { springSnappy } from "@/components/motion/presets";
 import { cx } from "@/components/ui/cx";
@@ -23,13 +23,23 @@ export function Segmented({
 }>) {
   const indicatorId = useId();
 
+  function onKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
+    const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (step === 0) return;
+
+    event.preventDefault();
+    const nextIndex = (index + step + options.length) % options.length;
+    onChange(options[nextIndex].value);
+    event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("button")[nextIndex]?.focus();
+  }
+
   return (
     <div
       role="radiogroup"
       aria-label={label}
       className={cx("inline-flex gap-1 rounded-pill bg-surface-base p-1", className)}
     >
-      {options.map((option) => {
+      {options.map((option, index) => {
         const selected = option.value === value;
 
         return (
@@ -38,7 +48,9 @@ export function Segmented({
             type="button"
             role="radio"
             aria-checked={selected}
+            tabIndex={selected ? 0 : -1}
             onClick={() => onChange(option.value)}
+            onKeyDown={(event) => onKeyDown(event, index)}
             className="relative rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors"
           >
             {selected ? (

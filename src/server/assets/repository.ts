@@ -39,6 +39,7 @@ type CardSettingsRow = Readonly<{
   payment_account_id: string;
   payment_day: number;
   credit_limit: number | string | null;
+  first_payment_date: string | null;
 }>;
 
 type InstallmentPaymentRow = Readonly<{
@@ -91,6 +92,7 @@ function toCardSettingsRecord(row: CardSettingsRow): AssetCardSettingsRecord {
     paymentAccountId: row.payment_account_id,
     paymentDay: row.payment_day,
     creditLimit: row.credit_limit === null ? null : toSafeInteger(row.credit_limit, "credit card credit_limit"),
+    firstPaymentDate: row.first_payment_date,
   };
 }
 
@@ -136,7 +138,7 @@ export function createAssetReadRepository(supabase: SupabaseClient): AssetReadRe
     async listCardSettings(userId) {
       const { data, error } = await supabase
         .from("credit_card_settings")
-        .select("id,user_id,account_id,payment_account_id,payment_day,credit_limit")
+        .select("id,user_id,account_id,payment_account_id,payment_day,credit_limit,first_payment_date")
         .eq("user_id", userId);
       if (error) throw new Error(error.message);
       return (data as CardSettingsRow[]).map(toCardSettingsRecord);

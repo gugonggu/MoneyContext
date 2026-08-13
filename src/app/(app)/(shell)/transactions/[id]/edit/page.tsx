@@ -6,6 +6,12 @@ import { listAccountsForCurrentUser } from "@/server/accounts";
 import { listCategoriesForCurrentUser } from "@/server/categories";
 import { getTransactionForCurrentUser, updateTransactionForCurrentUser } from "@/server/transactions";
 
+function toDateTimeLocalValue(iso: string): string {
+  const date = new Date(iso);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 async function submitEdit(id: string, _previous: EditTransactionState, formData: FormData): Promise<EditTransactionState> {
   "use server";
 
@@ -22,6 +28,8 @@ async function submitEdit(id: string, _previous: EditTransactionState, formData:
     const memo = String(formData.get("memo") ?? "").trim() || undefined;
 
     const existing = await getTransactionForCurrentUser(id);
+    const transactionAtRaw = String(formData.get("transactionAt") ?? "");
+    const transactionAt = transactionAtRaw ? new Date(transactionAtRaw).toISOString() : existing.transactionAt;
 
     if (type === "TRANSFER") {
       const fromAccountId = String(formData.get("fromAccountId"));
@@ -31,7 +39,7 @@ async function submitEdit(id: string, _previous: EditTransactionState, formData:
         amount,
         baseAmount,
         currency,
-        transactionAt: existing.transactionAt,
+        transactionAt,
         fromAccountId,
         toAccountId,
         memo,
@@ -44,7 +52,7 @@ async function submitEdit(id: string, _previous: EditTransactionState, formData:
         amount,
         baseAmount,
         currency,
-        transactionAt: existing.transactionAt,
+        transactionAt,
         accountId,
         categoryId,
         exchangeRate,
@@ -81,6 +89,7 @@ export default async function EditTransactionPage({ params }: { params: Promise<
           toAccountId: transaction.toAccountId,
           categoryId: transaction.categoryId,
           memo: transaction.memo,
+          transactionAtLocal: toDateTimeLocalValue(transaction.transactionAt),
         }}
         accounts={accounts.map((account) => ({ id: account.id, name: account.name, type: account.type }))}
         categories={categories.map((category) => ({ id: category.id, name: category.name, kind: category.kind }))}

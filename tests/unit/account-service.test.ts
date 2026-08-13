@@ -22,6 +22,8 @@ function createRepository(accounts = [bank]): AccountRepository {
     update: async () => null,
     deactivate: async () => false,
     createCreditCardSettings: async (_userId, input) => ({ id: "card-setting-a", userId, ...input }),
+    updateCreditCardSettings: async (_userId, accountId, input) => ({ id: "card-setting-a", userId, accountId, ...input }),
+    listCreditCardSettings: async () => [],
   };
 }
 
@@ -85,5 +87,49 @@ describe("account service", () => {
       paymentDay: 25,
       creditLimit: 1_000_000,
     })).rejects.toThrow("active BANK account");
+  });
+
+  it("updates credit-card settings when the payment account is a valid active BANK account", async () => {
+    const service = createAccountService(createRepository([
+      { ...bank, id: "card-a", type: "CREDIT_CARD" },
+      { ...bank, id: "bank-b", name: "다른 은행" },
+    ]));
+
+    await expect(service.updateCreditCardSettings("user-a", "card-a", {
+      paymentAccountId: "bank-b",
+      paymentDay: 15,
+      creditLimit: 2_000_000,
+    })).resolves.toMatchObject({ paymentAccountId: "bank-b", paymentDay: 15, creditLimit: 2_000_000 });
+  });
+
+  it("rejects updating credit-card settings when the target account is not an active CREDIT_CARD", async () => {
+    const service = createAccountService(createRepository());
+
+    await expect(service.updateCreditCardSettings(userId, "bank-a", {
+      paymentAccountId: bank.id,
+      paymentDay: 15,
+    })).rejects.toThrow("active CREDIT_CARD account");
+  });
+
+  it("accepts a well-formed first payment date on a new credit card (e.g. a card issued mid-cycle)", async () => {
+    const service = createAccountService(createRepository([bank, { ...bank, id: "card-a", type: "CREDIT_CARD" }]));
+
+    await expect(service.createCreditCardSettings(userId, {
+      accountId: "card-a",
+      paymentAccountId: bank.id,
+      paymentDay: 14,
+      firstPaymentDate: "2026-09-14",
+    })).resolves.toMatchObject({ firstPaymentDate: "2026-09-14" });
+  });
+
+  it("rejects a malformed first payment date", async () => {
+    const service = createAccountService(createRepository([bank, { ...bank, id: "card-a", type: "CREDIT_CARD" }]));
+
+    await expect(service.createCreditCardSettings(userId, {
+      accountId: "card-a",
+      paymentAccountId: bank.id,
+      paymentDay: 14,
+      firstPaymentDate: "September 14",
+    })).rejects.toThrow("firstPaymentDate must be a YYYY-MM-DD date");
   });
 });

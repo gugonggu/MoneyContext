@@ -35,21 +35,21 @@ export function DashboardOverview({ overview }: Readonly<{ overview: DashboardDa
         </Card>
 
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <StatTile label="수입" value={won(overview.income)} tone="positive" />
-          <StatTile label="지출" value={won(overview.expense)} />
-          <StatTile label="예산 사용액" value={won(overview.budgetUsage)} />
-          <StatTile label="유동 자산" value={won(overview.liquidAssets)} />
-          <StatTile label="순자산" value={won(overview.netWorth)} />
-          <StatTile label="카드 미결제액" value={won(overview.cardOutstanding)} />
+          <StatTile variant="glass" label="수입" value={won(overview.income)} tone="positive" />
+          <StatTile variant="glass" label="지출" value={won(overview.expense)} />
+          <StatTile variant="glass" label="예산 사용액" value={won(overview.budgetUsage)} />
+          <StatTile variant="glass" label="유동 자산" value={won(overview.liquidAssets)} />
+          <StatTile variant="glass" label="순자산" value={won(overview.netWorth)} />
+          <StatTile variant="glass" label="카드 미결제액" value={won(overview.cardOutstanding)} />
         </section>
 
         <CalendarStrip days={overview.recentDays} />
 
         <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Card>
+          <Card variant="glass">
             <p className="text-sm font-semibold text-content-primary">저축 목표 {overview.savingsGoals}개</p>
           </Card>
-          <Card>
+          <Card variant="glass">
             <p className="text-sm font-semibold text-content-primary">예정된 일정 {overview.upcomingEvents}건</p>
           </Card>
         </section>

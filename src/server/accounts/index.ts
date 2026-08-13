@@ -2,7 +2,7 @@ import "server-only";
 
 import { requireCurrentProfile } from "@/server/auth/require-profile";
 import { createAccountRepository } from "@/server/accounts/repository";
-import { createAccountService, type CreateAccountInput, type CreateCreditCardSettingsInput, type UpdateAccountInput } from "@/server/accounts/service";
+import { createAccountService, type CreateAccountInput, type CreateCreditCardSettingsInput, type UpdateAccountInput, type UpdateCreditCardSettingsInput } from "@/server/accounts/service";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 async function serviceForCurrentUser() {
@@ -33,4 +33,14 @@ export async function deactivateAccountForCurrentUser(accountId: string) {
 export async function createCreditCardSettingsForCurrentUser(input: CreateCreditCardSettingsInput) {
   const { userId, service } = await serviceForCurrentUser();
   return service.createCreditCardSettings(userId, input);
+}
+
+export async function updateCreditCardSettingsForCurrentUser(accountId: string, input: UpdateCreditCardSettingsInput) {
+  const { userId, service } = await serviceForCurrentUser();
+  return service.updateCreditCardSettings(userId, accountId, input);
+}
+
+export async function listCreditCardSettingsForCurrentUser() {
+  const { userId, service } = await serviceForCurrentUser();
+  return service.listCreditCardSettings(userId);
 }

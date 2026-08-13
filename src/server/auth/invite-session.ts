@@ -10,8 +10,11 @@ function signingKey(): string {
   return pepper;
 }
 
-export function createInviteSession(): string {
-  const payload = Buffer.from(JSON.stringify({ expiresAt: Date.now() + inviteSessionTtlMs })).toString("base64url");
+// `valid` records whether the invite code the user typed before starting Google
+// sign-in matched the signup code. Login never needs the code, so this is only
+// consulted by /auth/callback when it turns out to be a brand-new profile.
+export function createInviteSession(valid: boolean): string {
+  const payload = Buffer.from(JSON.stringify({ expiresAt: Date.now() + inviteSessionTtlMs, valid })).toString("base64url");
   const signature = createHmac("sha256", signingKey()).update(payload).digest("base64url");
   return `${payload}.${signature}`;
 }
@@ -25,8 +28,8 @@ export function isInviteSessionValid(token: string | undefined): boolean {
   const expectedBuffer = Buffer.from(expected);
   if (signatureBuffer.length !== expectedBuffer.length || !timingSafeEqual(signatureBuffer, expectedBuffer)) return false;
   try {
-    const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { expiresAt?: unknown };
-    return typeof decoded.expiresAt === "number" && decoded.expiresAt > Date.now();
+    const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { expiresAt?: unknown; valid?: unknown };
+    return typeof decoded.expiresAt === "number" && decoded.expiresAt > Date.now() && decoded.valid === true;
   } catch {
     return false;
   }

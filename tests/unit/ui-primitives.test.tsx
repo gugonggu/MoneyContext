@@ -125,8 +125,8 @@ describe("form primitives", () => {
       </>,
     );
 
-    const input = screen.getByRole("textbox");
-    const select = screen.getByRole("combobox");
+    const input = screen.getByRole("textbox", { name: "Amount In Korean won" });
+    const select = screen.getByRole("combobox", { name: "Account" });
 
     expect(input.className).toContain("border-border-strong");
     expect(input.className).toContain("bg-surface-raised");
@@ -148,12 +148,29 @@ describe("form primitives", () => {
       </>,
     );
 
-    expect(screen.getByRole("checkbox").className).toContain("border-border-strong");
+    expect(screen.getByRole("checkbox", { name: "Include planned transactions" }).className).toContain("border-border-strong");
     expect(screen.getByText("Include planned transactions").parentElement?.className).toContain("text-content-secondary");
     expect(screen.getByRole("button", { name: "Cash" }).className).toContain("bg-surface-raised");
     expect(screen.getByRole("button", { name: "Cash" }).className).toContain("text-content-secondary");
     expect(screen.getByRole("status").className).toContain("rounded-tile");
     expect(screen.getByRole("heading", { name: "Transactions" }).className).toContain("text-content-primary");
     expect(screen.getByText("Review your activity").className).toContain("text-content-muted");
+  });
+
+  it("marks a status alert polite and an alert-role message with implicit assertive live behavior", () => {
+    render(
+      <>
+        <Alert kind="info" role="status">Saved</Alert>
+        <Alert kind="error" role="alert">Something went wrong</Alert>
+      </>,
+    );
+
+    const status = screen.getByRole("status");
+    const alert = screen.getByRole("alert");
+
+    expect(status.textContent).toBe("Saved");
+    expect(status.getAttribute("aria-live")).toBe("polite");
+    expect(alert.textContent).toBe("Something went wrong");
+    expect(alert.hasAttribute("aria-live")).toBe(false);
   });
 });

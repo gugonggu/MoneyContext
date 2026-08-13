@@ -1,7 +1,8 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { usePathname } from "next/navigation";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/transactions" }));
+vi.mock("next/navigation", () => ({ usePathname: vi.fn(() => "/transactions") }));
 
 import { AppShell } from "@/components/nav/AppShell";
 
@@ -46,11 +47,11 @@ describe("AppShell", () => {
   it("exposes the calendar route in both navigations", () => {
     render(<AppShell>내용</AppShell>);
 
-    const calendarLinks = screen.getAllByRole("link", { name: "달력" });
-    expect(calendarLinks.length).toBeGreaterThanOrEqual(1);
-    for (const link of calendarLinks) {
-      expect(link.getAttribute("href")).toBe("/calendar");
-    }
+    const sidebar = screen.getByRole("navigation", { name: "주 메뉴" });
+    const bottomNav = screen.getByRole("navigation", { name: "하단 메뉴" });
+
+    expect(within(sidebar).getByRole("link", { name: "달력" }).getAttribute("href")).toBe("/calendar");
+    expect(within(bottomNav).getByRole("link", { name: "달력" }).getAttribute("href")).toBe("/calendar");
   });
 
   it("shows the notification bell in the desktop top bar", () => {
@@ -63,5 +64,16 @@ describe("AppShell", () => {
     render(<AppShell>내용</AppShell>);
 
     expect(screen.getByRole("heading", { name: "거래내역" })).toBeTruthy();
+  });
+
+  it("titles the top bar with the quick-entry route, not its parent", () => {
+    vi.mocked(usePathname).mockReturnValue("/transactions/new");
+    try {
+      render(<AppShell>내용</AppShell>);
+
+      expect(screen.getByRole("heading", { name: "거래 입력" })).toBeTruthy();
+    } finally {
+      vi.mocked(usePathname).mockReturnValue("/transactions");
+    }
   });
 });

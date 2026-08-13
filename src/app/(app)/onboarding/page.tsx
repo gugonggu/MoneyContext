@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TextField } from "@/components/ui/TextField";
+import { requireCurrentProfile } from "@/server/auth/require-profile";
 import { createSupabaseServerClient } from "@/server/supabase/server";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -13,6 +14,11 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 export default async function OnboardingPage({ searchParams }: Readonly<{ searchParams: Promise<{ error?: string }> }>) {
+  const profile = await requireCurrentProfile();
+  // The RPC below inserts accounts/categories with no dedup guard, so letting an
+  // already-onboarded profile resubmit would double up real financial data.
+  if (profile.onboarding_completed) redirect("/home");
+
   const { error } = await searchParams;
   const errorMessage = error ? ERROR_MESSAGES[error] ?? "문제가 발생했습니다. 다시 시도해주세요." : null;
 

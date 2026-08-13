@@ -1,8 +1,8 @@
 import { QuickEntryForm, type QuickEntryState } from "@/components/transactions/QuickEntryForm";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { parseDefaultTransactionDate } from "@/domain/transactions/default-date";
-import { listAccountsForCurrentUser } from "@/server/accounts";
-import { assignTagForCurrentUser, listCategoriesForCurrentUser, listTagsForCurrentUser } from "@/server/categories";
+import { listAccountsForCurrentUser, listCreditCardSettingsForCurrentUser } from "@/server/accounts";
+import { assignTagForCurrentUser, createCategoryForCurrentUser, listCategoriesForCurrentUser, listTagsForCurrentUser } from "@/server/categories";
 import { createInstallmentPurchaseForCurrentUser } from "@/server/installments";
 import { createTransactionForCurrentUser, listRecentTransactionsForPatterns } from "@/server/transactions";
 
@@ -27,9 +27,11 @@ async function submitQuickEntry(_previous: QuickEntryState, formData: FormData):
     const tagIds = formData.getAll("tagIds").map(String);
 
     if (type === "TRANSFER") {
-      const fromAccountId = String(formData.get("fromAccountId"));
-      const toAccountId = String(formData.get("toAccountId"));
-      await createTransactionForCurrentUser({ type: "TRANSFER", amount, baseAmount, currency, transactionAt, fromAccountId, toAccountId, memo });
+      const fromAccountIdRaw = formData.get("fromAccountId");
+      const toAccountIdRaw = formData.get("toAccountId");
+      const fromAccountId = typeof fromAccountIdRaw === "string" && fromAccountIdRaw ? fromAccountIdRaw : undefined;
+      const toAccountId = typeof toAccountIdRaw === "string" && toAccountIdRaw ? toAccountIdRaw : undefined;
+      await createTransactionForCurrentUser({ type: "TRANSFER", amount, baseAmount, currency, transactionAt, fromAccountId, toAccountId, categoryId, memo });
       return { status: "success" };
     }
 
@@ -38,6 +40,8 @@ async function submitQuickEntry(_previous: QuickEntryState, formData: FormData):
 
     if (isInstallment) {
       const installmentCount = Number(String(formData.get("installmentCount") ?? ""));
+      const firstPaymentDateRaw = String(formData.get("installmentFirstPaymentDate") ?? "");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(firstPaymentDateRaw)) throw new Error("첫 결제일을 입력해주세요");
       await createInstallmentPurchaseForCurrentUser({
         accountId,
         categoryId,
@@ -47,7 +51,7 @@ async function submitQuickEntry(_previous: QuickEntryState, formData: FormData):
         memo,
         installmentCount,
         interestType: "INTEREST_FREE",
-        firstPaymentDate: transactionAt.slice(0, 10),
+        firstPaymentDate: firstPaymentDateRaw,
       });
       return { status: "success" };
     }
@@ -74,6 +78,12 @@ async function submitQuickEntry(_previous: QuickEntryState, formData: FormData):
   }
 }
 
+async function createCategory(name: string, kind: "INCOME" | "EXPENSE" | "BOTH") {
+  "use server";
+  const category = await createCategoryForCurrentUser(name, kind);
+  return { id: category.id, name: category.name, kind: category.kind };
+}
+
 export default async function NewTransactionPage({
   searchParams,
 }: {
@@ -84,18 +94,26 @@ export default async function NewTransactionPage({
   const requested = Array.isArray(raw) ? raw[0] : raw;
   const defaultDate = parseDefaultTransactionDate(requested);
 
-  const [accounts, categories, tags, recentTransactions] = await Promise.all([
+  const [accounts, categories, tags, recentTransactions, creditCardSettings] = await Promise.all([
     listAccountsForCurrentUser(),
     listCategoriesForCurrentUser(),
     listTagsForCurrentUser(),
     listRecentTransactionsForPatterns(),
+    listCreditCardSettingsForCurrentUser(),
   ]);
+  const cardSettingsByAccountId = new Map(creditCardSettings.map((settings) => [settings.accountId, settings]));
 
   return (
     <div>
       <PageHeader title="거래 입력" />
       <QuickEntryForm
-        accounts={accounts.map((account) => ({ id: account.id, name: account.name, type: account.type }))}
+        accounts={accounts.map((account) => ({
+          id: account.id,
+          name: account.name,
+          type: account.type,
+          paymentDay: cardSettingsByAccountId.get(account.id)?.paymentDay,
+          firstPaymentDate: cardSettingsByAccountId.get(account.id)?.firstPaymentDate,
+        }))}
         categories={categories.map((category) => ({ id: category.id, name: category.name, kind: category.kind }))}
         tags={tags.map((tag) => ({ id: tag.id, name: tag.name }))}
         recentTransactions={recentTransactions.map((transaction) => ({
@@ -105,6 +123,7 @@ export default async function NewTransactionPage({
           occurredAt: transaction.transactionAt,
         }))}
         action={submitQuickEntry}
+        onCreateCategory={createCategory}
         defaultDate={defaultDate}
       />
     </div>

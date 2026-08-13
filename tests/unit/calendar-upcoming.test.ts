@@ -56,6 +56,19 @@ describe("collectUpcomingMarkers", () => {
     });
   });
 
+  it("skips payment dates before a card's first payment date (e.g. a card issued mid-cycle)", () => {
+    const markers = collectUpcomingMarkers({
+      ...EMPTY,
+      rangeStart: "2026-08-01",
+      rangeEnd: "2026-10-31",
+      cards: [{ accountId: "card-1", accountName: "새 카드", paymentDay: 14, firstPaymentDate: "2026-09-14" }],
+    });
+
+    expect(markers.get("2026-08-14")).toBeUndefined();
+    expect(markers.get("2026-09-14")?.[0].kind).toBe("CARD_PAYMENT");
+    expect(markers.get("2026-10-14")?.[0].kind).toBe("CARD_PAYMENT");
+  });
+
   it("clamps a 31st payment day to the last day of February", () => {
     const markers = collectUpcomingMarkers({
       ...EMPTY,

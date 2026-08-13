@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Checkbox } from "@/components/ui/Checkbox";
 
 const RESTORE_SUCCESS_FRAGMENT = "#backup-restored";
-const RESTORE_SUCCESS_MESSAGE = "Backup restored. Your financial data has been refreshed.";
+const RESTORE_SUCCESS_MESSAGE = "백업을 복원했습니다. 금융 데이터가 새로고침되었습니다.";
 
 function subscribeToRestoreFragment(listener: () => void): () => void {
   window.addEventListener("hashchange", listener);
@@ -57,7 +57,7 @@ export function BackupRestore() {
 
       if (!response.ok) {
         const body = await response.json().catch(() => null);
-        throw new Error(typeof body?.error === "string" ? body.error : "Unable to restore backup. Please try again.");
+        throw new Error(typeof body?.error === "string" ? body.error : "백업을 복원하지 못했습니다. 다시 시도해주세요.");
       }
 
       setFile(null);
@@ -69,7 +69,7 @@ export function BackupRestore() {
     } catch (error) {
       setMessage({
         kind: "error",
-        text: error instanceof SyntaxError ? "The selected file is not valid JSON." : error instanceof Error ? error.message : "Unable to restore backup. Please try again.",
+        text: error instanceof SyntaxError ? "선택한 파일이 올바른 JSON 형식이 아닙니다." : error instanceof Error ? error.message : "백업을 복원하지 못했습니다. 다시 시도해주세요.",
       });
     } finally {
       setIsRestoring(false);
@@ -80,24 +80,24 @@ export function BackupRestore() {
     <section aria-labelledby="backup-restore-heading" className="flex flex-col gap-4">
       <div>
         <h2 id="backup-restore-heading" className="text-lg font-semibold text-content-primary">
-          Backup and restore
+          백업 및 복원
         </h2>
-        <p className="mt-1 text-sm text-content-muted">Download a complete copy of your financial data, or restore a previously downloaded backup.</p>
+        <p className="mt-1 text-sm text-content-muted">금융 데이터 전체를 내려받거나, 이전에 내려받은 백업으로 복원할 수 있어요.</p>
       </div>
 
-      <Card className="flex flex-col gap-4">
+      <Card variant="glass" className="flex flex-col gap-4">
         <a
           href="/api/backup"
           download
           className="inline-flex w-fit items-center gap-1.5 rounded-tile border border-border-strong bg-surface-raised px-4 py-2 text-sm font-semibold text-content-secondary shadow-card transition-colors hover:bg-surface-base"
         >
-          Download full backup
+          전체 백업 내려받기
         </a>
 
         <div className="flex flex-col gap-3 border-t border-border-subtle pt-4">
-          <h3 className="text-sm font-semibold text-content-primary">Restore from backup</h3>
+          <h3 className="text-sm font-semibold text-content-primary">백업으로 복원</h3>
           <label className="flex flex-col gap-1.5 text-sm font-medium text-content-secondary">
-            Choose a JSON backup file
+            JSON 백업 파일 선택
             <input
               ref={fileInputRef}
               type="file"
@@ -110,16 +110,16 @@ export function BackupRestore() {
           {file ? (
             <div className="flex flex-col gap-3 rounded-tile border border-border-subtle bg-surface-base p-3">
               <p className="text-sm font-medium text-content-secondary">{file.name}</p>
-              <p role="status" aria-live="polite" aria-label="Restore replacement warning" className="text-sm text-content-secondary">
-                Restoring this backup will replace your current financial data. This cannot be undone.
+              <p role="status" aria-live="polite" aria-label="복원 시 데이터가 교체된다는 경고" className="text-sm text-content-secondary">
+                이 백업을 복원하면 현재 금융 데이터가 교체됩니다. 되돌릴 수 없어요.
               </p>
               <Checkbox
-                label="I understand that restoring replaces my current financial data"
+                label="복원 시 현재 금융 데이터가 교체된다는 것을 이해했습니다"
                 checked={isConfirmed}
                 onChange={(event) => setIsConfirmed(event.target.checked)}
               />
               <Button variant="danger" type="button" disabled={!isConfirmed || isRestoring} onClick={restore} className="self-start">
-                {isRestoring ? "Restoring backup..." : "Restore backup"}
+                {isRestoring ? "백업 복원 중..." : "백업 복원"}
               </Button>
             </div>
           ) : null}
@@ -129,7 +129,7 @@ export function BackupRestore() {
           <Alert
             kind={message?.kind === "error" ? "error" : "success"}
             role={message?.kind === "error" ? "alert" : "status"}
-            aria-label={message?.kind === "error" ? "Restore error" : undefined}
+            aria-label={message?.kind === "error" ? "복원 오류" : undefined}
           >
             {message?.text ?? RESTORE_SUCCESS_MESSAGE}
           </Alert>

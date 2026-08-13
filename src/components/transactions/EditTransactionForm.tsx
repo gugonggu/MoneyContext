@@ -22,6 +22,8 @@ export type EditTransaction = Readonly<{
   toAccountId?: string;
   categoryId?: string;
   memo?: string;
+  /** `datetime-local`-formatted value (YYYY-MM-DDTHH:mm) in the server's local time. */
+  transactionAtLocal: string;
 }>;
 
 export type EditTransactionState = Readonly<{ status: "idle" | "error"; message?: string }>;
@@ -50,6 +52,7 @@ export function EditTransactionForm({
   const [toAccountId, setToAccountId] = useState(transaction.toAccountId ?? accounts[1]?.id ?? accounts[0]?.id ?? "");
   const [currency, setCurrency] = useState(transaction.currency);
   const [exchangeRate, setExchangeRate] = useState(transaction.exchangeRate ?? "");
+  const [transactionAt, setTransactionAt] = useState(transaction.transactionAtLocal);
 
   const visibleCategories = categories.filter((category) => category.kind === "BOTH" || category.kind === transaction.type);
 
@@ -116,6 +119,15 @@ export function EditTransactionForm({
             </div>
           </div>
         )}
+
+        <TextField
+          label="날짜/시간"
+          name="transactionAt"
+          type="datetime-local"
+          required
+          value={transactionAt}
+          onChange={(event) => setTransactionAt(event.target.value)}
+        />
 
         <TextField label="메모" name="memo" type="text" value={memo} onChange={(event) => setMemo(event.target.value)} />
 

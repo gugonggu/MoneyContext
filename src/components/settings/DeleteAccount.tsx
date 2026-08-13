@@ -22,7 +22,7 @@ export function DeleteAccount() {
       const response = await fetch("/api/account/delete", { method: "POST" });
       if (!response.ok) {
         const body = await response.json().catch(() => null);
-        throw new Error(typeof body?.error === "string" ? body.error : "Unable to delete account. Please try again.");
+        throw new Error(typeof body?.error === "string" ? body.error : "계정을 삭제하지 못했습니다. 다시 시도해주세요.");
       }
 
       await createSupabaseBrowserClient().auth.signOut();
@@ -31,7 +31,7 @@ export function DeleteAccount() {
       // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = "/invite";
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete account. Please try again.");
+      setError(deleteError instanceof Error ? deleteError.message : "계정을 삭제하지 못했습니다. 다시 시도해주세요.");
       setIsDeleting(false);
     }
   }
@@ -39,32 +39,32 @@ export function DeleteAccount() {
   return (
     <section aria-labelledby="delete-account-heading" className="flex flex-col gap-4">
       <h2 id="delete-account-heading" className="text-lg font-semibold text-content-primary">
-        Delete account
+        계정 삭제
       </h2>
 
-      <Card className="flex flex-col gap-3 border-negative-100">
-        <p role="status" aria-live="polite" aria-label="Delete account warning" className="text-sm text-content-secondary">
-          Deleting your account permanently removes all your financial data. This cannot be undone.
+      <Card variant="glass" className="flex flex-col gap-3 border-negative-200 dark:border-negative-500/30">
+        <p role="status" aria-live="polite" aria-label="계정 삭제 경고" className="text-sm text-content-secondary">
+          계정을 삭제하면 모든 금융 데이터가 영구적으로 사라집니다. 되돌릴 수 없어요.
         </p>
         <p className="text-sm text-content-secondary">
-          Consider{" "}
+          삭제 전{" "}
           <a href="/api/backup" download className="font-medium text-brand-600 underline hover:text-brand-700">
-            downloading a full backup
-          </a>{" "}
-          first.
+            전체 백업을 내려받는 것
+          </a>
+          을 권장해요.
         </p>
 
         <Checkbox
-          label="I understand this will permanently delete my account and all my financial data"
+          label="계정과 모든 금융 데이터가 영구적으로 삭제된다는 것을 이해했습니다"
           checked={isConfirmed}
           onChange={(event) => setIsConfirmed(event.target.checked)}
         />
         <Button variant="danger" type="button" disabled={!isConfirmed || isDeleting} onClick={deleteAccount} className="self-start">
-          {isDeleting ? "Deleting account..." : "Delete account"}
+          {isDeleting ? "계정 삭제 중..." : "계정 삭제"}
         </Button>
 
         {error ? (
-          <Alert kind="error" role="alert" aria-label="Delete account error">
+          <Alert kind="error" role="alert" aria-label="계정 삭제 오류">
             {error}
           </Alert>
         ) : null}

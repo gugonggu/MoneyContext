@@ -117,6 +117,22 @@ describe("CalendarGrid", () => {
     expect(screen.getAllByRole("gridcell")).toHaveLength(42);
   });
 
+  it("exposes a labeled grid with a header row and six week rows of seven cells", () => {
+    render(<CalendarGrid cells={grid([])} selectedDate={null} onSelect={() => {}} />);
+
+    expect(screen.getByRole("grid", { name: "월별 기록" })).toBeTruthy();
+
+    const rows = screen.getAllByRole("row");
+    expect(rows).toHaveLength(7);
+
+    const [headerRow, ...weekRows] = rows;
+    expect(headerRow.querySelectorAll('[role="columnheader"]')).toHaveLength(7);
+    expect(weekRows).toHaveLength(6);
+    for (const row of weekRows) {
+      expect(row.querySelectorAll('[role="gridcell"]')).toHaveLength(7);
+    }
+  });
+
   it("shows amount lines only when a day has confirmed income or expense", () => {
     render(
       <CalendarGrid

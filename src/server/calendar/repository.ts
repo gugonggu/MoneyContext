@@ -46,7 +46,7 @@ export function createCalendarRepository(supabase: SupabaseClient): CalendarRepo
           .lte("scheduled_date", range.end),
         supabase
           .from("credit_card_settings")
-          .select("account_id,payment_day,accounts!credit_card_settings_account_id_fkey(name)")
+          .select("account_id,payment_day,first_payment_date,accounts!credit_card_settings_account_id_fkey(name)")
           .eq("user_id", userId),
         supabase
           .from("recurring_transactions")
@@ -85,6 +85,7 @@ export function createCalendarRepository(supabase: SupabaseClient): CalendarRepo
           accountId: String(row.account_id),
           accountName: firstName(row.accounts as NamedRow) ?? "카드",
           paymentDay: Number(row.payment_day),
+          ...(row.first_payment_date ? { firstPaymentDate: String(row.first_payment_date) } : {}),
         })),
         recurringRules: ((recurring.data ?? []) as readonly Record<string, unknown>[]).map((row) => ({
           id: String(row.id),

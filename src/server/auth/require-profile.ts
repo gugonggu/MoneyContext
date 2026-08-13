@@ -12,9 +12,3 @@ export async function requireCurrentProfile() {
   if (!profile) redirect("/invite?error=profile");
   return profile;
 }
-
-export async function requireAdminProfile() {
-  const profile = await requireCurrentProfile();
-  if (profile.role !== "ADMIN") redirect("/");
-  return profile;
-}
