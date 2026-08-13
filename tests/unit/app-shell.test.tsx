@@ -42,4 +42,26 @@ describe("AppShell", () => {
 
     expect(screen.getByRole("main").textContent).toContain("고유한-내용-abc");
   });
+
+  it("exposes the calendar route in both navigations", () => {
+    render(<AppShell>내용</AppShell>);
+
+    const calendarLinks = screen.getAllByRole("link", { name: "달력" });
+    expect(calendarLinks.length).toBeGreaterThanOrEqual(1);
+    for (const link of calendarLinks) {
+      expect(link.getAttribute("href")).toBe("/calendar");
+    }
+  });
+
+  it("shows the notification bell in the desktop top bar", () => {
+    render(<AppShell>내용</AppShell>);
+
+    expect(screen.getByRole("link", { name: "알림" }).getAttribute("href")).toBe("/notifications");
+  });
+
+  it("titles the top bar with the current route", () => {
+    render(<AppShell>내용</AppShell>);
+
+    expect(screen.getByRole("heading", { name: "거래내역" })).toBeTruthy();
+  });
 });
