@@ -132,7 +132,14 @@ export function buildCalendarMonth(
 ): CalendarMonth {
   const grid = buildMonthGrid(input.year, input.month, input.today);
   const totals = aggregateDailyTotals(input.transactions);
-  const levels = heatLevels(new Map([...totals].map(([date, value]) => [date, value.expense])));
+  const currentMonthDates = new Set(grid.filter((day) => day.inCurrentMonth).map((day) => day.date));
+  const levels = heatLevels(
+    new Map(
+      [...totals]
+        .filter(([date]) => currentMonthDates.has(date))
+        .map(([date, value]) => [date, value.expense]),
+    ),
+  );
 
   const byDate = new Map<string, CalendarTransaction[]>();
   for (const transaction of input.transactions) {

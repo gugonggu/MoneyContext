@@ -237,4 +237,19 @@ describe("buildCalendarMonth", () => {
     expect(month.cells.find((item) => item.date === "2026-07-28")?.expense).toBe(99_000);
     expect(month.summary.expense).toBe(47_000);
   });
+
+  it("calculates heat levels from current-month spending only", () => {
+    const month = buildCalendarMonth({
+      year: 2026,
+      month: 8,
+      today: "2026-08-12",
+      transactions: [
+        { id: "august", type: "EXPENSE", status: "CONFIRMED", transactionAt: "2026-08-05T03:00:00Z", baseAmount: 10_000 },
+        { id: "july", type: "EXPENSE", status: "CONFIRMED", transactionAt: "2026-07-28T03:00:00Z", baseAmount: 1_000_000 },
+      ],
+      upcoming: NO_UPCOMING,
+    });
+
+    expect(month.cells.find((item) => item.date === "2026-08-05")?.heatLevel).toBe(4);
+  });
 });

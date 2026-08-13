@@ -73,3 +73,29 @@ DB/Migration 영향: 없음. DB, migration, repository, server 코드를 변경�
 - 이 태스크는 표시용 예정 마커를 입력으로만 받는다. Task 10의 예정·카드결제·반복 마커 수집에서도 확정 합계와 절대 혼합하지 말아야 한다.
 - 그리드가 ISO 지원 범위 밖의 이웃 날짜를 필요로 하는 `0000-01`, `9999-12`는 공유 `addIsoDays` 계약에 따라 `RangeError`를 발생시켜 유효하지 않은 5자리/음수 연도를 만들지 않는다.
 - 저장소 루트의 `next-env.d.ts` 변경은 Task 9 시작 전부터 존재했으며 이 커밋에 포함하지 않는다.
+
+## Follow-up fix: target-month heat thresholds
+
+독립 리뷰에서 `buildCalendarMonth` 히트 임계값이 대상 월 밖 지출을 포함하는 문제를 발견했다.
+
+근본 원인:
+- `aggregateDailyTotals(input.transactions)`는 전체 입력 날짜를 집계하는 정상적인 공용 함수이다.
+- `buildCalendarMonth`가 이 전체 map을 범위 필터 없이 `heatLevels`에 넘겨, 월 요약에서는 제외된 이웃/범위 밖 지출이 히트 분위수를 흐렸다.
+
+RED 근거:
+- 2026년 8월의 유일한 지출 10,000원과 7월 지출 1,000,000원을 함께 넘기는 회귀 테스트를 먼저 추가했다.
+- `npx.cmd vitest run tests/unit/calendar-month.test.ts`: exit 1, 30건 중 1건 실패. 8월 5일의 기대 레벨 4에 대해 실제 레벨 2를 반환했다.
+
+수정:
+- 기존 일별 합계와 이웃 달 거래 셀 표시는 유지했다.
+- `grid.inCurrentMonth` 날짜 집합에 속한 지출만 `heatLevels`에 넘기도록 범위를 제한했다.
+
+GREEN 및 검증 근거:
+- `npx.cmd vitest run tests/unit/calendar-month.test.ts`: exit 0, 1 file, 30 tests passed.
+- `npm.cmd run typecheck`: exit 0.
+
+변경 범위:
+- `src/domain/calendar/month.ts`
+- `tests/unit/calendar-month.test.ts`
+- `.superpowers/sdd/2026-08-12-designcode-ui-redesign-calendar/task-9-report.md`
+- `next-env.d.ts`는 건드리거나 스테이징하지 않는다.
