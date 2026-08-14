@@ -339,20 +339,21 @@ external_outgoing = 600,000
 
 (`tests/unit/export-markdown.test.ts`, `tests/unit/export-json.test.ts`)
 
-## TC-EXPORT-003 내부 이체
+## TC-EXPORT-003 내부 이체 — 양쪽 모두 내 계좌
 
 ```text
-부산은행 → 토스
+부산은행 → 토스 (둘 다 현재 사용자의 Money Context 계좌)
 200,000
 ```
 
 기대:
 
+- 외부 자금 이동(external flow) 아님 — 외부 송금/외부 수입 어디에도 포함되지 않음
 - 수입 0
 - 지출 0
 - 결제수단별 소비 통계에 포함되지 않음
 
-(`tests/integration/export.test.ts` "maps both transfer account names")
+(`tests/integration/export.test.ts` "maps both transfer account names", `tests/unit/export-markdown.test.ts` "still excludes a TRANSFER between two of the user's own accounts")
 
 ## TC-EXPORT-004 반복 거래
 
@@ -396,6 +397,53 @@ expense_nature = UNKNOWN
 ```
 
 임의로 ONE_TIME으로 추정하지 않는다.
+
+## TC-EXPORT-007 외부 수입
+
+```text
+외부(부모님 등) → 부산은행
+```
+
+기대:
+
+- 외부 자금 이동(external incoming)에 포함
+- 수입에 포함
+- 결제수단별 소비 통계에는 포함하지 않음
+
+(`tests/unit/export-markdown.test.ts` "counts an external one-sided TRANSFER-in as income...")
+
+## TC-EXPORT-008 월 중간 분석 — 선택 기간과 실제 집계 범위 구분
+
+기준일: `2026-08-14` (Asia/Seoul)
+
+선택 분석 기간: `2026-08-01 ~ 2026-08-31`
+
+기대:
+
+```text
+selected period = 2026-08-01 ~ 2026-08-31
+actual aggregation period = 2026-08-01 ~ 2026-08-14
+status = IN_PROGRESS
+```
+
+8월 15일 이후의 확정 거래가 집계된 것처럼 표시하지 않는다.
+
+(`tests/unit/export-period.test.ts`, `tests/unit/export-markdown.test.ts`, `tests/unit/export-json.test.ts`)
+
+## TC-EXPORT-009 완료된 과거 기간
+
+기준일: `2026-08-14` (Asia/Seoul)
+
+분석 기간: `2026-07-01 ~ 2026-07-31`
+
+기대:
+
+```text
+actual aggregation period = 2026-07-01 ~ 2026-07-31
+status = COMPLETE
+```
+
+(`tests/unit/export-period.test.ts`, `tests/unit/export-markdown.test.ts`, `tests/unit/export-json.test.ts`)
 
 # 15. RLS
 

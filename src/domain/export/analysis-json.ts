@@ -7,6 +7,7 @@ import {
   type ExportReadModel,
   type ExportTransaction,
 } from "./markdown";
+import { resolvePeriodAggregation, type PeriodAggregationStatus } from "./period";
 
 type AmountBreakdown = Readonly<{ name: string; base_amount: number }>;
 
@@ -19,7 +20,14 @@ export type AnalysisJson = Readonly<{
     timezone: "Asia/Seoul";
     preset: string;
   }>;
-  period: Readonly<{ start_date: string; end_date: string }>;
+  period: Readonly<{
+    start_date: string;
+    end_date: string;
+    /** null when the selected period has not started yet - no confirmed data can exist. */
+    actual_data_start_date: string | null;
+    actual_data_end_date: string | null;
+    status: PeriodAggregationStatus;
+  }>;
   financial_position: Readonly<{
     total_assets_base_amount: number;
     total_liabilities_base_amount: number;
@@ -158,7 +166,16 @@ export function generateAnalysisJson(readModel: ExportReadModel): AnalysisJson {
       timezone: "Asia/Seoul",
       preset: readModel.preset,
     },
-    period: { start_date: readModel.period.startDate, end_date: readModel.period.endDate },
+    period: (() => {
+      const aggregation = resolvePeriodAggregation(readModel.period, new Date(readModel.generatedAt));
+      return {
+        start_date: readModel.period.startDate,
+        end_date: readModel.period.endDate,
+        actual_data_start_date: aggregation.actualDataStartDate,
+        actual_data_end_date: aggregation.actualDataEndDate,
+        status: aggregation.status,
+      };
+    })(),
     financial_position: {
       total_assets_base_amount: position.totalAssets,
       total_liabilities_base_amount: position.totalLiabilities,

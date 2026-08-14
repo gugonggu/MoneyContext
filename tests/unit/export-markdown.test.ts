@@ -67,6 +67,8 @@ describe("generateExportMarkdown", () => {
 
     expect(markdown).toContain("- 수입: 0 KRW");
     expect(markdown).toContain("- 지출: 0 KRW");
+    expect(markdown).toContain("- 외부 송금: 0 KRW");
+    expect(markdown).toContain("- 외부 수입: 0 KRW");
     expect(markdown).not.toContain("900,000 KRW");
   });
 
@@ -77,6 +79,8 @@ describe("generateExportMarkdown", () => {
     expect(markdown).toContain("생성일: 2026-08-11T12:00:00+09:00");
     expect(markdown).toContain("기준 통화: KRW");
     expect(markdown).toContain("분석 기간: 2026-08-01 ~ 2026-08-31");
+    expect(markdown).toContain("실제 확정 거래 집계 범위: 2026-08-01 ~ 2026-08-11");
+    expect(markdown).toContain("기간 상태: 진행 중");
     expect(markdown).toContain("## 재정 상태");
     expect(markdown).toContain("- 순자산: 3,800,000 KRW");
     expect(markdown).toContain("## 기간 내 현황");
@@ -84,6 +88,28 @@ describe("generateExportMarkdown", () => {
     expect(markdown).toContain("- 수입 대비 잉여율: 100%");
     expect(markdown).toContain("- 저축 목표 적립액: 0 KRW");
     expect(markdown).toContain("- 저축 목표 적립률: 0%");
+  });
+
+  it("distinguishes a mid-month selected period from the actual confirmed-data range and marks it in progress", () => {
+    const markdown = generateExportMarkdown(readModel({
+      generatedAt: "2026-08-14T15:00:00+09:00",
+      period: { startDate: "2026-08-01", endDate: "2026-08-31" },
+    }));
+
+    expect(markdown).toContain("분석 기간: 2026-08-01 ~ 2026-08-31");
+    expect(markdown).toContain("실제 확정 거래 집계 범위: 2026-08-01 ~ 2026-08-14");
+    expect(markdown).toContain("기간 상태: 진행 중");
+  });
+
+  it("marks a fully elapsed past period as complete, matching the selected range exactly", () => {
+    const markdown = generateExportMarkdown(readModel({
+      generatedAt: "2026-08-14T15:00:00+09:00",
+      period: { startDate: "2026-07-01", endDate: "2026-07-31" },
+    }));
+
+    expect(markdown).toContain("분석 기간: 2026-07-01 ~ 2026-07-31");
+    expect(markdown).toContain("실제 확정 거래 집계 범위: 2026-07-01 ~ 2026-07-31");
+    expect(markdown).toContain("기간 상태: 완료");
   });
 
   it("renders a negative net worth without treating it as an invalid amount", () => {
@@ -142,7 +168,8 @@ describe("generateExportMarkdown", () => {
     expect(markdown).toContain("외부 자금 이동(외부 송금/외부 수입)은 위 기간 수입/지출에 이미 포함된 부분집합이며, 총 수입/지출에 별도로 더해서 계산하지 않습니다.");
     expect(markdown).toContain("기간 잉여금은 저축 목표 적립액이 아닙니다.");
     expect(markdown).toContain("저축 목표 적립액은 Money Context 저축 목표에 연결된 적립 내역만 의미하며");
-    expect(markdown).toContain("'미지정'은 결제수단 정보가 누락된 거래이며, '외부 자금 이동'은 계좌 정보가 없는 외부 송금/수입입니다.");
+    expect(markdown).toContain("'미지정'은 결제수단(계좌) 정보 자체가 누락된 거래를 의미합니다.");
+    expect(markdown).toContain("'외부 자금 이동'은 거래 상대편이 Money Context에서 관리하는 내 금융 계정이 아닌 송금 또는 수입을 의미하며, 내가 관리하는 출금/입금 계좌 정보는 있을 수 있습니다.");
     expect(markdown).toContain("반복성 지출은 반복 거래 규칙에서 생성되었거나 사용자가 명시적으로 반복성으로 지정한 거래를 의미합니다.");
     expect(markdown).toContain("예정 거래라는 이유만으로 반복성 지출로 분류하지 않습니다.");
     expect(markdown).toContain("분류되지 않은 지출은 반복 여부를 확인할 근거가 부족한 거래이며, 일회성이라는 의미가 아닙니다.");

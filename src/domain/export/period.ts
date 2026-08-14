@@ -1,5 +1,44 @@
 export type ExportPeriod = Readonly<{ startDate: string; endDate: string }>;
 
+export type PeriodAggregationStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETE";
+
+export type PeriodAggregation = Readonly<{
+  /** Asia/Seoul calendar date the aggregation was computed as of. */
+  asOfDate: string;
+  /** null when the selected period has not started yet (no confirmed data can exist). */
+  actualDataStartDate: string | null;
+  actualDataEndDate: string | null;
+  status: PeriodAggregationStatus;
+}>;
+
+function seoulDateKey(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const part = (type: "year" | "month" | "day") => parts.find((item) => item.type === type)?.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+/**
+ * A user-selected period like "this month" may extend past today - confirmed
+ * transactions can only exist up to today, so the range actually reflected in
+ * the export ("actual data") is min(selected end, today), not the selected
+ * end itself. Reporting the selected end alone would let an AI mistake a
+ * mid-month snapshot for a completed month.
+ */
+export function resolvePeriodAggregation(period: ExportPeriod, now: Date): PeriodAggregation {
+  const asOfDate = seoulDateKey(now);
+  if (asOfDate < period.startDate) {
+    return { asOfDate, actualDataStartDate: null, actualDataEndDate: null, status: "NOT_STARTED" };
+  }
+  const actualDataEndDate = asOfDate < period.endDate ? asOfDate : period.endDate;
+  const status: PeriodAggregationStatus = asOfDate < period.endDate ? "IN_PROGRESS" : "COMPLETE";
+  return { asOfDate, actualDataStartDate: period.startDate, actualDataEndDate, status };
+}
+
 export type ExportPeriodInput =
   | Readonly<{ kind: "RECENT"; months: 1 | 3 | 6 }>
   | Readonly<{ kind: "MONTH"; month: string }>

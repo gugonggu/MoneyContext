@@ -71,7 +71,13 @@ describe("generateAnalysisJson", () => {
       timezone: "Asia/Seoul",
       preset: "SPENDING_REVIEW",
     });
-    expect(result.period).toEqual({ start_date: "2026-08-01", end_date: "2026-08-31" });
+    expect(result.period).toEqual({
+      start_date: "2026-08-01",
+      end_date: "2026-08-31",
+      actual_data_start_date: "2026-08-01",
+      actual_data_end_date: "2026-08-11",
+      status: "IN_PROGRESS",
+    });
   });
 
   it("uses the stored base amount and Seoul date for period analysis", () => {
@@ -217,6 +223,36 @@ describe("generateAnalysisJson", () => {
     }));
 
     expect(result.expense_nature).toEqual({ recurring_base_amount: 14_900, one_time_base_amount: 600_000, unknown_base_amount: 56_678 });
+  });
+
+  it("marks a mid-month selected period as in progress with the actual data range clamped to today", () => {
+    const result = generateAnalysisJson(readModel({
+      generatedAt: "2026-08-14T06:09:42.000Z",
+      period: { startDate: "2026-08-01", endDate: "2026-08-31" },
+    }));
+
+    expect(result.period).toEqual(expect.objectContaining({
+      start_date: "2026-08-01",
+      end_date: "2026-08-31",
+      actual_data_start_date: "2026-08-01",
+      actual_data_end_date: "2026-08-14",
+      status: "IN_PROGRESS",
+    }));
+  });
+
+  it("marks a fully elapsed past period as complete", () => {
+    const result = generateAnalysisJson(readModel({
+      generatedAt: "2026-08-14T06:09:42.000Z",
+      period: { startDate: "2026-07-01", endDate: "2026-07-31" },
+    }));
+
+    expect(result.period).toEqual(expect.objectContaining({
+      start_date: "2026-07-01",
+      end_date: "2026-07-31",
+      actual_data_start_date: "2026-07-01",
+      actual_data_end_date: "2026-07-31",
+      status: "COMPLETE",
+    }));
   });
 
   it("whitelists analysis fields and does not expose secret-like source properties", () => {

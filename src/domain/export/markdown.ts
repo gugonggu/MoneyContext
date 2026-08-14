@@ -1,4 +1,4 @@
-import { type ExportPeriod } from "@/domain/export/period";
+import { resolvePeriodAggregation, type ExportPeriod } from "@/domain/export/period";
 import { classifyExpenseNature, type ExpenseNature } from "@/domain/export/expense-nature";
 import { exportPresets, isExportPreset, type ExportPreset } from "@/domain/export/presets";
 import { classifyTransferDirection } from "@/domain/transactions/transfer-direction";
@@ -171,6 +171,20 @@ function percentage(numerator: bigint, denominator: bigint): string {
   return `${(numerator * 100n + denominator / 2n) / denominator}%`;
 }
 
+const PERIOD_STATUS_LABEL = { NOT_STARTED: "시작 전", IN_PROGRESS: "진행 중", COMPLETE: "완료" } as const;
+
+function periodStatusLines(readModel: ExportReadModel): string[] {
+  const aggregation = resolvePeriodAggregation(readModel.period, new Date(readModel.generatedAt));
+  const aggregationRange = aggregation.actualDataStartDate && aggregation.actualDataEndDate
+    ? `${aggregation.actualDataStartDate} ~ ${aggregation.actualDataEndDate}`
+    : "확정된 거래 없음 (분석 기간이 아직 시작되지 않음)";
+  return [
+    `분석 기간: ${readModel.period.startDate} ~ ${readModel.period.endDate}`,
+    `실제 확정 거래 집계 범위: ${aggregationRange}`,
+    `기간 상태: ${PERIOD_STATUS_LABEL[aggregation.status]}`,
+  ];
+}
+
 function financialPositionLines(readModel: ExportReadModel): string[] {
   const position = readModel.financialPosition;
   assertSafeAmount(position.totalAssets, "totalAssets");
@@ -265,7 +279,7 @@ export function generateExportMarkdown(readModel: ExportReadModel): string {
     "",
     `생성일: ${readModel.generatedAt}`,
     `기준 통화: ${readModel.baseCurrency}`,
-    `분석 기간: ${readModel.period.startDate} ~ ${readModel.period.endDate}`,
+    ...periodStatusLines(readModel),
     `분석 목적: ${exportPresets[readModel.preset].purpose}`,
     "",
     ...financialPositionLines(readModel),
@@ -299,9 +313,12 @@ export function generateExportMarkdown(readModel: ExportReadModel): string {
     "- 잔액조정은 수입/소비 통계에 포함하지 않습니다.",
     "- 예정 거래는 실제 소비가 아니며 미래 계획으로만 반영합니다.",
     "- 과거 외화 거래 분석은 거래 시점에 저장된 base_amount를 사용합니다.",
+    "- 선택한 분석 기간이 현재 날짜 이후까지 포함하는 경우, 미래 날짜는 확정 소비 통계에 포함되지 않습니다.",
+    "- 실제 확정 거래 집계 범위는 분석 기간과 다를 수 있으며, 월 중간 분석 결과를 완성된 월 전체 소비로 해석하면 안 됩니다.",
     "- 기간 잉여금은 저축 목표 적립액이 아닙니다.",
     "- 저축 목표 적립액은 Money Context 저축 목표에 연결된 적립 내역만 의미하며, 목표에 연결되지 않은 별도 저축(예: 목표 미지정 적금 이체)은 포함하지 않습니다.",
-    "- '미지정'은 결제수단 정보가 누락된 거래이며, '외부 자금 이동'은 계좌 정보가 없는 외부 송금/수입입니다.",
+    "- '미지정'은 결제수단(계좌) 정보 자체가 누락된 거래를 의미합니다.",
+    "- '외부 자금 이동'은 거래 상대편이 Money Context에서 관리하는 내 금융 계정이 아닌 송금 또는 수입을 의미하며, 내가 관리하는 출금/입금 계좌 정보는 있을 수 있습니다.",
     "- 반복성 지출은 반복 거래 규칙에서 생성되었거나 사용자가 명시적으로 반복성으로 지정한 거래를 의미합니다.",
     "- 예정 거래라는 이유만으로 반복성 지출로 분류하지 않습니다.",
     "- 분류되지 않은 지출은 반복 여부를 확인할 근거가 부족한 거래이며, 일회성이라는 의미가 아닙니다.",
