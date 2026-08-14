@@ -20,7 +20,7 @@ export function PlanningOverview({
   savingsForms,
 }: Readonly<{
   overview: {
-    budget: { actualUsage: number; forecastUsage: number };
+    budget: { actualUsage: number; forecastUsage: number; allocated: number | null };
     freeSpendable: number;
     futureCashflowCount: number;
     futureCashflows: readonly { id: string; label: string; amount: number; status: "CONFIRMED" | "PLANNED" }[];
@@ -46,10 +46,20 @@ export function PlanningOverview({
       {section === "budget" ? (
         <section className="flex flex-col gap-4">
           <Card>
-            <h2 className="text-sm font-medium text-content-muted">예산</h2>
+            <h2 className="text-sm font-medium text-content-muted">이번 달 예산</h2>
             <div className="mt-2 flex flex-col gap-1 text-sm text-content-secondary">
-              <p>실제 {money(overview.budget.actualUsage)}원</p>
-              <p>예상 {money(overview.budget.forecastUsage)}원</p>
+              {overview.budget.allocated !== null ? (
+                <p>
+                  예산 {money(overview.budget.allocated)}원 중 {money(overview.budget.actualUsage)}원 사용
+                  {overview.budget.allocated > 0 ? ` (${Math.round((overview.budget.actualUsage / overview.budget.allocated) * 100)}%)` : ""}
+                </p>
+              ) : (
+                <>
+                  <p>실제 {money(overview.budget.actualUsage)}원</p>
+                  <p className="text-xs text-content-muted">이번 달 예산이 아직 설정되지 않았습니다.</p>
+                </>
+              )}
+              <p>예상(이번 달 남은 예정 지출 포함) {money(overview.budget.forecastUsage)}원</p>
             </div>
           </Card>
           {budgetForms}

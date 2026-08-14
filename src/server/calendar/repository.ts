@@ -29,11 +29,11 @@ export function createCalendarRepository(supabase: SupabaseClient): CalendarRepo
         supabase
           .from("transactions")
           .select(
-            "id,type,status,transaction_at,base_amount,memo,recurring_rule_id,categories(name),accounts!transactions_account_id_fkey(name)",
+            "id,type,status,transaction_at,base_amount,memo,recurring_rule_id,from_account_id,to_account_id,categories(name),accounts!transactions_account_id_fkey(name)",
           )
           .eq("user_id", userId)
           .eq("status", "CONFIRMED")
-          .in("type", ["INCOME", "EXPENSE"])
+          .in("type", ["INCOME", "EXPENSE", "TRANSFER"])
           .gte("transaction_at", fromInstant)
           .lt("transaction_at", toInstant)
           .order("transaction_at"),
@@ -64,13 +64,15 @@ export function createCalendarRepository(supabase: SupabaseClient): CalendarRepo
       return {
         transactions: transactionRows.map((row) => ({
           id: String(row.id),
-          type: row.type as "INCOME" | "EXPENSE",
+          type: row.type as "INCOME" | "EXPENSE" | "TRANSFER",
           status: "CONFIRMED" as const,
           transactionAt: String(row.transaction_at),
           baseAmount: toSafeInteger(row.base_amount, "transaction base_amount"),
           ...(row.memo ? { memo: String(row.memo) } : {}),
           ...(firstName(row.categories as NamedRow) ? { categoryName: firstName(row.categories as NamedRow) } : {}),
           ...(firstName(row.accounts as NamedRow) ? { accountName: firstName(row.accounts as NamedRow) } : {}),
+          ...(row.from_account_id ? { fromAccountId: String(row.from_account_id) } : {}),
+          ...(row.to_account_id ? { toAccountId: String(row.to_account_id) } : {}),
         })),
         planned: ((planned.data ?? []) as readonly Record<string, unknown>[]).map((row) => ({
           scheduledDate: String(row.scheduled_date),

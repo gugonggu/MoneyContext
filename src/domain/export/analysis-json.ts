@@ -1,4 +1,4 @@
-import { type ExportReadModel, type ExportTransaction } from "./markdown";
+import { effectiveIncomeExpenseType, type ExportReadModel, type ExportTransaction } from "./markdown";
 
 type ActualTransaction = ExportTransaction & Readonly<{ type: "INCOME" | "EXPENSE" }>;
 
@@ -90,9 +90,11 @@ function exportTransactions(readModel: ExportReadModel): readonly ExportTransact
 }
 
 function actualTransactions(readModel: ExportReadModel): readonly ActualTransaction[] {
-  return exportTransactions(readModel).filter((transaction): transaction is ActualTransaction => (
-    transaction.status === "CONFIRMED" && (transaction.type === "INCOME" || transaction.type === "EXPENSE")
-  ));
+  return exportTransactions(readModel).flatMap((transaction): ActualTransaction[] => {
+    if (transaction.status !== "CONFIRMED") return [];
+    const type = effectiveIncomeExpenseType(transaction);
+    return type ? [{ ...transaction, type }] : [];
+  });
 }
 
 function sumAmounts(transactions: readonly ActualTransaction[], type: ActualTransaction["type"]): number {

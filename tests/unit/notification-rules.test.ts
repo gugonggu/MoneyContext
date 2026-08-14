@@ -74,9 +74,22 @@ describe("notification candidate rules", () => {
       monthlyBudgets: [{ id: "budget-1", baseAmount: 100_000 }],
       transactions: [
         { type: "EXPENSE", status: "CONFIRMED", transactionDate: today, baseAmount: 80_000 },
-        { type: "TRANSFER", status: "CONFIRMED", transactionDate: today, baseAmount: 50_000 },
+        { type: "TRANSFER", status: "CONFIRMED", transactionDate: today, baseAmount: 50_000, fromAccountId: "bank-a", toAccountId: "card-a" },
         { type: "ADJUSTMENT", status: "CONFIRMED", transactionDate: today, baseAmount: 50_000 },
         { type: "EXPENSE", status: "PENDING", transactionDate: today, baseAmount: 50_000 },
+      ],
+    }));
+
+    expect(candidates.filter((candidate) => candidate.type === "BUDGET_THRESHOLD").map((candidate) => candidate.dedupeKey))
+      .toEqual(["budget-threshold:budget-1:2026-08:80"]);
+  });
+
+  it("counts a one-sided TRANSFER out toward budget usage but excludes a one-sided TRANSFER in", () => {
+    const candidates = buildNotificationCandidates(input({
+      monthlyBudgets: [{ id: "budget-1", baseAmount: 100_000 }],
+      transactions: [
+        { type: "TRANSFER", status: "CONFIRMED", transactionDate: today, baseAmount: 80_000, fromAccountId: "bank-a" },
+        { type: "TRANSFER", status: "CONFIRMED", transactionDate: today, baseAmount: 1_000_000, toAccountId: "bank-a" },
       ],
     }));
 

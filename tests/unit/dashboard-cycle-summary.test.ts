@@ -19,6 +19,8 @@ function transaction(overrides: Record<string, unknown>) {
     status: overrides.status,
     transactionAt: overrides.transactionAt,
     baseAmount: overrides.baseAmount,
+    fromAccountId: overrides.fromAccountId,
+    toAccountId: overrides.toAccountId,
   };
 }
 
@@ -53,6 +55,19 @@ describe("getDashboardOverviewForCurrentUser — current salary-cycle summary", 
 
     expect(overview.income).toBe(3_000_000);
     expect(overview.expense).toBe(47_000);
+  });
+
+  it("counts a one-sided TRANSFER out as expense and one-sided TRANSFER in as income, but excludes an internal transfer", async () => {
+    listTransactionsForCurrentUser.mockResolvedValue([
+      transaction({ id: "transfer-out", type: "TRANSFER", status: "CONFIRMED", transactionAt: "2026-08-05T00:00:00+09:00", baseAmount: 50_000, fromAccountId: "bank-a" }),
+      transaction({ id: "transfer-in", type: "TRANSFER", status: "CONFIRMED", transactionAt: "2026-08-06T00:00:00+09:00", baseAmount: 30_000, toAccountId: "bank-a" }),
+      transaction({ id: "internal-transfer", type: "TRANSFER", status: "CONFIRMED", transactionAt: "2026-08-07T00:00:00+09:00", baseAmount: 900_000, fromAccountId: "bank-a", toAccountId: "card-a" }),
+    ]);
+
+    const overview = await getDashboardOverviewForCurrentUser();
+
+    expect(overview.income).toBe(30_000);
+    expect(overview.expense).toBe(50_000);
   });
 
   it("excludes CONFIRMED transactions that fall outside the current cycle window", async () => {

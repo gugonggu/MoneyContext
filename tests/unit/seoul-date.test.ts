@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { addIsoDays, seoulDayStartUtcIso, todayInSeoul, toSeoulDate } from "@/lib/dates/seoul";
+import { addIsoDays, seoulDayStartUtcIso, seoulWallClockToUtcIso, todayInSeoul, toSeoulDate, utcIsoToSeoulWallClock } from "@/lib/dates/seoul";
 
 describe("toSeoulDate", () => {
   it("keeps a mid-day UTC timestamp on the same Seoul day", () => {
@@ -83,5 +83,46 @@ describe("addIsoDays", () => {
 describe("todayInSeoul", () => {
   it("derives the Seoul date from the supplied instant", () => {
     expect(todayInSeoul(new Date("2026-08-05T15:30:00Z"))).toBe("2026-08-06");
+  });
+});
+
+// A datetime-local input's value is always Korea wall-clock time in this app,
+// never the server process's own timezone - new Date(value).toISOString()
+// would silently assume the runtime's local zone (fine on a Seoul-set dev
+// machine, wrong on Vercel's UTC runtime), so this must convert explicitly.
+describe("seoulWallClockToUtcIso", () => {
+  it("converts an evening Seoul time to the correct earlier UTC instant", () => {
+    expect(seoulWallClockToUtcIso("2026-08-05T23:30")).toBe("2026-08-05T14:30:00.000Z");
+  });
+
+  it("rolls a near-midnight Seoul time into the previous UTC day", () => {
+    expect(seoulWallClockToUtcIso("2026-08-05T00:30")).toBe("2026-08-04T15:30:00.000Z");
+  });
+
+  it("accepts an optional seconds component", () => {
+    expect(seoulWallClockToUtcIso("2026-08-05T09:00:15")).toBe("2026-08-05T00:00:15.000Z");
+  });
+
+  it("rejects a value that isn't an ISO-like datetime string", () => {
+    expect(() => seoulWallClockToUtcIso("2026-08-05")).toThrow(RangeError);
+    expect(() => seoulWallClockToUtcIso("not-a-datetime")).toThrow(RangeError);
+  });
+});
+
+describe("utcIsoToSeoulWallClock", () => {
+  it("renders a UTC instant as the equivalent Seoul wall-clock string", () => {
+    expect(utcIsoToSeoulWallClock("2026-08-05T14:30:00.000Z")).toBe("2026-08-05T23:30");
+  });
+
+  it("rolls a late-evening UTC instant into the next Seoul day", () => {
+    expect(utcIsoToSeoulWallClock("2026-08-05T15:30:00.000Z")).toBe("2026-08-06T00:30");
+  });
+
+  it("round-trips through seoulWallClockToUtcIso", () => {
+    expect(utcIsoToSeoulWallClock(seoulWallClockToUtcIso("2026-08-05T23:30"))).toBe("2026-08-05T23:30");
+  });
+
+  it("rejects an unparseable timestamp", () => {
+    expect(() => utcIsoToSeoulWallClock("not-a-timestamp")).toThrow(RangeError);
   });
 });

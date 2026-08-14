@@ -25,6 +25,10 @@ function uniqueCashflows(deductions: readonly PlanningForecastDeduction[]) {
 export interface PlanningReadRepository {
   getData(userId: string): Promise<Readonly<{
     liquidAssets: number;
+    // null when the user hasn't set a monthly_budgets row for the current
+    // Seoul month yet.
+    monthlyBudgetTotal: number | null;
+    // Scoped to the current Seoul month - see read-repository.ts.
     expenses: readonly Readonly<{ amount: number; status: "CONFIRMED" | "PENDING" | "CANCELLED" }>[];
     plannedExpenses: readonly number[];
     goals: readonly Goal[];
@@ -39,7 +43,7 @@ export function createPlanningReadService(repository: PlanningReadRepository) {
     const actualUsage = calculateActualBudgetUsage(data.expenses);
     const futureCashflows = uniqueCashflows(data.deductions);
     return {
-      budget: { actualUsage, forecastUsage: calculateForecastBudgetUsage(actualUsage, data.plannedExpenses) },
+      budget: { actualUsage, forecastUsage: calculateForecastBudgetUsage(actualUsage, data.plannedExpenses), allocated: data.monthlyBudgetTotal },
       goals: data.goals.map((goal) => {
         const contributedAmount = data.contributions.filter((item) => item.goalId === goal.id).reduce((sum, item) => sum + item.amount, 0);
         const remainingAmount = calculateRemainingSavings(goal.targetAmount, contributedAmount);

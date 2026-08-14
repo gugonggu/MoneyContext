@@ -111,7 +111,7 @@ export function createNotificationRepository(supabase: SupabaseClient): Notifica
         supabase.from("planned_transactions").select("id,scheduled_date,base_amount,status").eq("user_id", userId),
         supabase.from("credit_card_settings").select("account_id,payment_day").eq("user_id", userId),
         supabase.from("monthly_budgets").select("id,total_budget").eq("user_id", userId).eq("year", year).eq("month", month),
-        supabase.from("transactions").select("type,status,transaction_at,base_amount").eq("user_id", userId).gte("transaction_at", seoulDayStart(monthStart).toISOString()).lt("transaction_at", seoulDayStart(nextMonthStart).toISOString()),
+        supabase.from("transactions").select("type,status,transaction_at,base_amount,from_account_id,to_account_id").eq("user_id", userId).gte("transaction_at", seoulDayStart(monthStart).toISOString()).lt("transaction_at", seoulDayStart(nextMonthStart).toISOString()),
         supabase.from("savings_goals").select("id,target_amount,target_date,monthly_contribution_plan,is_active").eq("user_id", userId),
         supabase.from("savings_contributions").select("goal_id,amount").eq("user_id", userId),
       ]);
@@ -150,6 +150,8 @@ export function createNotificationRepository(supabase: SupabaseClient): Notifica
           status: row.status as "PENDING" | "CONFIRMED" | "CANCELLED",
           transactionDate: toSeoulDate(String(row.transaction_at)),
           baseAmount: toSafeInteger(row.base_amount, "transaction base_amount"),
+          ...(row.from_account_id ? { fromAccountId: String(row.from_account_id) } : {}),
+          ...(row.to_account_id ? { toAccountId: String(row.to_account_id) } : {}),
         })),
         savingsGoals: (goals.data ?? []).map((row) => ({
           id: String(row.id),

@@ -1,6 +1,7 @@
 import { QuickEntryForm, type QuickEntryState } from "@/components/transactions/QuickEntryForm";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { parseDefaultTransactionDate } from "@/domain/transactions/default-date";
+import { seoulWallClockToUtcIso } from "@/lib/dates/seoul";
 import { listAccountsForCurrentUser, listCreditCardSettingsForCurrentUser } from "@/server/accounts";
 import { assignTagForCurrentUser, createCategoryForCurrentUser, listCategoriesForCurrentUser, listTagsForCurrentUser } from "@/server/categories";
 import { createInstallmentPurchaseForCurrentUser } from "@/server/installments";
@@ -21,7 +22,7 @@ async function submitQuickEntry(_previous: QuickEntryState, formData: FormData):
     const baseAmount = currency === "KRW" ? amount : Math.round(amount * Number(exchangeRate ?? "0"));
 
     const transactionAtRaw = String(formData.get("transactionAt") ?? "");
-    const transactionAt = transactionAtRaw ? new Date(transactionAtRaw).toISOString() : new Date().toISOString();
+    const transactionAt = transactionAtRaw ? seoulWallClockToUtcIso(transactionAtRaw) : new Date().toISOString();
     const memo = String(formData.get("memo") ?? "").trim() || undefined;
     const categoryId = String(formData.get("categoryId") ?? "") || undefined;
     const tagIds = formData.getAll("tagIds").map(String);

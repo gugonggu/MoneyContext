@@ -1,3 +1,5 @@
+import { toSeoulDate } from "@/lib/dates/seoul";
+
 export type GroupableTransaction = Readonly<{ transactionAt: string }>;
 export type DateGroup<T> = Readonly<{ date: string; transactions: readonly T[] }>;
 
@@ -5,7 +7,7 @@ export function groupTransactionsByDate<T extends GroupableTransaction>(transact
   const groups = new Map<string, T[]>();
 
   for (const transaction of transactions) {
-    const date = transaction.transactionAt.slice(0, 10);
+    const date = toSeoulDate(transaction.transactionAt);
     const group = groups.get(date);
     if (group) group.push(transaction);
     else groups.set(date, [transaction]);

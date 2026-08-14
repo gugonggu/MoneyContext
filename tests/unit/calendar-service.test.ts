@@ -156,7 +156,7 @@ describe("calendar repository", () => {
 
     const transactions = queries[0].calls;
     expect(transactions).toContainEqual({ method: "eq", args: ["status", "CONFIRMED"] });
-    expect(transactions).toContainEqual({ method: "in", args: ["type", ["INCOME", "EXPENSE"]] });
+    expect(transactions).toContainEqual({ method: "in", args: ["type", ["INCOME", "EXPENSE", "TRANSFER"]] });
     expect(transactions).toContainEqual({
       method: "gte",
       args: ["transaction_at", "2026-07-25T15:00:00.000Z"],

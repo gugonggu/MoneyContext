@@ -1,3 +1,5 @@
+import { classifyTransferDirection } from "@/domain/transactions/transfer-direction";
+
 export type NotificationType =
   | "RECURRING_CONFIRMATION"
   | "PLANNED_DUE"
@@ -31,6 +33,8 @@ export type NotificationRuleInput = Readonly<{
     status: "PENDING" | "CONFIRMED" | "CANCELLED";
     transactionDate: string;
     baseAmount: number;
+    fromAccountId?: string;
+    toAccountId?: string;
   }>[];
   savingsGoals: readonly Readonly<{
     id: string;
@@ -70,6 +74,15 @@ function asInteger(value: number, name: string): bigint {
 function isCurrentMonth(date: string, today: string): boolean {
   parseDate(date);
   return date.slice(0, 7) === today.slice(0, 7);
+}
+
+// A TRANSFER with only one side present is money sent outside the tracked
+// accounts (e.g. paying a friend back) - it counts toward budget usage same
+// as a real EXPENSE would.
+function isEffectiveExpense(transaction: NotificationRuleInput["transactions"][number]): boolean {
+  if (transaction.type === "EXPENSE") return true;
+  if (transaction.type === "TRANSFER") return classifyTransferDirection(transaction.fromAccountId, transaction.toAccountId) === "EXPENSE";
+  return false;
 }
 
 function savingsStatus(goal: NotificationRuleInput["savingsGoals"][number], today: string): "AT_RISK" | "OVERDUE" | null {
@@ -133,7 +146,7 @@ export function buildNotificationCandidates(input: NotificationRuleInput): reado
   }
 
   const currentMonthUsage = input.transactions
-    .filter((transaction) => transaction.type === "EXPENSE" && transaction.status === "CONFIRMED" && isCurrentMonth(transaction.transactionDate, input.today))
+    .filter((transaction) => transaction.status === "CONFIRMED" && isCurrentMonth(transaction.transactionDate, input.today) && isEffectiveExpense(transaction))
     .reduce((total, transaction) => total + asInteger(transaction.baseAmount, "transaction baseAmount"), 0n);
   const monthKey = input.today.slice(0, 7);
   for (const budget of input.monthlyBudgets) {

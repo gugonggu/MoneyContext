@@ -6,6 +6,7 @@ type Category = Readonly<{ id: string; userId: string; isActive: boolean }>;
 type TransactionInput = Readonly<{ type: TransactionType; amount: number; baseAmount: number; currency: string; transactionAt: string; accountId?: string; fromAccountId?: string; toAccountId?: string; categoryId?: string; exchangeRate?: string; memo?: string }>;
 export type TransactionRecord = Readonly<TransactionInput & { id: string; userId: string; status: TransactionStatus }>;
 export type PatternTransaction = Readonly<{ accountId: string; categoryId?: string; type: "INCOME" | "EXPENSE"; transactionAt: string }>;
+export type ConfirmedRecurringOccurrenceMonth = Readonly<{ ruleId: string; month: string }>;
 export type TransactionStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
 export type TransactionSearchFilters = Readonly<{
   from?: string;
@@ -48,6 +49,7 @@ export interface TransactionRepository {
   listRecentForPatterns(userId: string, limit: number): Promise<PatternTransaction[]>;
   search(userId: string, filters: TransactionSearchFilters): Promise<TransactionSearchPage>;
   get(userId: string, id: string): Promise<TransactionRecord | null>;
+  listConfirmedRecurringOccurrenceMonths(userId: string): Promise<ConfirmedRecurringOccurrenceMonth[]>;
 }
 const MIN_PATTERN_LIMIT = 1;
 const MAX_PATTERN_LIMIT = 500;
@@ -129,4 +131,5 @@ export function createTransactionService(repository: TransactionRepository) { re
   listRecentForPatterns: (userId: string, limit: number = DEFAULT_PATTERN_LIMIT) => repository.listRecentForPatterns(userId, clampPatternLimit(limit)),
   search: async (userId: string, filters: TransactionSearchFilters) => repository.search(userId, validateSearchFilters(filters)),
   get: async (userId: string, id: string) => { const row = await repository.get(userId, id); if (!row) throw new Error("transaction not found"); return row; },
+  listConfirmedRecurringOccurrenceMonths: (userId: string) => repository.listConfirmedRecurringOccurrenceMonths(userId),
 }; }

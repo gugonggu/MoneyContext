@@ -44,6 +44,32 @@ describe("generateExportMarkdown", () => {
     expect(markdown).not.toContain("20,000 KRW");
   });
 
+  it("counts a one-sided TRANSFER out as an expense and one-sided TRANSFER in as income", () => {
+    const markdown = generateExportMarkdown(readModel({
+      transactions: [
+        { id: "transfer-out", transactionDate: "2026-08-06", type: "TRANSFER", status: "CONFIRMED", baseAmount: 50_000, fromAccountName: "부산은행", memo: "친구에게 송금" },
+        { id: "transfer-in", transactionDate: "2026-08-07", type: "TRANSFER", status: "CONFIRMED", baseAmount: 30_000, toAccountName: "부산은행", memo: "친구에게 받음" },
+      ],
+    }));
+
+    expect(markdown).toContain("- 수입: 30,000 KRW");
+    expect(markdown).toContain("- 지출: 50,000 KRW");
+    expect(markdown).toContain("친구에게 송금");
+    expect(markdown).toContain("친구에게 받음");
+  });
+
+  it("still excludes a TRANSFER between two of the user's own accounts (both sides present)", () => {
+    const markdown = generateExportMarkdown(readModel({
+      transactions: [
+        { id: "internal-transfer", transactionDate: "2026-08-06", type: "TRANSFER", status: "CONFIRMED", baseAmount: 900_000, fromAccountName: "부산은행", toAccountName: "신용카드" },
+      ],
+    }));
+
+    expect(markdown).toContain("- 수입: 0 KRW");
+    expect(markdown).toContain("- 지출: 0 KRW");
+    expect(markdown).not.toContain("900,000 KRW");
+  });
+
   it("renders the stable header, financial position, and period summary", () => {
     const markdown = generateExportMarkdown(readModel());
 
@@ -102,7 +128,8 @@ describe("generateExportMarkdown", () => {
   it("includes the mandatory financial-rule notes", () => {
     const markdown = generateExportMarkdown(readModel());
 
-    expect(markdown).toContain("이체는 수입/지출에 포함하지 않습니다.");
+    expect(markdown).toContain("내 계좌 간 이체(양쪽 다 내 소유 계좌)는 수입/지출에 포함하지 않습니다.");
+    expect(markdown).toContain("외부로 보내거나 외부에서 받은 이체(한쪽만 내 계좌)는 각각 지출/수입에 포함합니다.");
     expect(markdown).toContain("카드대금 납부는 추가 소비가 아닙니다.");
     expect(markdown).toContain("신용카드 구매 소비는 구매일에 전액 인식합니다.");
     expect(markdown).toContain("할부 회차는 소비가 아니라 미래 결제 현금흐름입니다.");

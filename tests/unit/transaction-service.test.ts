@@ -13,6 +13,7 @@ function repository(accounts = [bank, bankB], categories = [category]): Transact
     findCategory: async (_userId, id) => categories.find((item) => item.id === id) ?? null,
     create: async (_userId, input) => ({ id: "transaction-a", userId, status: "CONFIRMED", ...input }),
     list: async () => [], update: async () => null, remove: async () => false, confirm: async () => null,
+    listConfirmedRecurringOccurrenceMonths: async () => [],
     listRecentForPatterns: vi.fn(async () => []),
     search: vi.fn(async () => ({ items: [], hasMore: false })),
     get: vi.fn(async () => null),

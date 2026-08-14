@@ -1,4 +1,5 @@
 import { addIsoDays, assertIsoDate, toSeoulDate } from "@/lib/dates/seoul";
+import { classifyTransferDirection } from "@/domain/transactions/transfer-direction";
 
 import type { CalendarCell, CalendarMonth, CalendarTransaction, HeatLevel, UpcomingMarker } from "./types";
 
@@ -20,13 +21,24 @@ export type SourceTransaction = Readonly<{
   memo?: string;
   categoryName?: string;
   accountName?: string;
+  fromAccountId?: string;
+  toAccountId?: string;
 }>;
 
 export type DailyTotals = Readonly<{ income: number; expense: number }>;
 
+// A TRANSFER with only one side present is money sent to or received from
+// outside the tracked accounts (e.g. paying a friend back) - it counts toward
+// the day's income/expense same as a real transaction would.
+function effectiveType(transaction: SourceTransaction): "INCOME" | "EXPENSE" | undefined {
+  if (transaction.type === "INCOME" || transaction.type === "EXPENSE") return transaction.type;
+  if (transaction.type === "TRANSFER") return classifyTransferDirection(transaction.fromAccountId, transaction.toAccountId);
+  return undefined;
+}
+
 function countsTowardTotals(transaction: SourceTransaction): boolean {
   if (transaction.status !== "CONFIRMED") return false;
-  return transaction.type === "INCOME" || transaction.type === "EXPENSE";
+  return effectiveType(transaction) !== undefined;
 }
 
 function firstOfMonth(year: number, month: number): string {
@@ -74,7 +86,7 @@ export function aggregateDailyTotals(
     if (!countsTowardTotals(transaction)) continue;
     const date = toSeoulDate(transaction.transactionAt);
     const bucket = totals.get(date) ?? { income: 0, expense: 0 };
-    if (transaction.type === "INCOME") bucket.income += transaction.baseAmount;
+    if (effectiveType(transaction) === "INCOME") bucket.income += transaction.baseAmount;
     else bucket.expense += transaction.baseAmount;
     totals.set(date, bucket);
   }
@@ -148,7 +160,7 @@ export function buildCalendarMonth(
     const bucket = byDate.get(date) ?? [];
     bucket.push({
       id: transaction.id,
-      type: transaction.type === "INCOME" ? "INCOME" : "EXPENSE",
+      type: effectiveType(transaction) === "INCOME" ? "INCOME" : "EXPENSE",
       baseAmount: transaction.baseAmount,
       memo: transaction.memo,
       categoryName: transaction.categoryName,

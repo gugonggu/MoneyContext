@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { ExportTransaction } from "@/domain/export/markdown";
+import { effectiveIncomeExpenseType, type ExportTransaction } from "@/domain/export/markdown";
 import type { ExportPeriod } from "@/domain/export/period";
 import { createAssetReadRepository } from "@/server/assets/repository";
 import { createAssetReadService } from "@/server/assets/service";
@@ -98,8 +98,12 @@ function mapTransaction(row: TransactionRow): ExportTransaction {
   };
 }
 
+// Mirrors the income/expense totals' own reclassification - a one-sided
+// TRANSFER (money sent outside the tracked accounts) counts as budget usage
+// same as a real EXPENSE would, so this stays consistent with the rest of
+// the same export document instead of using the raw transaction type.
 function isActualExpense(transaction: ExportTransaction): boolean {
-  return transaction.type === "EXPENSE" && transaction.status === "CONFIRMED";
+  return transaction.status === "CONFIRMED" && effectiveIncomeExpenseType(transaction) === "EXPENSE";
 }
 
 function isExportablePlannedCashflow(row: PlannedRow): row is PlannedRow & Readonly<{ type: "INCOME" | "EXPENSE"; base_amount: number | string }> {

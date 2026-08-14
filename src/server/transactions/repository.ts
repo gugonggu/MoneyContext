@@ -43,6 +43,16 @@ export function createTransactionRepository(supabase: SupabaseClient): Transacti
     }
     return searchTransactions(supabase, userId, filters);
   },
+  async listConfirmedRecurringOccurrenceMonths(userId) {
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("recurring_rule_id, recurring_occurrence_date")
+      .eq("user_id", userId)
+      .eq("status", "CONFIRMED")
+      .not("recurring_rule_id", "is", null);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row) => ({ ruleId: String(row.recurring_rule_id), month: String(row.recurring_occurrence_date).slice(0, 7) }));
+  },
 }; }
 
 async function searchTransactions(

@@ -129,6 +129,29 @@ describe("generateAnalysisJson", () => {
     expect(result.planned_cashflows).toEqual([expect.objectContaining({ scheduled_date: "2026-08-10", status: "PLANNED" })]);
   });
 
+  it("counts a one-sided TRANSFER in period_summary and statistics but keeps its raw type in the transactions dump", () => {
+    const result = generateAnalysisJson(readModel({
+      transactions: [
+        { id: "transfer-out", transactionDate: "2026-08-06T00:00:00.000Z", type: "TRANSFER", status: "CONFIRMED", baseAmount: 50_000, fromAccountName: "Bank", categoryName: "Gift" },
+      ],
+    }));
+
+    expect(result.period_summary.expense_base_amount).toBe(50_000);
+    expect(result.statistics.category_spending).toEqual([{ name: "Gift", base_amount: 50_000 }]);
+    expect(result.transactions).toEqual([expect.objectContaining({ transaction_type: "TRANSFER", from_account: "Bank" })]);
+  });
+
+  it("excludes a TRANSFER between two of the user's own accounts from period_summary", () => {
+    const result = generateAnalysisJson(readModel({
+      transactions: [
+        { id: "internal-transfer", transactionDate: "2026-08-06T00:00:00.000Z", type: "TRANSFER", status: "CONFIRMED", baseAmount: 900_000, fromAccountName: "Bank", toAccountName: "Card" },
+      ],
+    }));
+
+    expect(result.period_summary.income_base_amount).toBe(0);
+    expect(result.period_summary.expense_base_amount).toBe(0);
+  });
+
   it("whitelists analysis fields and does not expose secret-like source properties", () => {
     const result = generateAnalysisJson({
       ...readModel(),

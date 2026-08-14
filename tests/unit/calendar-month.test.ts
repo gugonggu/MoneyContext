@@ -88,12 +88,29 @@ describe("aggregateDailyTotals", () => {
     expect(totals.get("2026-08-05")).toEqual({ income: 2_500_000, expense: 20_000 });
   });
 
-  it("excludes transfers because a transfer is neither income nor expense", () => {
+  it("excludes a transfer between two of the user's own accounts (both sides present)", () => {
+    const totals = aggregateDailyTotals([
+      { ...base, id: "1", type: "TRANSFER", status: "CONFIRMED", transactionAt: "2026-08-05T03:00:00Z", baseAmount: 500_000, fromAccountId: "bank-a", toAccountId: "card-a" },
+    ]);
+
+    expect(totals.get("2026-08-05")).toBeUndefined();
+  });
+
+  it("excludes a transfer with neither side attributable", () => {
     const totals = aggregateDailyTotals([
       { ...base, id: "1", type: "TRANSFER", status: "CONFIRMED", transactionAt: "2026-08-05T03:00:00Z", baseAmount: 500_000 },
     ]);
 
     expect(totals.get("2026-08-05")).toBeUndefined();
+  });
+
+  it("counts a one-sided TRANSFER out as expense and one-sided TRANSFER in as income", () => {
+    const totals = aggregateDailyTotals([
+      { ...base, id: "1", type: "TRANSFER", status: "CONFIRMED", transactionAt: "2026-08-05T03:00:00Z", baseAmount: 50_000, fromAccountId: "bank-a" },
+      { ...base, id: "2", type: "TRANSFER", status: "CONFIRMED", transactionAt: "2026-08-05T04:00:00Z", baseAmount: 30_000, toAccountId: "bank-a" },
+    ]);
+
+    expect(totals.get("2026-08-05")).toEqual({ income: 30_000, expense: 50_000 });
   });
 
   it("excludes balance adjustments from income and expense", () => {
@@ -209,6 +226,18 @@ describe("buildCalendarMonth", () => {
 
     expect(cell?.expense).toBe(47_000);
     expect(cell?.transactions.map((item) => item.memo)).toEqual(["점심"]);
+  });
+
+  it("counts a one-sided TRANSFER out toward the day's expense", () => {
+    const withOneSided = [
+      ...transactions,
+      { id: "5", type: "TRANSFER" as const, status: "CONFIRMED" as const, transactionAt: "2026-08-15T03:00:00Z", baseAmount: 20_000, fromAccountId: "bank-a" },
+    ];
+    const month = buildCalendarMonth({ year: 2026, month: 8, today: "2026-08-12", transactions: withOneSided, upcoming: NO_UPCOMING });
+    const cell = month.cells.find((item) => item.date === "2026-08-15");
+
+    expect(cell?.expense).toBe(20_000);
+    expect(month.summary.expense).toBe(47_000 + 20_000);
   });
 
   it("leaves transfer-only days empty", () => {

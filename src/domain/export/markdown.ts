@@ -1,5 +1,6 @@
 import { type ExportPeriod } from "@/domain/export/period";
 import { exportPresets, isExportPreset, type ExportPreset } from "@/domain/export/presets";
+import { classifyTransferDirection } from "@/domain/transactions/transfer-direction";
 
 type ActualTransactionType = "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
 type TransactionStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
@@ -88,12 +89,18 @@ function inPeriod(value: string, period: ExportPeriod): boolean {
   return key >= period.startDate && key <= period.endDate;
 }
 
+export function effectiveIncomeExpenseType(transaction: ExportTransaction): "INCOME" | "EXPENSE" | undefined {
+  if (transaction.type === "INCOME" || transaction.type === "EXPENSE") return transaction.type;
+  if (transaction.type !== "TRANSFER") return undefined;
+  return classifyTransferDirection(transaction.fromAccountName, transaction.toAccountName);
+}
+
 function actualTransactions(readModel: ExportReadModel): ActualTransaction[] {
-  return readModel.transactions.filter((transaction): transaction is ActualTransaction => (
-    transaction.status === "CONFIRMED"
-    && (transaction.type === "INCOME" || transaction.type === "EXPENSE")
-    && inPeriod(transaction.transactionDate, readModel.period)
-  ));
+  return readModel.transactions.flatMap((transaction): ActualTransaction[] => {
+    if (transaction.status !== "CONFIRMED" || !inPeriod(transaction.transactionDate, readModel.period)) return [];
+    const type = effectiveIncomeExpenseType(transaction);
+    return type ? [{ ...transaction, type }] : [];
+  });
 }
 
 function breakdown(transactions: readonly ActualTransaction[], key: (transaction: ActualTransaction) => readonly string[]): readonly [string, bigint][] {
@@ -208,7 +215,8 @@ export function generateExportMarkdown(readModel: ExportReadModel): string {
   if (sections.includes("TRANSACTIONS")) lines.push(...transactionLines(transactions, readModel.baseCurrency));
   lines.push(
     "## 데이터 해석 주의사항",
-    "- 이체는 수입/지출에 포함하지 않습니다.",
+    "- 내 계좌 간 이체(양쪽 다 내 소유 계좌)는 수입/지출에 포함하지 않습니다.",
+    "- 외부로 보내거나 외부에서 받은 이체(한쪽만 내 계좌)는 각각 지출/수입에 포함합니다.",
     "- 카드대금 납부는 추가 소비가 아닙니다.",
     "- 신용카드 구매 소비는 구매일에 전액 인식합니다.",
     "- 할부 회차는 소비가 아니라 미래 결제 현금흐름입니다.",

@@ -1,4 +1,5 @@
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_DATE_TIME = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/;
 const SEOUL_UTC_OFFSET_HOURS = 9;
 
 const SEOUL_FORMATTER = new Intl.DateTimeFormat("en-US", {
@@ -7,6 +8,17 @@ const SEOUL_FORMATTER = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
   month: "2-digit",
   day: "2-digit",
+});
+
+const SEOUL_DATETIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Seoul",
+  era: "short",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
 });
 
 function formatIsoDate(year: number, month: number, day: number): string {
@@ -32,6 +44,33 @@ function utcDate(year: number, month: number, day: number, hours = 0): Date {
 
 export function toSeoulDate(isoTimestamp: string): string {
   return formatSeoulDate(new Date(isoTimestamp));
+}
+
+// Converts a UTC instant to the "YYYY-MM-DDTHH:mm" wall-clock string an
+// <input type="datetime-local"> expects, using Korea time regardless of the
+// server process's own timezone (Vercel runs UTC; local dev may not).
+export function utcIsoToSeoulWallClock(isoTimestamp: string): string {
+  const instant = new Date(isoTimestamp);
+  if (Number.isNaN(instant.getTime())) throw new RangeError("timestamp must be parseable");
+  const parts = SEOUL_DATETIME_FORMATTER.formatToParts(instant);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value;
+  const eraYear = Number(part("year"));
+  const year = part("era") === "BC" ? 1 - eraYear : eraYear;
+  return `${formatIsoDate(year, Number(part("month")), Number(part("day")))}T${part("hour")}:${part("minute")}`;
+}
+
+// The inverse: a "YYYY-MM-DDTHH:mm[:ss]" wall-clock string (e.g. straight from
+// a datetime-local input) is always Korea time in this app - never the
+// server's local timezone - so it must be converted explicitly rather than
+// handed to `new Date(...)`, which assumes the runtime's own timezone.
+export function seoulWallClockToUtcIso(value: string): string {
+  const match = ISO_DATE_TIME.exec(value);
+  if (!match) throw new RangeError("datetime must be an ISO-like YYYY-MM-DDTHH:mm[:ss] string");
+  const [, year, month, day, hour, minute, second] = match;
+  const instant = new Date(0);
+  instant.setUTCFullYear(Number(year), Number(month) - 1, Number(day));
+  instant.setUTCHours(Number(hour) - SEOUL_UTC_OFFSET_HOURS, Number(minute), Number(second ?? "0"), 0);
+  return instant.toISOString();
 }
 
 export function todayInSeoul(now: Date = new Date()): string {

@@ -13,3 +13,4 @@ export async function confirmTransactionForCurrentUser(id: string) { const { use
 export async function listRecentTransactionsForPatterns(limit?: number) { const { userId, service } = await current(); return service.listRecentForPatterns(userId, limit); }
 export async function searchTransactionsForCurrentUser(filters: TransactionSearchFilters) { const { userId, service } = await current(); return service.search(userId, filters); }
 export async function getTransactionForCurrentUser(id: string) { const { userId, service } = await current(); return service.get(userId, id); }
+export async function listConfirmedRecurringOccurrenceMonthsForCurrentUser() { const { userId, service } = await current(); return service.listConfirmedRecurringOccurrenceMonths(userId); }

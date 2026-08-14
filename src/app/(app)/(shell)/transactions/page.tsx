@@ -11,15 +11,30 @@ import { Select } from "@/components/ui/Select";
 import { TextField } from "@/components/ui/TextField";
 import { describeActiveFilters } from "@/domain/transactions/filter-summary";
 import { groupTransactionsByDate } from "@/domain/transactions/group-by-date";
+import { paginateByDate } from "@/domain/transactions/paginate-by-date";
 import { listAccountsForCurrentUser } from "@/server/accounts";
 import { listCategoriesForCurrentUser, listTagsForCurrentUser } from "@/server/categories";
 import { confirmPlannedTransactionForCurrentUser, listPlannedTransactionsForCurrentUser } from "@/server/planned";
 import { listRecurringRulesForCurrentUser } from "@/server/recurring";
-import { confirmTransactionForCurrentUser, removeTransactionForCurrentUser, searchTransactionsForCurrentUser, type TransactionSearchResult } from "@/server/transactions";
+import {
+  confirmTransactionForCurrentUser,
+  listConfirmedRecurringOccurrenceMonthsForCurrentUser,
+  removeTransactionForCurrentUser,
+  searchTransactionsForCurrentUser,
+  type TransactionSearchResult,
+} from "@/server/transactions";
 
 const TYPE_LABELS = { INCOME: "수입", EXPENSE: "지출", TRANSFER: "이체", ADJUSTMENT: "조정" } as const;
 const STATUS_LABELS = { PENDING: "대기", CONFIRMED: "확정", CANCELLED: "취소" } as const;
 const PAGE_SIZE = 20;
+// Fetched beyond PAGE_SIZE so a day's rows never split across two pages -
+// see paginateByDate. Sized to land exactly on the search API's own cap.
+const OVERFLOW_CAP = 80;
+
+function parseOffsetList(raw: string | undefined): number[] {
+  if (!raw) return [];
+  return raw.split(",").flatMap((value) => (/^\d+$/.test(value) ? [Number(value)] : []));
+}
 
 const secondaryLinkClasses =
   "inline-flex items-center justify-center gap-1.5 rounded-tile border border-border-strong bg-surface-raised px-4 py-2 text-sm font-semibold text-content-primary no-underline shadow-card transition-colors hover:bg-surface-base";
@@ -126,8 +141,9 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
 
   const minAmountRaw = param(params, "minAmount");
   const maxAmountRaw = param(params, "maxAmount");
-  const pageRaw = param(params, "page");
-  const page = pageRaw && /^\d+$/.test(pageRaw) && Number(pageRaw) > 0 ? Number(pageRaw) : 1;
+  const offsetRaw = param(params, "offset");
+  const offset = offsetRaw && /^\d+$/.test(offsetRaw) ? Number(offsetRaw) : 0;
+  const offsetHistory = parseOffsetList(param(params, "h"));
   const filters = {
     from: param(params, "from"),
     to: param(params, "to"),
@@ -139,19 +155,22 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     minAmount: minAmountRaw ? Number(minAmountRaw) : undefined,
     maxAmount: maxAmountRaw ? Number(maxAmountRaw) : undefined,
     memo: param(params, "memo"),
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
+    limit: PAGE_SIZE + OVERFLOW_CAP,
+    offset,
   };
 
-  const [accounts, categories, tags, searchPage, planned, recurringRules] = await Promise.all([
+  const [accounts, categories, tags, searchPage, planned, recurringRules, confirmedRecurringMonths] = await Promise.all([
     listAccountsForCurrentUser(),
     listCategoriesForCurrentUser(),
     listTagsForCurrentUser(),
     searchTransactionsForCurrentUser(filters),
     listPlannedTransactionsForCurrentUser(),
     listRecurringRulesForCurrentUser(),
+    listConfirmedRecurringOccurrenceMonthsForCurrentUser(),
   ]);
-  const { items: transactions, hasMore } = searchPage;
+  const confirmedRecurringMonthKeys = new Set(confirmedRecurringMonths.map((item) => `${item.ruleId}:${item.month}`));
+  const { items: fetchedTransactions, hasMore: repositoryHasMore } = searchPage;
+  const { items: transactions, consumedCount, hasMore } = paginateByDate(fetchedTransactions, PAGE_SIZE, repositoryHasMore);
   const activeFilters = describeActiveFilters(filters, { accounts, categories, tags });
 
   const accountNameById = new Map(accounts.map((account) => [account.id, account.name]));
@@ -171,6 +190,9 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
       })),
     ...recurringRules
       .filter((rule) => rule.isActive)
+      // Already generated (and confirmed) for this month - showing it again as
+      // "upcoming" would just be an already-handled occurrence, not a real one.
+      .filter((rule) => !confirmedRecurringMonthKeys.has(`${rule.id}:${rule.nextRunDate.slice(0, 7)}`))
       .map((rule): UpcomingItem => ({
         key: `recurring-${rule.id}`,
         date: rule.nextRunDate,
@@ -195,18 +217,25 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const groups = groupTransactionsByDate(transactions.map((row) => ({ ...row, transactionAt: row.transactionAt })));
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (key === "page") continue;
+    if (key === "offset" || key === "h") continue;
     const first = Array.isArray(value) ? value[0] : value;
     if (first) query.set(key, first);
   }
   const queryString = query.toString() ? `?${query.toString()}` : "";
 
-  function hrefForPage(targetPage: number): string {
+  function hrefForOffset(targetOffset: number, targetHistory: readonly number[]): string {
     const pageQuery = new URLSearchParams(query);
-    if (targetPage > 1) pageQuery.set("page", String(targetPage));
+    if (targetOffset > 0) pageQuery.set("offset", String(targetOffset));
+    if (targetHistory.length > 0) pageQuery.set("h", targetHistory.join(","));
     const suffix = pageQuery.toString();
     return `/transactions${suffix ? `?${suffix}` : ""}`;
   }
+
+  const pageNumber = offsetHistory.length + 1;
+  const nextOffset = offset + consumedCount;
+  const nextHistory = [...offsetHistory, offset];
+  const previousOffset = offsetHistory.at(-1) ?? 0;
+  const previousHistory = offsetHistory.slice(0, -1);
 
   return (
     <div className="flex flex-col gap-6">
@@ -466,14 +495,14 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
           </div>
 
           <nav aria-label="페이지" className="flex items-center justify-center gap-4 text-sm">
-            {page > 1 ? (
-              <Link href={hrefForPage(page - 1)} className="font-medium text-brand-600 hover:text-brand-700">
+            {offset > 0 ? (
+              <Link href={hrefForOffset(previousOffset, previousHistory)} className="font-medium text-brand-600 hover:text-brand-700">
                 이전
               </Link>
             ) : null}
-            <span className="text-content-muted">{page}페이지</span>
+            <span className="text-content-muted">{pageNumber}페이지</span>
             {hasMore ? (
-              <Link href={hrefForPage(page + 1)} className="font-medium text-brand-600 hover:text-brand-700">
+              <Link href={hrefForOffset(nextOffset, nextHistory)} className="font-medium text-brand-600 hover:text-brand-700">
                 다음
               </Link>
             ) : null}

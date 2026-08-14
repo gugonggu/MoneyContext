@@ -7,6 +7,7 @@ describe("planning read service", () => {
     const service = createPlanningReadService({
       getData: async () => ({
         liquidAssets: 500_000,
+        monthlyBudgetTotal: 150_000,
         expenses: [{ amount: 80_000, status: "CONFIRMED" as const }],
         plannedExpenses: [30_000],
         goals: [{ id: "goal-a", name: "Emergency fund", targetAmount: 1_000_000, monthlyContributionPlan: 100_000 }],
@@ -20,13 +21,31 @@ describe("planning read service", () => {
     });
 
     await expect(service.getOverview("user-a")).resolves.toMatchObject({
-      budget: { actualUsage: 80_000, forecastUsage: 110_000 },
+      budget: { actualUsage: 80_000, forecastUsage: 110_000, allocated: 150_000 },
       goals: [{ id: "goal-a", contributedAmount: 300_000, remainingAmount: 700_000, requiredMonthlyAmount: 700_000, progressPercent: 30 }],
       freeSpendable: 400_000,
       futureCashflows: [
         { id: "planned-rent", label: "월세", amount: 50_000, status: "PLANNED" },
         { id: "card-a", label: "카드대금", amount: 50_000, status: "CONFIRMED" },
       ],
+    });
+  });
+
+  it("reports no allocated budget when the user hasn't set one for the current month", async () => {
+    const service = createPlanningReadService({
+      getData: async () => ({
+        liquidAssets: 0,
+        monthlyBudgetTotal: null,
+        expenses: [],
+        plannedExpenses: [],
+        goals: [],
+        contributions: [],
+        deductions: [],
+      }),
+    });
+
+    await expect(service.getOverview("user-a")).resolves.toMatchObject({
+      budget: { actualUsage: 0, forecastUsage: 0, allocated: null },
     });
   });
 });

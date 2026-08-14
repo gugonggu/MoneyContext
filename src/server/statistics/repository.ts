@@ -1,19 +1,14 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { classifyTransferDirection } from "@/domain/transactions/transfer-direction";
 import type { StatisticsTransaction } from "./service";
 
 type NamedRow = Readonly<{ name: string }> | readonly Readonly<{ name: string }>[] | null;
 const firstName = (value: NamedRow): string | undefined => (Array.isArray(value) ? value[0] : value)?.name;
 
-// A TRANSFER with only one of from/to_account_id is money sent to or received
-// from outside the tracked accounts (e.g. paying a friend back) - it behaves
-// like a real EXPENSE/INCOME for statistics. A TRANSFER with both sides is
-// between two of the user's own accounts and stays excluded (net-worth neutral).
 function effectiveType(type: string, fromAccountId: string | null, toAccountId: string | null): StatisticsTransaction["type"] {
   if (type !== "TRANSFER") return type as StatisticsTransaction["type"];
-  if (fromAccountId && !toAccountId) return "EXPENSE";
-  if (toAccountId && !fromAccountId) return "INCOME";
-  return "TRANSFER";
+  return classifyTransferDirection(fromAccountId, toAccountId) ?? "TRANSFER";
 }
 
 export async function listStatisticsTransactions(supabase: SupabaseClient, userId: string): Promise<readonly StatisticsTransaction[]> {

@@ -7,7 +7,7 @@ describe("PlanningOverview", () => {
     render(
       <PlanningOverview
         overview={{
-          budget: { actualUsage: 80_000, forecastUsage: 110_000 },
+          budget: { actualUsage: 80_000, forecastUsage: 110_000, allocated: 150_000 },
           freeSpendable: 450_000,
           futureCashflowCount: 2,
           futureCashflows: [
@@ -39,5 +39,22 @@ describe("PlanningOverview", () => {
     expect(screen.getByText("월세").closest("li")?.className).toContain("border-dashed");
     expect(screen.getByText("확정")).toBeTruthy();
     expect(screen.getByText("예정")).toBeTruthy();
+  });
+
+  it("shows an unset-budget hint instead of a bogus percentage when no monthly budget is configured", () => {
+    render(
+      <PlanningOverview
+        overview={{
+          budget: { actualUsage: 80_000, forecastUsage: 110_000, allocated: null },
+          freeSpendable: 450_000,
+          futureCashflowCount: 0,
+          futureCashflows: [],
+          goals: [],
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/실제 80,000원/)).toBeTruthy();
+    expect(screen.getByText("이번 달 예산이 아직 설정되지 않았습니다.")).toBeTruthy();
   });
 });
