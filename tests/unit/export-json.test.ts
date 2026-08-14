@@ -54,6 +54,8 @@ describe("generateAnalysisJson", () => {
       "period",
       "financial_position",
       "period_summary",
+      "external_flows",
+      "expense_nature",
       "budgets",
       "credit_cards",
       "savings_goals",
@@ -79,6 +81,10 @@ describe("generateAnalysisJson", () => {
       income_base_amount: 0,
       expense_base_amount: 1_500,
       net_cashflow_base_amount: -1_500,
+      period_surplus_base_amount: -1_500,
+      surplus_rate: null,
+      actual_savings_base_amount: 0,
+      actual_savings_rate: null,
     });
     expect(result.transactions).toEqual([expect.objectContaining({
       transaction_date: "2026-08-01",
@@ -150,6 +156,54 @@ describe("generateAnalysisJson", () => {
 
     expect(result.period_summary.income_base_amount).toBe(0);
     expect(result.period_summary.expense_base_amount).toBe(0);
+  });
+
+  it("computes actual savings from periodActualSavingsBaseAmount separately from the income/expense surplus", () => {
+    const result = generateAnalysisJson(readModel({
+      transactions: [
+        { id: "income", transactionDate: "2026-08-01T00:00:00.000+09:00", type: "INCOME", status: "CONFIRMED", baseAmount: 1_000_000 },
+        { id: "expense", transactionDate: "2026-08-02T00:00:00.000+09:00", type: "EXPENSE", status: "CONFIRMED", baseAmount: 700_000 },
+      ],
+      periodActualSavingsBaseAmount: 100_000,
+    }));
+
+    expect(result.period_summary.period_surplus_base_amount).toBe(300_000);
+    expect(result.period_summary.actual_savings_base_amount).toBe(100_000);
+    expect(result.period_summary.surplus_rate).toBe(0.3);
+    expect(result.period_summary.actual_savings_rate).toBe(0.1);
+  });
+
+  it("reports one-sided transfers as external_flows regardless of whether the source account is known", () => {
+    const result = generateAnalysisJson(readModel({
+      transactions: [
+        { id: "transfer-out", transactionDate: "2026-08-06T00:00:00.000Z", type: "TRANSFER", status: "CONFIRMED", baseAmount: 600_000, fromAccountName: "Bank" },
+        { id: "transfer-in", transactionDate: "2026-08-07T00:00:00.000Z", type: "TRANSFER", status: "CONFIRMED", baseAmount: 13_060, toAccountName: "Bank" },
+      ],
+    }));
+
+    expect(result.external_flows).toEqual({ outgoing_base_amount: 600_000, incoming_base_amount: 13_060 });
+  });
+
+  it("attributes a transfer-out with a known source account to that account in statistics, not 'Unspecified'", () => {
+    const result = generateAnalysisJson(readModel({
+      transactions: [
+        { id: "transfer-out", transactionDate: "2026-08-06T00:00:00.000Z", type: "TRANSFER", status: "CONFIRMED", baseAmount: 600_000, fromAccountName: "Bank" },
+      ],
+    }));
+
+    expect(result.statistics.account_spending).toEqual([{ name: "Bank", base_amount: 600_000 }]);
+  });
+
+  it("classifies expense_nature by recurring rule origin, planned transaction origin, and unknown otherwise", () => {
+    const result = generateAnalysisJson(readModel({
+      transactions: [
+        { id: "recurring", transactionDate: "2026-08-05T00:00:00.000+09:00", type: "EXPENSE", status: "CONFIRMED", baseAmount: 14_900, recurringRuleId: "rule-1" },
+        { id: "one-time", transactionDate: "2026-08-06T00:00:00.000+09:00", type: "EXPENSE", status: "CONFIRMED", baseAmount: 600_000, plannedTransactionId: "plan-1" },
+        { id: "unknown", transactionDate: "2026-08-07T00:00:00.000+09:00", type: "EXPENSE", status: "CONFIRMED", baseAmount: 56_678 },
+      ],
+    }));
+
+    expect(result.expense_nature).toEqual({ recurring_base_amount: 14_900, one_time_base_amount: 600_000, unknown_base_amount: 56_678 });
   });
 
   it("whitelists analysis fields and does not expose secret-like source properties", () => {

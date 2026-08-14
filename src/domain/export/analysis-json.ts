@@ -1,6 +1,12 @@
-import { effectiveIncomeExpenseType, type ExportReadModel, type ExportTransaction } from "./markdown";
-
-type ActualTransaction = ExportTransaction & Readonly<{ type: "INCOME" | "EXPENSE" }>;
+import {
+  actualTransactions,
+  expenseNatureBreakdown,
+  externalFlows,
+  paymentMethodKey,
+  type ActualTransaction,
+  type ExportReadModel,
+  type ExportTransaction,
+} from "./markdown";
 
 type AmountBreakdown = Readonly<{ name: string; base_amount: number }>;
 
@@ -23,8 +29,15 @@ export type AnalysisJson = Readonly<{
   period_summary: Readonly<{
     income_base_amount: number;
     expense_base_amount: number;
+    /** @deprecated identical to period_surplus_base_amount; kept for existing consumers. */
     net_cashflow_base_amount: number;
+    period_surplus_base_amount: number;
+    surplus_rate: number | null;
+    actual_savings_base_amount: number;
+    actual_savings_rate: number | null;
   }>;
+  external_flows: Readonly<{ outgoing_base_amount: number; incoming_base_amount: number }>;
+  expense_nature: Readonly<{ recurring_base_amount: number; one_time_base_amount: number; unknown_base_amount: number }>;
   budgets: readonly Readonly<{ name: string; allocated_base_amount: number; actual_usage_base_amount: number }>[];
   credit_cards: readonly Readonly<{ name: string; outstanding_base_amount: number; next_payment_date: string | null }>[];
   savings_goals: readonly Readonly<{ name: string; target_base_amount: number; contributed_base_amount: number; target_date: string }>[];
@@ -89,12 +102,9 @@ function exportTransactions(readModel: ExportReadModel): readonly ExportTransact
   return readModel.transactions.filter((transaction) => inPeriod(transaction.transactionDate, readModel));
 }
 
-function actualTransactions(readModel: ExportReadModel): readonly ActualTransaction[] {
-  return exportTransactions(readModel).flatMap((transaction): ActualTransaction[] => {
-    if (transaction.status !== "CONFIRMED") return [];
-    const type = effectiveIncomeExpenseType(transaction);
-    return type ? [{ ...transaction, type }] : [];
-  });
+function rate(numerator: number, denominator: number): number | null {
+  if (denominator === 0) return null;
+  return Math.round((numerator / denominator) * 10_000) / 10_000;
 }
 
 function sumAmounts(transactions: readonly ActualTransaction[], type: ActualTransaction["type"]): number {
@@ -129,6 +139,8 @@ export function generateAnalysisJson(readModel: ExportReadModel): AnalysisJson {
   const expense = sumAmounts(actual, "EXPENSE");
   const netCashflow = income - expense;
   assertSafeInteger(netCashflow, "period summary");
+  const actualSavings = readModel.periodActualSavingsBaseAmount ?? 0;
+  assertNonNegativeAmount(actualSavings, "periodActualSavingsBaseAmount");
   const position = readModel.financialPosition;
   assertNonNegativeAmount(position.totalAssets, "totalAssets");
   assertNonNegativeAmount(position.totalLiabilities, "totalLiabilities");
@@ -155,7 +167,19 @@ export function generateAnalysisJson(readModel: ExportReadModel): AnalysisJson {
       income_base_amount: income,
       expense_base_amount: expense,
       net_cashflow_base_amount: netCashflow,
+      period_surplus_base_amount: netCashflow,
+      surplus_rate: rate(netCashflow, income),
+      actual_savings_base_amount: actualSavings,
+      actual_savings_rate: rate(actualSavings, income),
     },
+    external_flows: (() => {
+      const flows = externalFlows(actual);
+      return { outgoing_base_amount: flows.outgoingBaseAmount, incoming_base_amount: flows.incomingBaseAmount };
+    })(),
+    expense_nature: (() => {
+      const nature = expenseNatureBreakdown(actual);
+      return { recurring_base_amount: nature.recurringBaseAmount, one_time_base_amount: nature.oneTimeBaseAmount, unknown_base_amount: nature.unknownBaseAmount };
+    })(),
     budgets: readModel.budgets.map((budget) => {
       assertNonNegativeAmount(budget.allocatedBaseAmount, "budget allocatedBaseAmount");
       assertNonNegativeAmount(budget.actualUsageBaseAmount, "budget actualUsageBaseAmount");
@@ -177,7 +201,7 @@ export function generateAnalysisJson(readModel: ExportReadModel): AnalysisJson {
     statistics: {
       category_spending: spendingBreakdown(actual, (transaction) => [transaction.categoryName ?? "Uncategorized"]),
       tag_spending: spendingBreakdown(actual, (transaction) => transaction.tagNames ?? []),
-      account_spending: spendingBreakdown(actual, (transaction) => [transaction.accountName ?? "Unspecified"]),
+      account_spending: spendingBreakdown(actual, (transaction) => [paymentMethodKey(transaction)]),
     },
     transactions: transactions.map((transaction) => {
       assertTransactionAmount(transaction, transaction.baseAmount, "transaction baseAmount");

@@ -80,7 +80,10 @@ describe("generateExportMarkdown", () => {
     expect(markdown).toContain("## 재정 상태");
     expect(markdown).toContain("- 순자산: 3,800,000 KRW");
     expect(markdown).toContain("## 기간 내 현황");
-    expect(markdown).toContain("- 저축률: 100%");
+    expect(markdown).toContain("- 기간 잉여금: 2,998,500 KRW");
+    expect(markdown).toContain("- 수입 대비 잉여율: 100%");
+    expect(markdown).toContain("- 실제 저축액: 0 KRW");
+    expect(markdown).toContain("- 실제 저축률: 0%");
   });
 
   it("renders a negative net worth without treating it as an invalid amount", () => {
@@ -136,6 +139,73 @@ describe("generateExportMarkdown", () => {
     expect(markdown).toContain("잔액조정은 수입/소비 통계에 포함하지 않습니다.");
     expect(markdown).toContain("예정 거래는 실제 소비가 아니며 미래 계획으로만 반영합니다.");
     expect(markdown).toContain("과거 외화 거래 분석은 거래 시점에 저장된 base_amount를 사용합니다.");
+    expect(markdown).toContain("기간 잉여금(수입-지출)은 실제 저축액이 아닙니다.");
+    expect(markdown).toContain("실제 저축액은 저축 목표에 실제 적립된 금액만 의미합니다.");
+    expect(markdown).toContain("'미지정'은 결제수단 정보가 누락된 거래이며, '외부 자금 이동'은 계좌 정보가 없는 외부 송금/수입입니다.");
+    expect(markdown).toContain("일회성 지출은 향후 월 반복 소비를 의미하지 않습니다.");
+    expect(markdown).toContain("카테고리는 소비 대상(무엇에 사용했는가), 태그는 소비 맥락(왜/어떤 상황에서 사용했는가)을 나타냅니다.");
+  });
+
+  it("reports the period surplus separately from actual savings contributions", () => {
+    const markdown = generateExportMarkdown(readModel({ periodActualSavingsBaseAmount: 100_000 }));
+
+    expect(markdown).toContain("- 수입: 3,000,000 KRW");
+    expect(markdown).toContain("- 지출: 1,500 KRW");
+    expect(markdown).toContain("- 기간 잉여금: 2,998,500 KRW");
+    expect(markdown).toContain("- 실제 저축액: 100,000 KRW");
+    expect(markdown).not.toContain("- 저축:");
+    expect(markdown).not.toContain("- 저축률:");
+  });
+
+  it("attributes an external transfer-out with a known source account to that account, not to 미지정", () => {
+    const markdown = generateExportMarkdown(readModel({
+      transactions: [
+        { id: "missing-account", transactionDate: "2026-08-06", type: "EXPENSE", status: "CONFIRMED", baseAmount: 12_000, categoryName: "식비" },
+        { id: "transfer-out-known-account", transactionDate: "2026-08-07", type: "TRANSFER", status: "CONFIRMED", baseAmount: 600_000, fromAccountName: "부산은행", memo: "부모님 송금" },
+      ],
+    }));
+
+    expect(markdown).toContain("- 미지정: 12,000 KRW");
+    expect(markdown).toContain("- 부산은행: 600,000 KRW");
+    expect(markdown).not.toMatch(/- 미지정: 612,000 KRW/);
+    expect(markdown).toContain("## 외부 자금 이동");
+    expect(markdown).toContain("- 외부 송금: 600,000 KRW");
+  });
+
+  it("counts an external one-sided TRANSFER-in as income for the external flows summary", () => {
+    const markdown = generateExportMarkdown(readModel({
+      transactions: [
+        { id: "transfer-in", transactionDate: "2026-08-07", type: "TRANSFER", status: "CONFIRMED", baseAmount: 13_060, toAccountName: "부산은행", memo: "정산금 수령" },
+      ],
+    }));
+
+    expect(markdown).toContain("- 외부 수입: 13,060 KRW");
+  });
+
+  it("classifies expense nature from recurring rule and planned transaction origin, defaulting to unknown", () => {
+    const markdown = generateExportMarkdown(readModel({
+      transactions: [
+        { id: "recurring", transactionDate: "2026-08-05", type: "EXPENSE", status: "CONFIRMED", baseAmount: 14_900, recurringRuleId: "rule-1", categoryName: "구독" },
+        { id: "one-time", transactionDate: "2026-08-06", type: "EXPENSE", status: "CONFIRMED", baseAmount: 600_000, plannedTransactionId: "plan-1", categoryName: "경조사" },
+        { id: "unknown", transactionDate: "2026-08-07", type: "EXPENSE", status: "CONFIRMED", baseAmount: 56_678, categoryName: "생활" },
+      ],
+    }));
+
+    expect(markdown).toContain("## 소비 성격");
+    expect(markdown).toContain("- 반복성 지출: 14,900 KRW");
+    expect(markdown).toContain("- 일회성 지출: 600,000 KRW");
+    expect(markdown).toContain("- 분류되지 않은 지출: 56,678 KRW");
+  });
+
+  it("does not guess ONE_TIME for an ordinary transaction with no recurring or planned origin", () => {
+    const markdown = generateExportMarkdown(readModel({
+      transactions: [
+        { id: "ordinary", transactionDate: "2026-08-05", type: "EXPENSE", status: "CONFIRMED", baseAmount: 117_000, categoryName: "쇼핑", memo: "키보드" },
+      ],
+    }));
+
+    expect(markdown).toContain("- 분류되지 않은 지출: 117,000 KRW");
+    expect(markdown).toContain("- 일회성 지출: 0 KRW");
   });
 
   it("rejects an unsupported preset supplied at runtime", () => {

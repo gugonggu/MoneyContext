@@ -23,6 +23,8 @@ type TransactionRow = Readonly<{
   from_accounts: { name: string } | { name: string }[] | null;
   to_accounts: { name: string } | { name: string }[] | null;
   transaction_tags: Array<{ tags: { name: string } | { name: string }[] | null }> | null;
+  recurring_rule_id: string | null;
+  planned_transaction_id: string | null;
 }>;
 
 type ProfileRow = Readonly<{ base_currency: string }>;
@@ -36,7 +38,7 @@ type CategoryBudgetRow = Readonly<{
 }>;
 type PlannedRow = Readonly<{ scheduled_date: string; type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT"; status: "PLANNED" | "CONFIRMED" | "CANCELLED"; amount: number | string; base_amount: number | string | null; memo: string | null }>;
 type GoalRow = Readonly<{ id: string; name: string; target_amount: number | string; target_date: string }>;
-type ContributionRow = Readonly<{ goal_id: string; amount: number | string }>;
+type ContributionRow = Readonly<{ goal_id: string; amount: number | string; contribution_date: string }>;
 
 function one<T>(value: T | readonly T[] | null): T | undefined {
   return (Array.isArray(value) ? value[0] : value) as T | undefined;
@@ -95,6 +97,8 @@ function mapTransaction(row: TransactionRow): ExportTransaction {
     ...(toAccount ? { toAccountName: toAccount.name } : {}),
     ...(tagNames.length > 0 ? { tagNames } : {}),
     ...(row.memo === null ? {} : { memo: row.memo }),
+    ...(row.recurring_rule_id === null ? {} : { recurringRuleId: row.recurring_rule_id }),
+    ...(row.planned_transaction_id === null ? {} : { plannedTransactionId: row.planned_transaction_id }),
   };
 }
 
@@ -123,12 +127,12 @@ export function createExportRepository(supabase: SupabaseClient): ExportReadRepo
       const nextDate = nextSeoulDate(period.endDate);
       const [profileResult, transactionResult, monthlyBudgetResult, categoryBudgetResult, plannedResult, goalResult, contributionResult, assets] = await Promise.all([
         supabase.from("profiles").select("base_currency").eq("id", userId).maybeSingle(),
-        supabase.from("transactions").select("id,transaction_at,type,status,amount,currency,base_amount,memo,categories(name),accounts!transactions_account_id_fkey(name),from_accounts:accounts!transactions_from_account_id_fkey(name),to_accounts:accounts!transactions_to_account_id_fkey(name),transaction_tags(tags(name))").eq("user_id", userId).gte("transaction_at", `${period.startDate}T00:00:00+09:00`).lt("transaction_at", `${nextDate}T00:00:00+09:00`).order("transaction_at"),
+        supabase.from("transactions").select("id,transaction_at,type,status,amount,currency,base_amount,memo,recurring_rule_id,planned_transaction_id,categories(name),accounts!transactions_account_id_fkey(name),from_accounts:accounts!transactions_from_account_id_fkey(name),to_accounts:accounts!transactions_to_account_id_fkey(name),transaction_tags(tags(name))").eq("user_id", userId).gte("transaction_at", `${period.startDate}T00:00:00+09:00`).lt("transaction_at", `${nextDate}T00:00:00+09:00`).order("transaction_at"),
         supabase.from("monthly_budgets").select("year,month,total_budget").eq("user_id", userId),
         supabase.from("category_budgets").select("year,month,base_budget,rollover_amount,categories(name)").eq("user_id", userId),
         supabase.from("planned_transactions").select("scheduled_date,type,status,amount,base_amount,memo").eq("user_id", userId).gte("scheduled_date", period.startDate).lte("scheduled_date", period.endDate),
         supabase.from("savings_goals").select("id,name,target_amount,target_date").eq("user_id", userId).eq("is_active", true).order("target_date"),
-        supabase.from("savings_contributions").select("goal_id,amount").eq("user_id", userId),
+        supabase.from("savings_contributions").select("goal_id,amount,contribution_date").eq("user_id", userId),
         assetService.getOverview(userId),
       ]);
       const profile = errorOr(profileResult as { data: ProfileRow | null; error: { message: string } | null });
@@ -161,8 +165,13 @@ export function createExportRepository(supabase: SupabaseClient): ExportReadRepo
         }),
       ];
       const contributedByGoal = new Map<string, number>();
+      let periodActualSavingsBaseAmount = 0;
       for (const contribution of contributions) {
-        contributedByGoal.set(contribution.goal_id, (contributedByGoal.get(contribution.goal_id) ?? 0) + asSafeInteger(contribution.amount, "savings contribution"));
+        const amount = asSafeInteger(contribution.amount, "savings contribution");
+        contributedByGoal.set(contribution.goal_id, (contributedByGoal.get(contribution.goal_id) ?? 0) + amount);
+        if (contribution.contribution_date >= period.startDate && contribution.contribution_date <= period.endDate) {
+          periodActualSavingsBaseAmount += amount;
+        }
       }
       return {
         baseCurrency: profile.base_currency,
@@ -177,6 +186,7 @@ export function createExportRepository(supabase: SupabaseClient): ExportReadRepo
         plannedCashflows: plannedRows.filter(isExportablePlannedCashflow).map((row) => ({ scheduledDate: row.scheduled_date, type: row.type, status: row.status, baseAmount: asSafeInteger(row.base_amount, "planned base_amount"), ...(row.memo === null ? {} : { memo: row.memo }) })),
         savingsGoals: goals.map((goal) => ({ name: goal.name, targetBaseAmount: asSafeInteger(goal.target_amount, "savings target"), contributedBaseAmount: contributedByGoal.get(goal.id) ?? 0, targetDate: goal.target_date })),
         creditCards: assets.cards.map((card) => ({ name: card.name, outstandingBaseAmount: card.outstanding, nextPaymentDate: card.nextPaymentDate })),
+        periodActualSavingsBaseAmount,
       };
     },
   };

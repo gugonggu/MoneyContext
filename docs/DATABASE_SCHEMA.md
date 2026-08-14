@@ -202,6 +202,8 @@ updated_at timestamptz not null
 - TRANSFER: from_account_id와 to_account_id 필수, 서로 달라야 함
 - ADJUSTMENT: account_id 필수
 
+> **2026-08-14 정정:** GPT Export의 "소비 성격"(RECURRING/ONE_TIME/UNKNOWN) 분류는 이 테이블에 컬럼을 추가하지 않고 기존 `recurring_rule_id`(반복 거래 규칙 생성 → RECURRING)와 `planned_transaction_id`(예정 거래 확정 → ONE_TIME) 값으로 도출한다. 둘 다 없으면 UNKNOWN이며, 기존 데이터를 소급 재분류하지 않는다. 자세한 규칙은 `BUSINESS_RULES.md` 19장, Export 반영은 `EXPORT_FORMATS.md`를 참고한다.
+
 반복거래 중복 방지:
 
 ```text

@@ -1,4 +1,5 @@
 import { type ExportPeriod } from "@/domain/export/period";
+import { classifyExpenseNature, type ExpenseNature } from "@/domain/export/expense-nature";
 import { exportPresets, isExportPreset, type ExportPreset } from "@/domain/export/presets";
 import { classifyTransferDirection } from "@/domain/transactions/transfer-direction";
 
@@ -19,6 +20,8 @@ export type ExportTransaction = Readonly<{
   toAccountName?: string;
   tagNames?: readonly string[];
   memo?: string;
+  recurringRuleId?: string;
+  plannedTransactionId?: string;
 }>;
 
 export type ExportReadModel = Readonly<{
@@ -48,9 +51,11 @@ export type ExportReadModel = Readonly<{
     targetDate: string;
   }>[];
   creditCards?: readonly Readonly<{ name: string; outstandingBaseAmount: number; nextPaymentDate?: string | null }>[];
+  /** Sum of savings_contributions within the export period - the only amount that may be called "실제 저축액". */
+  periodActualSavingsBaseAmount?: number;
 }>;
 
-type ActualTransaction = ExportTransaction & Readonly<{ type: "INCOME" | "EXPENSE" }>;
+export type ActualTransaction = ExportTransaction & Readonly<{ type: "INCOME" | "EXPENSE"; rawType: ActualTransactionType }>;
 
 function assertSafeAmount(value: number, label: string): void {
   if (!Number.isSafeInteger(value) || value < 0) throw new RangeError(`${label} must be a non-negative safe integer`);
@@ -95,12 +100,53 @@ export function effectiveIncomeExpenseType(transaction: ExportTransaction): "INC
   return classifyTransferDirection(transaction.fromAccountName, transaction.toAccountName);
 }
 
-function actualTransactions(readModel: ExportReadModel): ActualTransaction[] {
+export function actualTransactions(readModel: ExportReadModel): ActualTransaction[] {
   return readModel.transactions.flatMap((transaction): ActualTransaction[] => {
     if (transaction.status !== "CONFIRMED" || !inPeriod(transaction.transactionDate, readModel.period)) return [];
     const type = effectiveIncomeExpenseType(transaction);
-    return type ? [{ ...transaction, type }] : [];
+    return type ? [{ ...transaction, type, rawType: transaction.type }] : [];
   });
+}
+
+/**
+ * A one-sided TRANSFER (money sent to/received from outside the tracked
+ * accounts) that has no known source/destination account is a distinct case
+ * from a genuine EXPENSE/INCOME missing its account: the former is external
+ * money movement without account detail, the latter is actually missing data.
+ * Conflating them as "미지정" reads to an AI as a data-quality problem when
+ * it isn't one.
+ */
+export function paymentMethodKey(transaction: ActualTransaction): string {
+  if (transaction.accountName) return transaction.accountName;
+  if (transaction.rawType === "TRANSFER") return transaction.fromAccountName ?? "외부 자금 이동";
+  return "미지정";
+}
+
+export function externalFlows(transactions: readonly ActualTransaction[]): Readonly<{ outgoingBaseAmount: number; incomingBaseAmount: number }> {
+  let outgoingBaseAmount = 0;
+  let incomingBaseAmount = 0;
+  for (const transaction of transactions) {
+    if (transaction.rawType !== "TRANSFER") continue;
+    assertSafeAmount(transaction.baseAmount, "transaction baseAmount");
+    if (transaction.type === "EXPENSE") outgoingBaseAmount += transaction.baseAmount;
+    else incomingBaseAmount += transaction.baseAmount;
+  }
+  return { outgoingBaseAmount, incomingBaseAmount };
+}
+
+export function expenseNatureBreakdown(transactions: readonly ActualTransaction[]): Readonly<{ recurringBaseAmount: number; oneTimeBaseAmount: number; unknownBaseAmount: number }> {
+  let recurringBaseAmount = 0;
+  let oneTimeBaseAmount = 0;
+  let unknownBaseAmount = 0;
+  for (const transaction of transactions) {
+    if (transaction.type !== "EXPENSE") continue;
+    assertSafeAmount(transaction.baseAmount, "transaction baseAmount");
+    const nature: ExpenseNature = classifyExpenseNature(transaction);
+    if (nature === "RECURRING") recurringBaseAmount += transaction.baseAmount;
+    else if (nature === "ONE_TIME") oneTimeBaseAmount += transaction.baseAmount;
+    else unknownBaseAmount += transaction.baseAmount;
+  }
+  return { recurringBaseAmount, oneTimeBaseAmount, unknownBaseAmount };
 }
 
 function breakdown(transactions: readonly ActualTransaction[], key: (transaction: ActualTransaction) => readonly string[]): readonly [string, bigint][] {
@@ -121,6 +167,7 @@ function listBreakdown(title: string, entries: readonly [string, bigint][], curr
 
 function percentage(numerator: bigint, denominator: bigint): string {
   if (denominator === 0n) return "계산 불가";
+  if (numerator < 0n) return `-${((-numerator) * 100n + denominator / 2n) / denominator}%`;
   return `${(numerator * 100n + denominator / 2n) / denominator}%`;
 }
 
@@ -166,6 +213,27 @@ function savingsGoalLines(readModel: ExportReadModel): string[] {
   return ["## 저축 목표", ...(rows.length === 0 ? ["- 활성 저축 목표가 없습니다."] : rows), ""];
 }
 
+function externalFlowLines(readModel: ExportReadModel, transactions: readonly ActualTransaction[]): string[] {
+  const flows = externalFlows(transactions);
+  return [
+    "## 외부 자금 이동",
+    `- 외부 송금: ${formatMoney(BigInt(flows.outgoingBaseAmount), readModel.baseCurrency)}`,
+    `- 외부 수입: ${formatMoney(BigInt(flows.incomingBaseAmount), readModel.baseCurrency)}`,
+    "",
+  ];
+}
+
+function expenseNatureLines(readModel: ExportReadModel, transactions: readonly ActualTransaction[]): string[] {
+  const nature = expenseNatureBreakdown(transactions);
+  return [
+    "## 소비 성격",
+    `- 반복성 지출: ${formatMoney(BigInt(nature.recurringBaseAmount), readModel.baseCurrency)}`,
+    `- 일회성 지출: ${formatMoney(BigInt(nature.oneTimeBaseAmount), readModel.baseCurrency)}`,
+    `- 분류되지 않은 지출: ${formatMoney(BigInt(nature.unknownBaseAmount), readModel.baseCurrency)}`,
+    "",
+  ];
+}
+
 function cardLines(readModel: ExportReadModel): string[] {
   const rows = (readModel.creditCards ?? []).map((card) => {
     assertSafeAmount(card.outstandingBaseAmount, "credit card outstandingBaseAmount");
@@ -188,6 +256,9 @@ export function generateExportMarkdown(readModel: ExportReadModel): string {
   const transactions = actualTransactions(readModel);
   const income = sumAmounts(transactions.filter((transaction) => transaction.type === "INCOME").map((transaction) => transaction.baseAmount), "transaction baseAmount");
   const expense = sumAmounts(transactions.filter((transaction) => transaction.type === "EXPENSE").map((transaction) => transaction.baseAmount), "transaction baseAmount");
+  const surplus = income - expense;
+  const actualSavings = readModel.periodActualSavingsBaseAmount ?? 0;
+  assertSafeAmount(actualSavings, "periodActualSavingsBaseAmount");
   const sections = exportPresets[readModel.preset].sections;
   const lines = [
     "# Money Context 재정 데이터",
@@ -201,14 +272,18 @@ export function generateExportMarkdown(readModel: ExportReadModel): string {
     "## 기간 내 현황",
     `- 수입: ${formatMoney(income, readModel.baseCurrency)}`,
     `- 지출: ${formatMoney(expense, readModel.baseCurrency)}`,
-    `- 저축: ${formatMoney(income - expense, readModel.baseCurrency)}`,
-    `- 저축률: ${percentage(income - expense, income)}`,
+    `- 기간 잉여금: ${formatMoney(surplus, readModel.baseCurrency)}`,
+    `- 수입 대비 잉여율: ${percentage(surplus, income)}`,
+    `- 실제 저축액: ${formatMoney(BigInt(actualSavings), readModel.baseCurrency)}`,
+    `- 실제 저축률: ${percentage(BigInt(actualSavings), income)}`,
     "",
   ];
   if (sections.includes("BUDGETS")) lines.push(...budgetLines(readModel));
   if (sections.includes("CATEGORY_SPENDING")) lines.push(...listBreakdown("## 카테고리별 소비", breakdown(transactions, (transaction) => [transaction.categoryName ?? "미분류"]), readModel.baseCurrency));
   if (sections.includes("TAG_SPENDING")) lines.push(...listBreakdown("## 태그별 소비", breakdown(transactions, (transaction) => transaction.tagNames ?? []), readModel.baseCurrency));
-  if (sections.includes("PAYMENT_METHODS")) lines.push(...listBreakdown("## 결제수단별 소비", breakdown(transactions, (transaction) => [transaction.accountName ?? "미지정"]), readModel.baseCurrency));
+  if (sections.includes("PAYMENT_METHODS")) lines.push(...listBreakdown("## 결제수단별 소비", breakdown(transactions, (transaction) => [paymentMethodKey(transaction)]), readModel.baseCurrency));
+  if (sections.includes("EXTERNAL_FLOWS")) lines.push(...externalFlowLines(readModel, transactions));
+  if (sections.includes("EXPENSE_NATURE")) lines.push(...expenseNatureLines(readModel, transactions));
   if (sections.includes("CARDS")) lines.push(...cardLines(readModel));
   if (sections.includes("SAVINGS_GOALS")) lines.push(...savingsGoalLines(readModel));
   if (sections.includes("PLANNED_CASHFLOWS")) lines.push(...plannedCashflowLines(readModel));
@@ -223,6 +298,12 @@ export function generateExportMarkdown(readModel: ExportReadModel): string {
     "- 잔액조정은 수입/소비 통계에 포함하지 않습니다.",
     "- 예정 거래는 실제 소비가 아니며 미래 계획으로만 반영합니다.",
     "- 과거 외화 거래 분석은 거래 시점에 저장된 base_amount를 사용합니다.",
+    "- 기간 잉여금(수입-지출)은 실제 저축액이 아닙니다.",
+    "- 실제 저축액은 저축 목표에 실제 적립된 금액만 의미합니다.",
+    "- '미지정'은 결제수단 정보가 누락된 거래이며, '외부 자금 이동'은 계좌 정보가 없는 외부 송금/수입입니다.",
+    "- 일회성 지출은 향후 월 반복 소비를 의미하지 않습니다.",
+    "- 반복성 지출은 반복 거래 규칙에서 생성되었거나 사용자가 예정 거래로 등록한 항목만 의미하며, 분류되지 않은 지출은 반복 여부가 확인되지 않은 것일 뿐 일회성이라는 뜻이 아닙니다.",
+    "- 카테고리는 소비 대상(무엇에 사용했는가), 태그는 소비 맥락(왜/어떤 상황에서 사용했는가)을 나타냅니다.",
   );
   return `${lines.join("\n")}\n`;
 }

@@ -27,11 +27,13 @@ Money Context에는 세 종류의 데이터 내보내기가 있다.
 
 ```text
 재정 상태
-기간 요약
+기간 요약(수입/지출/기간 잉여금/수입 대비 잉여율/실제 저축액/실제 저축률)
 예산
 카테고리별 소비
 태그별 소비
 결제수단별 소비
+외부 자금 이동
+소비 성격(반복성/일회성/미분류)
 고정비/변동비
 예정 현금흐름
 카드 현황
@@ -41,6 +43,41 @@ Money Context에는 세 종류의 데이터 내보내기가 있다.
 ```
 
 분석 목적에 따라 불필요한 섹션은 생략한다.
+
+## 기간 요약 — 잉여금과 실제 저축액 분리
+
+`수입 - 지출`은 **기간 잉여금**이며 저축이 아니다. **실제 저축액**은 분석 기간 내 `savings_contributions` 합계만 사용한다. 두 값을 같은 이름으로 표시하지 않는다. 자세한 계산식은 `BUSINESS_RULES.md` 17장을 따른다.
+
+```text
+## 기간 내 현황
+- 수입: 1,573,180 KRW
+- 지출: 1,382,188 KRW
+- 기간 잉여금: 190,992 KRW
+- 수입 대비 잉여율: 12%
+- 실제 저축액: 0 KRW
+- 실제 저축률: 0%
+```
+
+## 결제수단별 소비 — "미지정"과 "외부 자금 이동" 분리
+
+계좌 정보가 없는 진짜 데이터 누락은 "미지정"으로, 외부 송금/수신처럼 계좌 개념이 없는 자금 이동은 "외부 자금 이동"으로 구분한다. 실제 출금 계좌를 알 수 있는 외부 송금은 그 계좌로 정상 집계한다. 자세한 규칙은 `BUSINESS_RULES.md` 18장을 따른다.
+
+```text
+## 외부 자금 이동
+- 외부 송금: 600,000 KRW
+- 외부 수입: 13,060 KRW
+```
+
+## 소비 성격 — 반복성/일회성 구분
+
+```text
+## 소비 성격
+- 반복성 지출: 7,890 KRW
+- 일회성 지출: 1,317,620 KRW
+- 분류되지 않은 지출: 56,678 KRW
+```
+
+`RECURRING`/`ONE_TIME`/`UNKNOWN` 판정 기준은 `BUSINESS_RULES.md` 19장을 따른다. 근거 없이 UNKNOWN을 ONE_TIME으로 추정하지 않는다.
 
 ## 해석 주의사항
 
@@ -52,6 +89,12 @@ Markdown 마지막에 최소한 다음 의미를 넣는다.
 - 할부 구매 소비는 구매일에 전액 인식됨
 - 예정 거래는 실제 소비가 아니라 미래 계획임
 - 모든 외화 통계는 거래 당시 KRW 환산값 기준
+- 기간 잉여금은 실제 저축액이 아님
+- 실제 저축액은 저축 목표에 실제 적립된 금액만 의미함
+- 일회성 지출은 향후 월 반복 소비를 의미하지 않음
+- 반복성 지출은 반복 거래 규칙 또는 사용자가 예정 거래로 등록해 확정된 항목만 의미함
+- 카테고리는 소비 대상, 태그는 소비 맥락을 나타냄
+- '미지정'과 '외부 자금 이동'은 서로 다른 의미임
 ```
 
 # 3. Analysis JSON
@@ -64,12 +107,49 @@ Markdown 마지막에 최소한 다음 의미를 넣는다.
   "period": {},
   "financial_position": {},
   "period_summary": {},
+  "external_flows": {},
+  "expense_nature": {},
   "budgets": {},
   "credit_cards": [],
   "savings_goals": [],
   "planned_cashflows": [],
   "statistics": {},
   "transactions": []
+}
+```
+
+## period_summary (schema v1, 필드 추가)
+
+```json
+{
+  "income_base_amount": 1573180,
+  "expense_base_amount": 1382188,
+  "net_cashflow_base_amount": 190992,
+  "period_surplus_base_amount": 190992,
+  "surplus_rate": 0.12,
+  "actual_savings_base_amount": 0,
+  "actual_savings_rate": 0
+}
+```
+
+`net_cashflow_base_amount`은 기존 소비자와의 호환을 위해 유지하며 `period_surplus_base_amount`와 항상 같은 값이다. 새 필드는 모두 추가된 것이며 기존 필드를 제거하지 않았으므로 `schema_version`은 올리지 않는다.
+
+## external_flows
+
+```json
+{
+  "outgoing_base_amount": 600000,
+  "incoming_base_amount": 13060
+}
+```
+
+## expense_nature
+
+```json
+{
+  "recurring_base_amount": 7890,
+  "one_time_base_amount": 1317620,
+  "unknown_base_amount": 56678
 }
 ```
 

@@ -297,7 +297,93 @@ JPY 3,000, base_amount 28,400으로 저장.
 과거 소비 통계 = 28,400 KRW
 ```
 
-# 14. RLS
+# 14. GPT Export 의미 정확도
+
+## TC-EXPORT-001 잉여금과 실제 저축액 분리
+
+입력:
+
+```text
+income = 1,000,000
+expense = 700,000
+savings contribution (기간 내) = 100,000
+```
+
+기대:
+
+```text
+period_surplus = 300,000
+actual_savings = 100,000
+```
+
+두 값을 동일하게 계산하지 않는다. (`tests/unit/export-json.test.ts`, `tests/integration/export.test.ts`)
+
+## TC-EXPORT-002 외부 송금
+
+```text
+내 은행 계좌 → 외부인
+600,000
+```
+
+기대:
+
+- 지출 600,000에 포함
+- 내부 이체로 취급하지 않음
+- 결제수단별 소비에서 실제 출금 계좌로 집계되며 "미지정"으로 잘못 집계되지 않음
+- "외부 자금 이동 - 외부 송금"에 포함
+
+(`tests/unit/export-markdown.test.ts`)
+
+## TC-EXPORT-003 내부 이체
+
+```text
+부산은행 → 토스
+200,000
+```
+
+기대:
+
+- 수입 0
+- 지출 0
+- 결제수단별 소비 통계에 포함되지 않음
+
+(`tests/integration/export.test.ts` "maps both transfer account names")
+
+## TC-EXPORT-004 반복 거래
+
+반복 거래 규칙(`recurring_rule_id`)에서 생성된 구독료 14,900원.
+
+기대:
+
+```text
+expense_nature = RECURRING
+```
+
+(`tests/unit/export-json.test.ts`, `tests/integration/export.test.ts`)
+
+## TC-EXPORT-005 예정 거래에서 확정된 일회성 거래
+
+사용자가 등록한 예정 거래(`planned_transaction_id`)가 확정되어 생성된 거래.
+
+기대:
+
+```text
+expense_nature = ONE_TIME
+```
+
+## TC-EXPORT-006 기존 일반 거래
+
+반복 여부를 판단할 근거(`recurring_rule_id`, `planned_transaction_id`)가 없는 기존 거래.
+
+기대:
+
+```text
+expense_nature = UNKNOWN
+```
+
+임의로 ONE_TIME으로 추정하지 않는다.
+
+# 15. RLS
 
 ## TC-RLS-001 거래 조회
 
@@ -317,7 +403,7 @@ User A가 request payload에 User B user_id를 전달.
 
 기대: User A 데이터만 반환하거나 요청 거부.
 
-# 15. Backup / Restore
+# 16. Backup / Restore
 
 ## TC-BACKUP-001 Round Trip
 
@@ -337,7 +423,7 @@ User A가 request payload에 User B user_id를 전달.
 
 기대: restore 시작 전 실패, DB 변화 없음.
 
-# 16. E2E
+# 17. E2E
 
 ## E2E-001 첫 사용자
 

@@ -173,6 +173,108 @@ describe("authenticated markdown export read model", () => {
     expect(readData.plannedCashflows).toEqual([]);
   });
 
+  it("distinguishes the period surplus from an actual savings contribution recorded inside the period", async () => {
+    const { data: goal, error: goalError } = await userAClient
+      .from("savings_goals")
+      .insert({ user_id: userA.id, name: "Emergency fund", target_amount: 1_000_000, target_date: "2027-01-01" })
+      .select("id")
+      .single();
+    if (goalError || !goal) throw new Error(goalError?.message ?? "Unable to create savings goal");
+
+    const { error: contributionError } = await admin.from("savings_contributions").insert([
+      { user_id: userA.id, goal_id: goal.id, amount: 100_000, contribution_date: "2026-08-15" },
+      { user_id: userA.id, goal_id: goal.id, amount: 50_000, contribution_date: "2026-07-15" },
+    ]);
+    if (contributionError) throw new Error(contributionError.message);
+
+    const readData = await createExportRepository(userAClient).getReadData(userA.id, {
+      startDate: "2026-08-01",
+      endDate: "2026-08-31",
+    });
+
+    expect(readData.periodActualSavingsBaseAmount).toBe(100_000);
+
+    const markdown = await createExportService(createExportRepository(userAClient)).generateMarkdown(userA.id, {
+      preset: "SPENDING_REVIEW",
+      period: { kind: "CUSTOM", startDate: "2026-08-01", endDate: "2026-08-31" },
+    });
+
+    expect(markdown).toContain("- 실제 저축액: 100,000 KRW");
+    expect(markdown).not.toContain("- 실제 저축액: 150,000 KRW");
+  });
+
+  it("classifies a recurring-rule-generated transaction as RECURRING and a planned-transaction-derived one as ONE_TIME", async () => {
+    const { data: rule, error: ruleError } = await userAClient
+      .from("recurring_transactions")
+      .insert({
+        user_id: userA.id,
+        type: "EXPENSE",
+        amount: 14_900,
+        currency: "KRW",
+        account_id: userACheckingAccountId,
+        frequency: "MONTHLY",
+        day_of_month: 5,
+        start_date: "2026-08-01",
+        next_run_date: "2026-09-05",
+        confirmation_mode: "AUTO_CONFIRM",
+      })
+      .select("id")
+      .single();
+    if (ruleError || !rule) throw new Error(ruleError?.message ?? "Unable to create recurring rule");
+
+    const { data: plan, error: planError } = await userAClient
+      .from("planned_transactions")
+      .insert({ user_id: userA.id, type: "EXPENSE", status: "CONFIRMED", scheduled_date: "2026-08-06", amount: 600_000, currency: "KRW", base_amount: 600_000, account_id: userACheckingAccountId })
+      .select("id")
+      .single();
+    if (planError || !plan) throw new Error(planError?.message ?? "Unable to create planned transaction");
+
+    const { error: recurringTxError } = await userAClient.from("transactions").insert({
+      user_id: userA.id,
+      type: "EXPENSE",
+      status: "CONFIRMED",
+      transaction_at: "2026-08-05T12:00:00+09:00",
+      amount: 14_900,
+      currency: "KRW",
+      base_amount: 14_900,
+      base_currency: "KRW",
+      account_id: userACheckingAccountId,
+      recurring_rule_id: rule.id,
+      recurring_occurrence_date: "2026-08-05",
+    });
+    if (recurringTxError) throw new Error(recurringTxError.message);
+
+    const { error: plannedTxError } = await userAClient.from("transactions").insert({
+      user_id: userA.id,
+      type: "EXPENSE",
+      status: "CONFIRMED",
+      transaction_at: "2026-08-06T12:00:00+09:00",
+      amount: 600_000,
+      currency: "KRW",
+      base_amount: 600_000,
+      base_currency: "KRW",
+      account_id: userACheckingAccountId,
+      planned_transaction_id: plan.id,
+    });
+    if (plannedTxError) throw new Error(plannedTxError.message);
+
+    const readData = await createExportRepository(userAClient).getReadData(userA.id, {
+      startDate: "2026-08-01",
+      endDate: "2026-08-31",
+    });
+
+    expect(readData.transactions).toContainEqual(expect.objectContaining({ baseAmount: 14_900, recurringRuleId: rule.id }));
+    expect(readData.transactions).toContainEqual(expect.objectContaining({ baseAmount: 600_000, plannedTransactionId: plan.id }));
+
+    const markdown = await createExportService(createExportRepository(userAClient)).generateMarkdown(userA.id, {
+      preset: "SPENDING_REVIEW",
+      period: { kind: "CUSTOM", startDate: "2026-08-01", endDate: "2026-08-31" },
+    });
+
+    expect(markdown).toContain("- 반복성 지출: 14,900 KRW");
+    expect(markdown).toContain("- 일회성 지출: 600,000 KRW");
+  });
+
   it("rejects a user A client attempting to export a spoofed user B id", async () => {
     const service = createExportService(createExportRepository(userAClient));
 
