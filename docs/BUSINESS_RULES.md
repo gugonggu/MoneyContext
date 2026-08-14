@@ -296,7 +296,7 @@ Tag: 보충제
 
 Category는 "무엇"을, Tag는 "왜/어떤 상황"을 답한다. 새 카테고리/태그를 만들 때도 이 기준을 유지한다. 기존 거래의 카테고리/태그를 이 기준에 맞춰 임의로 재분류하지 않는다.
 
-# 17. 기간 잉여금과 실제 저축액
+# 17. 기간 잉여금과 저축 목표 적립액
 
 ## 17.1 기간 잉여금(Period Surplus)
 
@@ -306,19 +306,19 @@ period_surplus = income - expense
 
 수입에서 지출을 뺀 값은 **저축이 아니라 기간 내 잉여금**이다. 저축 목표에 실제로 적립되지 않았다면 그 돈은 남아있을 뿐 저축된 것이 아니다.
 
-## 17.2 실제 저축액(Actual Savings)
+## 17.2 저축 목표 적립액(Savings Goal Contributions)
 
 ```text
-actual_savings = 분석 기간 내 savings_contributions.amount 합계
+savings_goal_contributions = 분석 기간 내 savings_contributions.amount 합계
 ```
 
-`savings_contributions.contribution_date`가 분석 기간에 속하는 적립 기록만 합산한다. 저축 목표에 실제로 적립된 금액만 저축으로 인정하며, 기간 잉여금과 동일하게 계산하지 않는다.
+`savings_contributions.contribution_date`가 분석 기간에 속하는 적립 기록만 합산한다. **Money Context 저축 목표에 연결된 적립 기록만** 이 값에 포함되며, 목표에 연결되지 않은 별도 저축(예: 목표를 지정하지 않고 적금 계좌로 이체한 돈)은 포함하지 않는다. 따라서 "사용자의 모든 실제 저축 행위"를 의미하지 않으며, 기간 잉여금과도 동일하게 계산하지 않는다.
 
 ## 17.3 비율
 
 ```text
 surplus_rate = period_surplus / income
-actual_savings_rate = actual_savings / income
+savings_goal_contribution_rate = savings_goal_contributions / income
 ```
 
 수입이 0이면 두 비율 모두 계산 불가로 표시한다(0으로 나누지 않는다).
@@ -340,6 +340,10 @@ actual_savings_rate = actual_savings / income
 
 "미지정"은 EXPENSE 거래인데 결제 계좌 정보 자체가 누락된, 진짜 데이터 누락 사례에만 사용한다. "외부 자금 이동"은 거래의 성격이 외부 자금 이동이기 때문에 결제수단이 없는 경우에 사용한다. 두 값을 같은 의미로 취급하지 않는다.
 
+## 18.4 외부 자금 이동은 수입/지출과 별도로 더하는 금액이 아니다
+
+Export의 "외부 자금 이동" 섹션(외부 송금/외부 수입 합계)은 이미 위 기간 수입/지출 합계 안에 포함된 **부분집합**이다. 외부 AI가 이 값을 기간 지출·수입에 추가로 더해 이중 계산하지 않도록, Markdown 섹션 제목과 해석 주의사항에 "이미 포함됨"을 명시하고 JSON에서는 `external_flows.included_in_period_totals: true`로 표시한다.
+
 # 19. 거래의 반복/일회성 성격(Expense Nature)
 
 GPT Export가 소비 추세를 단순 연장(extrapolation)하지 않도록, 지출 거래를 다음 세 가지로 분류한다.
@@ -353,6 +357,8 @@ UNKNOWN
 - `recurring_rule_id`가 있는 거래(반복 거래 규칙이 생성한 거래)는 RECURRING이다.
 - `planned_transaction_id`가 있는 거래(사용자가 등록한 예정 거래가 확정되어 생성된 거래)는 ONE_TIME이다.
 - 그 외 모든 거래는 UNKNOWN이다. 근거 없이 ONE_TIME으로 추정하지 않는다. 기존 데이터를 이 기준으로 소급 재분류하지 않는다.
+
+`예정 거래(planned transaction)`와 `반복 거래(recurring transaction)`는 서로 다른 개념이다. 예정 거래는 반복 규칙 없이 등록된 미래의 단일 이벤트(예: "다음 주 차량 수리 300,000원")일 수 있으므로, **예정 거래에서 확정되었다는 사실만으로 RECURRING으로 판정하지 않는다.** `planned_transaction_id`가 있는 거래는 위 기준대로 항상 ONE_TIME이다.
 
 # 20. 삭제/수정 규칙
 

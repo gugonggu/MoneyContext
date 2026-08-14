@@ -51,7 +51,7 @@ export type ExportReadModel = Readonly<{
     targetDate: string;
   }>[];
   creditCards?: readonly Readonly<{ name: string; outstandingBaseAmount: number; nextPaymentDate?: string | null }>[];
-  /** Sum of savings_contributions within the export period - the only amount that may be called "실제 저축액". */
+  /** Sum of savings_contributions within the export period, for goals tracked in Money Context - this is "저축 목표 적립액", not the user's total savings behavior. */
   periodActualSavingsBaseAmount?: number;
 }>;
 
@@ -216,7 +216,7 @@ function savingsGoalLines(readModel: ExportReadModel): string[] {
 function externalFlowLines(readModel: ExportReadModel, transactions: readonly ActualTransaction[]): string[] {
   const flows = externalFlows(transactions);
   return [
-    "## 외부 자금 이동",
+    "## 외부 자금 이동 (위 수입/지출에 이미 포함)",
     `- 외부 송금: ${formatMoney(BigInt(flows.outgoingBaseAmount), readModel.baseCurrency)}`,
     `- 외부 수입: ${formatMoney(BigInt(flows.incomingBaseAmount), readModel.baseCurrency)}`,
     "",
@@ -274,8 +274,8 @@ export function generateExportMarkdown(readModel: ExportReadModel): string {
     `- 지출: ${formatMoney(expense, readModel.baseCurrency)}`,
     `- 기간 잉여금: ${formatMoney(surplus, readModel.baseCurrency)}`,
     `- 수입 대비 잉여율: ${percentage(surplus, income)}`,
-    `- 실제 저축액: ${formatMoney(BigInt(actualSavings), readModel.baseCurrency)}`,
-    `- 실제 저축률: ${percentage(BigInt(actualSavings), income)}`,
+    `- 저축 목표 적립액: ${formatMoney(BigInt(actualSavings), readModel.baseCurrency)}`,
+    `- 저축 목표 적립률: ${percentage(BigInt(actualSavings), income)}`,
     "",
   ];
   if (sections.includes("BUDGETS")) lines.push(...budgetLines(readModel));
@@ -292,17 +292,19 @@ export function generateExportMarkdown(readModel: ExportReadModel): string {
     "## 데이터 해석 주의사항",
     "- 내 계좌 간 이체(양쪽 다 내 소유 계좌)는 수입/지출에 포함하지 않습니다.",
     "- 외부로 보내거나 외부에서 받은 이체(한쪽만 내 계좌)는 각각 지출/수입에 포함합니다.",
+    "- 외부 자금 이동(외부 송금/외부 수입)은 위 기간 수입/지출에 이미 포함된 부분집합이며, 총 수입/지출에 별도로 더해서 계산하지 않습니다.",
     "- 카드대금 납부는 추가 소비가 아닙니다.",
     "- 신용카드 구매 소비는 구매일에 전액 인식합니다.",
     "- 할부 회차는 소비가 아니라 미래 결제 현금흐름입니다.",
     "- 잔액조정은 수입/소비 통계에 포함하지 않습니다.",
     "- 예정 거래는 실제 소비가 아니며 미래 계획으로만 반영합니다.",
     "- 과거 외화 거래 분석은 거래 시점에 저장된 base_amount를 사용합니다.",
-    "- 기간 잉여금(수입-지출)은 실제 저축액이 아닙니다.",
-    "- 실제 저축액은 저축 목표에 실제 적립된 금액만 의미합니다.",
+    "- 기간 잉여금은 저축 목표 적립액이 아닙니다.",
+    "- 저축 목표 적립액은 Money Context 저축 목표에 연결된 적립 내역만 의미하며, 목표에 연결되지 않은 별도 저축(예: 목표 미지정 적금 이체)은 포함하지 않습니다.",
     "- '미지정'은 결제수단 정보가 누락된 거래이며, '외부 자금 이동'은 계좌 정보가 없는 외부 송금/수입입니다.",
-    "- 일회성 지출은 향후 월 반복 소비를 의미하지 않습니다.",
-    "- 반복성 지출은 반복 거래 규칙에서 생성되었거나 사용자가 예정 거래로 등록한 항목만 의미하며, 분류되지 않은 지출은 반복 여부가 확인되지 않은 것일 뿐 일회성이라는 뜻이 아닙니다.",
+    "- 반복성 지출은 반복 거래 규칙에서 생성되었거나 사용자가 명시적으로 반복성으로 지정한 거래를 의미합니다.",
+    "- 예정 거래라는 이유만으로 반복성 지출로 분류하지 않습니다.",
+    "- 분류되지 않은 지출은 반복 여부를 확인할 근거가 부족한 거래이며, 일회성이라는 의미가 아닙니다.",
     "- 카테고리는 소비 대상(무엇에 사용했는가), 태그는 소비 맥락(왜/어떤 상황에서 사용했는가)을 나타냅니다.",
   );
   return `${lines.join("\n")}\n`;

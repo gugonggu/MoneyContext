@@ -96,8 +96,14 @@
 
 # GPT Export 의미 정확도 (2026-08-14)
 
-- `수입 - 지출`은 "저축"이 아니라 "기간 잉여금"으로 명칭을 분리한다. 실제 저축액은 분석 기간 내 `savings_contributions` 합계만 사용한다.
-- Analysis JSON은 기존 `net_cashflow_base_amount` 필드를 유지하고 `period_surplus_base_amount`/`surplus_rate`/`actual_savings_base_amount`/`actual_savings_rate`를 추가만 한다. 필드 제거가 없으므로 `schema_version`은 올리지 않는다.
+- `수입 - 지출`은 "저축"이 아니라 "기간 잉여금"으로 명칭을 분리한다. 저축 목표 적립액은 분석 기간 내, Money Context 저축 목표에 연결된 `savings_contributions` 합계만 사용한다.
+- Analysis JSON은 기존 `net_cashflow_base_amount` 필드를 유지하고 `period_surplus_base_amount`/`surplus_rate`를 추가만 한다. 필드 제거가 없으므로 `schema_version`은 올리지 않는다.
 - 소비 성격(RECURRING/ONE_TIME/UNKNOWN) 분류는 새 DB 컬럼을 만들지 않고 기존 `recurring_rule_id`/`planned_transaction_id`로 도출한다. 사용자가 거래별로 직접 성격을 지정하는 UI는 이번 범위에서 구현하지 않았다 — 필요 여부는 사용자 확인 후 별도 작업으로 진행한다.
 - 결제수단별 소비에서 "미지정"(진짜 데이터 누락)과 "외부 자금 이동"(계좌 개념이 없는 외부 송금/수신)을 분리한다. "외부 자금 이동" 섹션은 항상 별도로 합계를 보여준다.
+
+# GPT Export 의미 정정 2차 (2026-08-14)
+
+- Markdown "외부 자금 이동" 섹션은 이미 기간 수입/지출에 포함된 부분집합이라는 점이 제목에서 드러나지 않아 AI가 이중 계산할 위험이 있었다. 섹션 제목을 "외부 자금 이동 (위 수입/지출에 이미 포함)"으로 바꾸고, 해석 주의사항과 JSON `external_flows.included_in_period_totals: true`로 동일한 의미를 명시했다.
+- 해석 주의사항의 "반복성 지출은 ... 사용자가 예정 거래로 등록한 항목만 의미"라는 문구가 예정 거래(planned transaction)와 반복 거래(recurring transaction)를 혼동시켰다. 실제 분류 로직(`recurring_rule_id`→RECURRING, `planned_transaction_id`→ONE_TIME)은 처음부터 올바랐으므로 **로직은 변경하지 않고 설명 문구만 수정**했다.
+- `actual_savings_base_amount`/`actual_savings_rate` 필드는 바로 이전 작업에서 신설되어 외부에 공개된 이력이 없으므로, 하위 호환 별칭을 남기지 않고 `savings_goal_contribution_base_amount`/`savings_goal_contribution_rate`로 정리했다. `net_cashflow_base_amount`(이전부터 존재)는 계속 별도로 유지한다. 필드 제거가 아닌 신설 필드의 명칭 정리이므로 `schema_version`은 올리지 않는다.
 - Category(무엇에 사용)와 Tag(왜/어떤 맥락)의 역할을 `BUSINESS_RULES.md`에 명문화했다. 기존 거래의 카테고리/태그는 소급 재분류하지 않는다.

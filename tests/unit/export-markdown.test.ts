@@ -82,8 +82,8 @@ describe("generateExportMarkdown", () => {
     expect(markdown).toContain("## 기간 내 현황");
     expect(markdown).toContain("- 기간 잉여금: 2,998,500 KRW");
     expect(markdown).toContain("- 수입 대비 잉여율: 100%");
-    expect(markdown).toContain("- 실제 저축액: 0 KRW");
-    expect(markdown).toContain("- 실제 저축률: 0%");
+    expect(markdown).toContain("- 저축 목표 적립액: 0 KRW");
+    expect(markdown).toContain("- 저축 목표 적립률: 0%");
   });
 
   it("renders a negative net worth without treating it as an invalid amount", () => {
@@ -139,10 +139,13 @@ describe("generateExportMarkdown", () => {
     expect(markdown).toContain("잔액조정은 수입/소비 통계에 포함하지 않습니다.");
     expect(markdown).toContain("예정 거래는 실제 소비가 아니며 미래 계획으로만 반영합니다.");
     expect(markdown).toContain("과거 외화 거래 분석은 거래 시점에 저장된 base_amount를 사용합니다.");
-    expect(markdown).toContain("기간 잉여금(수입-지출)은 실제 저축액이 아닙니다.");
-    expect(markdown).toContain("실제 저축액은 저축 목표에 실제 적립된 금액만 의미합니다.");
+    expect(markdown).toContain("외부 자금 이동(외부 송금/외부 수입)은 위 기간 수입/지출에 이미 포함된 부분집합이며, 총 수입/지출에 별도로 더해서 계산하지 않습니다.");
+    expect(markdown).toContain("기간 잉여금은 저축 목표 적립액이 아닙니다.");
+    expect(markdown).toContain("저축 목표 적립액은 Money Context 저축 목표에 연결된 적립 내역만 의미하며");
     expect(markdown).toContain("'미지정'은 결제수단 정보가 누락된 거래이며, '외부 자금 이동'은 계좌 정보가 없는 외부 송금/수입입니다.");
-    expect(markdown).toContain("일회성 지출은 향후 월 반복 소비를 의미하지 않습니다.");
+    expect(markdown).toContain("반복성 지출은 반복 거래 규칙에서 생성되었거나 사용자가 명시적으로 반복성으로 지정한 거래를 의미합니다.");
+    expect(markdown).toContain("예정 거래라는 이유만으로 반복성 지출로 분류하지 않습니다.");
+    expect(markdown).toContain("분류되지 않은 지출은 반복 여부를 확인할 근거가 부족한 거래이며, 일회성이라는 의미가 아닙니다.");
     expect(markdown).toContain("카테고리는 소비 대상(무엇에 사용했는가), 태그는 소비 맥락(왜/어떤 상황에서 사용했는가)을 나타냅니다.");
   });
 
@@ -152,7 +155,7 @@ describe("generateExportMarkdown", () => {
     expect(markdown).toContain("- 수입: 3,000,000 KRW");
     expect(markdown).toContain("- 지출: 1,500 KRW");
     expect(markdown).toContain("- 기간 잉여금: 2,998,500 KRW");
-    expect(markdown).toContain("- 실제 저축액: 100,000 KRW");
+    expect(markdown).toContain("- 저축 목표 적립액: 100,000 KRW");
     expect(markdown).not.toContain("- 저축:");
     expect(markdown).not.toContain("- 저축률:");
   });
@@ -195,6 +198,30 @@ describe("generateExportMarkdown", () => {
     expect(markdown).toContain("- 반복성 지출: 14,900 KRW");
     expect(markdown).toContain("- 일회성 지출: 600,000 KRW");
     expect(markdown).toContain("- 분류되지 않은 지출: 56,678 KRW");
+  });
+
+  it("does not classify a one-off planned transaction as RECURRING just because it was scheduled ahead of time", () => {
+    const markdown = generateExportMarkdown(readModel({
+      transactions: [
+        { id: "car-repair", transactionDate: "2026-08-06", type: "EXPENSE", status: "CONFIRMED", baseAmount: 300_000, plannedTransactionId: "plan-car-repair", categoryName: "차량", memo: "차량 수리" },
+      ],
+    }));
+
+    expect(markdown).toContain("- 일회성 지출: 300,000 KRW");
+    expect(markdown).toContain("- 반복성 지출: 0 KRW");
+  });
+
+  it("does not add external outgoing transfers on top of the period expense total", () => {
+    const markdown = generateExportMarkdown(readModel({
+      transactions: [
+        { id: "expense", transactionDate: "2026-08-01", type: "EXPENSE", status: "CONFIRMED", baseAmount: 400_000, categoryName: "생활" },
+        { id: "transfer-out", transactionDate: "2026-08-06", type: "TRANSFER", status: "CONFIRMED", baseAmount: 600_000, fromAccountName: "부산은행" },
+      ],
+    }));
+
+    expect(markdown).toContain("- 지출: 1,000,000 KRW");
+    expect(markdown).toContain("- 외부 송금: 600,000 KRW");
+    expect(markdown).not.toContain("1,600,000 KRW");
   });
 
   it("does not guess ONE_TIME for an ordinary transaction with no recurring or planned origin", () => {

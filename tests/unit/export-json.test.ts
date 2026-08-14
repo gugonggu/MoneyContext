@@ -83,8 +83,8 @@ describe("generateAnalysisJson", () => {
       net_cashflow_base_amount: -1_500,
       period_surplus_base_amount: -1_500,
       surplus_rate: null,
-      actual_savings_base_amount: 0,
-      actual_savings_rate: null,
+      savings_goal_contribution_base_amount: 0,
+      savings_goal_contribution_rate: null,
     });
     expect(result.transactions).toEqual([expect.objectContaining({
       transaction_date: "2026-08-01",
@@ -168,12 +168,12 @@ describe("generateAnalysisJson", () => {
     }));
 
     expect(result.period_summary.period_surplus_base_amount).toBe(300_000);
-    expect(result.period_summary.actual_savings_base_amount).toBe(100_000);
+    expect(result.period_summary.savings_goal_contribution_base_amount).toBe(100_000);
     expect(result.period_summary.surplus_rate).toBe(0.3);
-    expect(result.period_summary.actual_savings_rate).toBe(0.1);
+    expect(result.period_summary.savings_goal_contribution_rate).toBe(0.1);
   });
 
-  it("reports one-sided transfers as external_flows regardless of whether the source account is known", () => {
+  it("reports one-sided transfers as external_flows, flagged as already included in period totals", () => {
     const result = generateAnalysisJson(readModel({
       transactions: [
         { id: "transfer-out", transactionDate: "2026-08-06T00:00:00.000Z", type: "TRANSFER", status: "CONFIRMED", baseAmount: 600_000, fromAccountName: "Bank" },
@@ -181,7 +181,20 @@ describe("generateAnalysisJson", () => {
       ],
     }));
 
-    expect(result.external_flows).toEqual({ outgoing_base_amount: 600_000, incoming_base_amount: 13_060 });
+    expect(result.external_flows).toEqual({ included_in_period_totals: true, outgoing_base_amount: 600_000, incoming_base_amount: 13_060 });
+  });
+
+  it("does not double count external flows into a larger expense total", () => {
+    const result = generateAnalysisJson(readModel({
+      transactions: [
+        { id: "expense", transactionDate: "2026-08-01T00:00:00.000+09:00", type: "EXPENSE", status: "CONFIRMED", baseAmount: 400_000 },
+        { id: "transfer-out", transactionDate: "2026-08-06T00:00:00.000Z", type: "TRANSFER", status: "CONFIRMED", baseAmount: 600_000, fromAccountName: "Bank" },
+      ],
+    }));
+
+    expect(result.period_summary.expense_base_amount).toBe(1_000_000);
+    expect(result.external_flows.outgoing_base_amount).toBe(600_000);
+    expect(result.period_summary.expense_base_amount).not.toBe(1_600_000);
   });
 
   it("attributes a transfer-out with a known source account to that account in statistics, not 'Unspecified'", () => {

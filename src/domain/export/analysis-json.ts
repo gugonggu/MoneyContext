@@ -33,10 +33,12 @@ export type AnalysisJson = Readonly<{
     net_cashflow_base_amount: number;
     period_surplus_base_amount: number;
     surplus_rate: number | null;
-    actual_savings_base_amount: number;
-    actual_savings_rate: number | null;
+    /** Sum of savings_contributions within the period for goals tracked in Money Context - not a user's total savings behavior. */
+    savings_goal_contribution_base_amount: number;
+    savings_goal_contribution_rate: number | null;
   }>;
-  external_flows: Readonly<{ outgoing_base_amount: number; incoming_base_amount: number }>;
+  /** outgoing/incoming are already counted inside period_summary income/expense - do not add them again. */
+  external_flows: Readonly<{ included_in_period_totals: true; outgoing_base_amount: number; incoming_base_amount: number }>;
   expense_nature: Readonly<{ recurring_base_amount: number; one_time_base_amount: number; unknown_base_amount: number }>;
   budgets: readonly Readonly<{ name: string; allocated_base_amount: number; actual_usage_base_amount: number }>[];
   credit_cards: readonly Readonly<{ name: string; outstanding_base_amount: number; next_payment_date: string | null }>[];
@@ -139,8 +141,8 @@ export function generateAnalysisJson(readModel: ExportReadModel): AnalysisJson {
   const expense = sumAmounts(actual, "EXPENSE");
   const netCashflow = income - expense;
   assertSafeInteger(netCashflow, "period summary");
-  const actualSavings = readModel.periodActualSavingsBaseAmount ?? 0;
-  assertNonNegativeAmount(actualSavings, "periodActualSavingsBaseAmount");
+  const savingsGoalContributions = readModel.periodActualSavingsBaseAmount ?? 0;
+  assertNonNegativeAmount(savingsGoalContributions, "periodActualSavingsBaseAmount");
   const position = readModel.financialPosition;
   assertNonNegativeAmount(position.totalAssets, "totalAssets");
   assertNonNegativeAmount(position.totalLiabilities, "totalLiabilities");
@@ -169,12 +171,12 @@ export function generateAnalysisJson(readModel: ExportReadModel): AnalysisJson {
       net_cashflow_base_amount: netCashflow,
       period_surplus_base_amount: netCashflow,
       surplus_rate: rate(netCashflow, income),
-      actual_savings_base_amount: actualSavings,
-      actual_savings_rate: rate(actualSavings, income),
+      savings_goal_contribution_base_amount: savingsGoalContributions,
+      savings_goal_contribution_rate: rate(savingsGoalContributions, income),
     },
     external_flows: (() => {
       const flows = externalFlows(actual);
-      return { outgoing_base_amount: flows.outgoingBaseAmount, incoming_base_amount: flows.incomingBaseAmount };
+      return { included_in_period_totals: true as const, outgoing_base_amount: flows.outgoingBaseAmount, incoming_base_amount: flows.incomingBaseAmount };
     })(),
     expense_nature: (() => {
       const nature = expenseNatureBreakdown(actual);

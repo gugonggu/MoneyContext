@@ -299,7 +299,7 @@ JPY 3,000, base_amount 28,400으로 저장.
 
 # 14. GPT Export 의미 정확도
 
-## TC-EXPORT-001 잉여금과 실제 저축액 분리
+## TC-EXPORT-001 잉여금과 저축 목표 적립액 분리
 
 입력:
 
@@ -313,26 +313,31 @@ savings contribution (기간 내) = 100,000
 
 ```text
 period_surplus = 300,000
-actual_savings = 100,000
+savings_goal_contributions = 100,000
 ```
 
 두 값을 동일하게 계산하지 않는다. (`tests/unit/export-json.test.ts`, `tests/integration/export.test.ts`)
 
-## TC-EXPORT-002 외부 송금
+## TC-EXPORT-002 외부 송금 — 지출에 이미 포함, 이중 계산 금지
 
 ```text
-내 은행 계좌 → 외부인
-600,000
+총 지출 = 1,000,000
+그중 외부 송금 = 600,000
 ```
 
 기대:
 
-- 지출 600,000에 포함
+```text
+period_expenses = 1,000,000
+external_outgoing = 600,000
+```
+
+- 지출 1,000,000에 이미 외부 송금 600,000이 포함되어 있으며, 이를 다시 더해 1,600,000으로 해석/계산하지 않음
 - 내부 이체로 취급하지 않음
 - 결제수단별 소비에서 실제 출금 계좌로 집계되며 "미지정"으로 잘못 집계되지 않음
-- "외부 자금 이동 - 외부 송금"에 포함
+- Export에 "외부 자금 이동은 이미 수입/지출에 포함됨"을 알리는 설명이 있음
 
-(`tests/unit/export-markdown.test.ts`)
+(`tests/unit/export-markdown.test.ts`, `tests/unit/export-json.test.ts`)
 
 ## TC-EXPORT-003 내부 이체
 
@@ -361,15 +366,24 @@ expense_nature = RECURRING
 
 (`tests/unit/export-json.test.ts`, `tests/integration/export.test.ts`)
 
-## TC-EXPORT-005 예정 거래에서 확정된 일회성 거래
+## TC-EXPORT-005 예정 거래 — 반복 규칙 없이는 ONE_TIME, 절대 RECURRING 아님
 
-사용자가 등록한 예정 거래(`planned_transaction_id`)가 확정되어 생성된 거래.
+```text
+차량 수리
+300,000
+planned = true (반복 거래 규칙 없음)
+```
 
 기대:
 
 ```text
 expense_nature = ONE_TIME
+expense_nature != RECURRING
 ```
+
+`planned_transaction_id`가 있다는 사실만으로는 반복성으로 판정하지 않는다. 예정 거래와 반복 거래는 서로 다른 개념이다.
+
+(`tests/unit/export-markdown.test.ts` "does not classify a one-off planned transaction as RECURRING...")
 
 ## TC-EXPORT-006 기존 일반 거래
 

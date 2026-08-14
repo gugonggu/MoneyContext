@@ -199,8 +199,8 @@ describe("authenticated markdown export read model", () => {
       period: { kind: "CUSTOM", startDate: "2026-08-01", endDate: "2026-08-31" },
     });
 
-    expect(markdown).toContain("- 실제 저축액: 100,000 KRW");
-    expect(markdown).not.toContain("- 실제 저축액: 150,000 KRW");
+    expect(markdown).toContain("- 저축 목표 적립액: 100,000 KRW");
+    expect(markdown).not.toContain("- 저축 목표 적립액: 150,000 KRW");
   });
 
   it("classifies a recurring-rule-generated transaction as RECURRING and a planned-transaction-derived one as ONE_TIME", async () => {
