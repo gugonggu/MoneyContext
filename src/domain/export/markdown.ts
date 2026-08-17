@@ -234,6 +234,42 @@ function plannedCashflowLines(readModel: ExportReadModel): string[] {
   return ["## 예정된 현금흐름", ...(rows.length === 0 ? ["- 확정 전 예정 거래가 없습니다."] : rows), ""];
 }
 
+const FUTURE_CASHFLOW_LABEL: Readonly<Record<ExportFutureCashflow["source"], Readonly<Record<"INCOME" | "EXPENSE", string>>>> = {
+  PLANNED: { INCOME: "예정 수입", EXPENSE: "예정 지출" },
+  CONFIRMED_FUTURE: { INCOME: "미리 확정된 미래 수입", EXPENSE: "미리 확정된 미래 지출" },
+  INSTALLMENT: { INCOME: "할부 잔여금", EXPENSE: "할부 잔여금" },
+};
+
+function sumFutureCashflow(items: readonly ExportFutureCashflow[], source: ExportFutureCashflow["source"], type: "INCOME" | "EXPENSE"): number {
+  return items.filter((item) => item.source === source && item.type === type).reduce((total, item) => {
+    assertSafeAmount(item.baseAmount, "future cashflow baseAmount");
+    return total + item.baseAmount;
+  }, 0);
+}
+
+// Unlike plannedCashflowLines, this is never limited to the selected analysis
+// period - it covers every future cashflow regardless of what window the user
+// chose, so a subscription due next quarter still shows up today.
+function futureCashflowLines(readModel: ExportReadModel): string[] {
+  const items = readModel.futureCashflows ?? [];
+  const rows = [...items]
+    .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))
+    .map((item) => {
+      assertSafeAmount(item.baseAmount, "future cashflow baseAmount");
+      return `- ${item.scheduledDate}: ${FUTURE_CASHFLOW_LABEL[item.source][item.type]} ${formatMoney(BigInt(item.baseAmount), readModel.baseCurrency)}${item.memo ? ` (${item.memo})` : ""}`;
+    });
+  return [
+    "## 미래 지출 (선택한 분석 기간과 무관)",
+    `- 예정 지출 합계: ${formatMoney(BigInt(sumFutureCashflow(items, "PLANNED", "EXPENSE")), readModel.baseCurrency)}`,
+    `- 예정 수입 합계: ${formatMoney(BigInt(sumFutureCashflow(items, "PLANNED", "INCOME")), readModel.baseCurrency)}`,
+    `- 미리 확정된 미래 지출 합계: ${formatMoney(BigInt(sumFutureCashflow(items, "CONFIRMED_FUTURE", "EXPENSE")), readModel.baseCurrency)}`,
+    `- 미리 확정된 미래 수입 합계: ${formatMoney(BigInt(sumFutureCashflow(items, "CONFIRMED_FUTURE", "INCOME")), readModel.baseCurrency)}`,
+    `- 할부 잔여금 합계 (이미 구매 시점에 지출로 인식됨): ${formatMoney(BigInt(sumFutureCashflow(items, "INSTALLMENT", "EXPENSE")), readModel.baseCurrency)}`,
+    ...(rows.length === 0 ? ["- 예정되거나 확정된 미래 현금흐름이 없습니다."] : rows),
+    "",
+  ];
+}
+
 function savingsGoalLines(readModel: ExportReadModel): string[] {
   const rows = readModel.savingsGoals.map((goal) => {
     assertSafeAmount(goal.targetBaseAmount, "savings goal targetBaseAmount");
@@ -317,6 +353,7 @@ export function generateExportMarkdown(readModel: ExportReadModel): string {
   if (sections.includes("CARDS")) lines.push(...cardLines(readModel));
   if (sections.includes("SAVINGS_GOALS")) lines.push(...savingsGoalLines(readModel));
   if (sections.includes("PLANNED_CASHFLOWS")) lines.push(...plannedCashflowLines(readModel));
+  if (sections.includes("FUTURE_CASHFLOWS")) lines.push(...futureCashflowLines(readModel));
   if (sections.includes("TRANSACTIONS")) lines.push(...transactionLines(transactions, readModel.baseCurrency));
   lines.push(
     "## 데이터 해석 주의사항",
@@ -339,6 +376,8 @@ export function generateExportMarkdown(readModel: ExportReadModel): string {
     "- 예정 거래라는 이유만으로 반복성 지출로 분류하지 않습니다.",
     "- 분류되지 않은 지출은 반복 여부를 확인할 근거가 부족한 거래이며, 일회성이라는 의미가 아닙니다.",
     "- 카테고리는 소비 대상(무엇에 사용했는가), 태그는 소비 맥락(왜/어떤 상황에서 사용했는가)을 나타냅니다.",
+    "- '미래 지출'은 선택한 분석 기간과 무관하게 아직 실현되지 않은 모든 미래 현금흐름(예정 거래, 예정일 전에 미리 확정한 거래, 할부 잔여금)을 의미합니다.",
+    "- 할부 잔여금은 이미 구매 시점에 지출로 전액 인식된 금액을 카드사에 갚는 미래 현금흐름이며, 새로운 소비가 아니므로 위 기간 지출 합계에 다시 더하면 안 됩니다.",
   );
   return `${lines.join("\n")}\n`;
 }

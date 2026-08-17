@@ -128,6 +128,7 @@ describe("generateExportMarkdown", () => {
   it.each<ExportPreset>(["SPENDING_REVIEW", "BUDGET_REVIEW", "FINANCIAL_HEALTH"])("renders the sections for the %s preset", (preset) => {
     const markdown = generateExportMarkdown(readModel({ preset }));
 
+    expect(markdown).toContain("## 미래 지출 (선택한 분석 기간과 무관)");
     if (preset === "SPENDING_REVIEW") {
       expect(markdown).toContain("## 카테고리별 소비");
       expect(markdown).toContain("## 태그별 소비");
@@ -144,6 +145,29 @@ describe("generateExportMarkdown", () => {
       expect(markdown).toContain("## 저축 목표");
       expect(markdown).toContain("## 예정된 현금흐름");
     }
+  });
+
+  it("renders future cashflow totals and items, distinguishing planned, confirmed-ahead-of-time, and installment sources", () => {
+    const markdown = generateExportMarkdown(readModel({
+      futureCashflows: [
+        { source: "PLANNED", scheduledDate: "2026-09-01", type: "EXPENSE", baseAmount: 12_000, memo: "통신비" },
+        { source: "CONFIRMED_FUTURE", scheduledDate: "2026-09-07", type: "INCOME", baseAmount: 700_000 },
+        { source: "INSTALLMENT", scheduledDate: "2026-09-10", type: "EXPENSE", baseAmount: 20_000, memo: "노트북 (할부 1/3회차)" },
+      ],
+    }));
+
+    expect(markdown).toContain("- 예정 지출 합계: 12,000 KRW");
+    expect(markdown).toContain("- 미리 확정된 미래 수입 합계: 700,000 KRW");
+    expect(markdown).toContain("- 할부 잔여금 합계 (이미 구매 시점에 지출로 인식됨): 20,000 KRW");
+    expect(markdown).toContain("- 2026-09-01: 예정 지출 12,000 KRW (통신비)");
+    expect(markdown).toContain("- 2026-09-07: 미리 확정된 미래 수입 700,000 KRW");
+    expect(markdown).toContain("- 2026-09-10: 할부 잔여금 20,000 KRW (노트북 (할부 1/3회차))");
+  });
+
+  it("states that there are no future cashflows when the list is empty", () => {
+    const markdown = generateExportMarkdown(readModel());
+
+    expect(markdown).toContain("- 예정되거나 확정된 미래 현금흐름이 없습니다.");
   });
 
   it("states that an empty actual period has no transactions", () => {
@@ -174,6 +198,8 @@ describe("generateExportMarkdown", () => {
     expect(markdown).toContain("예정 거래라는 이유만으로 반복성 지출로 분류하지 않습니다.");
     expect(markdown).toContain("분류되지 않은 지출은 반복 여부를 확인할 근거가 부족한 거래이며, 일회성이라는 의미가 아닙니다.");
     expect(markdown).toContain("카테고리는 소비 대상(무엇에 사용했는가), 태그는 소비 맥락(왜/어떤 상황에서 사용했는가)을 나타냅니다.");
+    expect(markdown).toContain("'미래 지출'은 선택한 분석 기간과 무관하게 아직 실현되지 않은 모든 미래 현금흐름(예정 거래, 예정일 전에 미리 확정한 거래, 할부 잔여금)을 의미합니다.");
+    expect(markdown).toContain("할부 잔여금은 이미 구매 시점에 지출로 전액 인식된 금액을 카드사에 갚는 미래 현금흐름이며, 새로운 소비가 아니므로 위 기간 지출 합계에 다시 더하면 안 됩니다.");
   });
 
   it("reports the period surplus separately from actual savings contributions", () => {
