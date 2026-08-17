@@ -275,6 +275,70 @@ describe("authenticated markdown export read model", () => {
     expect(markdown).toContain("- 일회성 지출: 600,000 KRW");
   });
 
+  it("includes future_cashflows sources regardless of the selected period: an all-time PLANNED transaction, a planned transaction confirmed ahead of its future scheduled_date, and a remaining installment payment", async () => {
+    const { data: card, error: cardError } = await userAClient
+      .from("accounts")
+      .insert({ user_id: userA.id, name: "A card", type: "CREDIT_CARD" })
+      .select("id")
+      .single();
+    if (cardError || !card) throw new Error(cardError?.message ?? "Unable to create credit card account");
+
+    const { error: plannedError } = await userAClient.from("planned_transactions").insert({
+      user_id: userA.id,
+      type: "EXPENSE",
+      status: "PLANNED",
+      scheduled_date: "2099-01-01",
+      amount: 12_000,
+      currency: "KRW",
+      base_amount: 12_000,
+      base_currency: "KRW",
+      memo: "Future subscription",
+    });
+    if (plannedError) throw new Error(plannedError.message);
+
+    const { data: toConfirm, error: toConfirmError } = await userAClient
+      .from("planned_transactions")
+      .insert({ user_id: userA.id, type: "EXPENSE", status: "PLANNED", scheduled_date: "2099-02-01", amount: 34_000, currency: "KRW", base_amount: 34_000, base_currency: "KRW", account_id: userACheckingAccountId, memo: "Confirmed ahead of time" })
+      .select("id")
+      .single();
+    if (toConfirmError || !toConfirm) throw new Error(toConfirmError?.message ?? "Unable to create planned transaction to confirm");
+    const { error: confirmError } = await userAClient.rpc("confirm_planned_transaction", { input_planned_id: toConfirm.id });
+    if (confirmError) throw new Error(confirmError.message);
+
+    const { error: purchaseError } = await userAClient.rpc("create_installment_purchase", {
+      input_purchase: {
+        account_id: card.id,
+        category_id: null,
+        transaction_at: "2026-08-01T12:00:00+09:00",
+        amount: 60_000,
+        memo: "Laptop",
+        installment_count: 3,
+        interest_type: "INTEREST_FREE",
+        start_month: "2026-08-01",
+      },
+      payment_schedule: [
+        { sequence: 1, scheduled_date: "2026-08-25", principal_amount: 20_000, fee_amount: 0 },
+        { sequence: 2, scheduled_date: "2026-09-25", principal_amount: 20_000, fee_amount: 0 },
+        { sequence: 3, scheduled_date: "2026-10-25", principal_amount: 20_000, fee_amount: 0 },
+      ],
+    });
+    if (purchaseError) throw new Error(purchaseError.message);
+
+    const readData = await createExportRepository(userAClient).getReadData(userA.id, {
+      startDate: "2026-08-01",
+      endDate: "2026-08-31",
+    });
+
+    expect(readData.futureCashflows).toContainEqual(expect.objectContaining({ source: "PLANNED", scheduledDate: "2099-01-01", type: "EXPENSE", baseAmount: 12_000, memo: "Future subscription" }));
+    expect(readData.futureCashflows).toContainEqual(expect.objectContaining({ source: "CONFIRMED_FUTURE", scheduledDate: "2099-02-01", type: "EXPENSE", baseAmount: 34_000, memo: "Confirmed ahead of time" }));
+    // Every SCHEDULED installment payment is included regardless of its own
+    // scheduled_date - "not yet billed" is what makes it a future cashflow,
+    // not whether that date has already passed.
+    expect(readData.futureCashflows).toContainEqual(expect.objectContaining({ source: "INSTALLMENT", scheduledDate: "2026-08-25", type: "EXPENSE", baseAmount: 20_000 }));
+    expect(readData.futureCashflows).toContainEqual(expect.objectContaining({ source: "INSTALLMENT", scheduledDate: "2026-09-25", type: "EXPENSE", baseAmount: 20_000 }));
+    expect(readData.futureCashflows).toContainEqual(expect.objectContaining({ source: "INSTALLMENT", scheduledDate: "2026-10-25", type: "EXPENSE", baseAmount: 20_000 }));
+  });
+
   it("rejects a user A client attempting to export a spoofed user B id", async () => {
     const service = createExportService(createExportRepository(userAClient));
 

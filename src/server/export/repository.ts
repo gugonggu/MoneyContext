@@ -2,8 +2,9 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { effectiveIncomeExpenseType, type ExportTransaction } from "@/domain/export/markdown";
+import { effectiveIncomeExpenseType, type ExportFutureCashflow, type ExportTransaction } from "@/domain/export/markdown";
 import type { ExportPeriod } from "@/domain/export/period";
+import { addIsoDays, seoulDayStartUtcIso, todayInSeoul } from "@/lib/dates/seoul";
 import { createAssetReadRepository } from "@/server/assets/repository";
 import { createAssetReadService } from "@/server/assets/service";
 
@@ -39,6 +40,15 @@ type CategoryBudgetRow = Readonly<{
 type PlannedRow = Readonly<{ scheduled_date: string; type: "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT"; status: "PLANNED" | "CONFIRMED" | "CANCELLED"; amount: number | string; base_amount: number | string | null; memo: string | null }>;
 type GoalRow = Readonly<{ id: string; name: string; target_amount: number | string; target_date: string }>;
 type ContributionRow = Readonly<{ goal_id: string; amount: number | string; contribution_date: string }>;
+type ConfirmedFutureTransactionRow = Readonly<{ transaction_at: string; type: "INCOME" | "EXPENSE"; base_amount: number | string; memo: string | null }>;
+type InstallmentPlanJoin = Readonly<{ installment_count: number | string; transactions: { memo: string | null } | { memo: string | null }[] | null }>;
+type InstallmentPaymentRow = Readonly<{
+  sequence: number | string;
+  scheduled_date: string;
+  principal_amount: number | string;
+  fee_amount: number | string;
+  installment_plans: InstallmentPlanJoin | InstallmentPlanJoin[] | null;
+}>;
 
 function one<T>(value: T | readonly T[] | null): T | undefined {
   return (Array.isArray(value) ? value[0] : value) as T | undefined;
@@ -114,6 +124,45 @@ function isExportablePlannedCashflow(row: PlannedRow): row is PlannedRow & Reado
   return (row.type === "INCOME" || row.type === "EXPENSE") && row.base_amount !== null;
 }
 
+function mapFuturePlanned(row: PlannedRow & Readonly<{ type: "INCOME" | "EXPENSE"; base_amount: number | string }>): ExportFutureCashflow {
+  return {
+    source: "PLANNED",
+    scheduledDate: row.scheduled_date,
+    type: row.type,
+    baseAmount: asSafeInteger(row.base_amount, "planned base_amount"),
+    ...(row.memo === null ? {} : { memo: row.memo }),
+  };
+}
+
+function mapConfirmedFuture(row: ConfirmedFutureTransactionRow): ExportFutureCashflow {
+  return {
+    source: "CONFIRMED_FUTURE",
+    scheduledDate: seoulDate(row.transaction_at),
+    type: row.type,
+    baseAmount: asSafeInteger(row.base_amount, "transaction base_amount"),
+    ...(row.memo === null ? {} : { memo: row.memo }),
+  };
+}
+
+// A future installment payment is money the card issuer will bill later for a
+// purchase already recognized as an expense on the purchase date - the memo
+// carries the original purchase memo plus its installment sequence so this
+// reads as "future cash outflow", not "new spending".
+function mapInstallmentFuturePayment(row: InstallmentPaymentRow): ExportFutureCashflow {
+  const plan = one(row.installment_plans);
+  const transaction = plan ? one(plan.transactions) : undefined;
+  const sequence = asSafeInteger(row.sequence, "installment sequence");
+  const installmentCount = plan ? asSafeInteger(plan.installment_count, "installment_count") : undefined;
+  const label = [transaction?.memo, installmentCount ? `할부 ${sequence}/${installmentCount}회차` : null].filter(Boolean).join(" ");
+  return {
+    source: "INSTALLMENT",
+    scheduledDate: row.scheduled_date,
+    type: "EXPENSE",
+    baseAmount: asSafeInteger(row.principal_amount, "installment principal_amount") + asSafeInteger(row.fee_amount, "installment fee_amount"),
+    ...(label ? { memo: label } : {}),
+  };
+}
+
 function errorOr<T>(result: Readonly<{ data: T | null; error: { message: string } | null }>): T {
   if (result.error) throw new Error(result.error.message);
   if (result.data === null) throw new Error("export data was not found");
@@ -125,7 +174,8 @@ export function createExportRepository(supabase: SupabaseClient): ExportReadRepo
   return {
     async getReadData(userId, period): Promise<ExportReadData> {
       const nextDate = nextSeoulDate(period.endDate);
-      const [profileResult, transactionResult, monthlyBudgetResult, categoryBudgetResult, plannedResult, goalResult, contributionResult, assets] = await Promise.all([
+      const futureBoundary = seoulDayStartUtcIso(addIsoDays(todayInSeoul(), 1));
+      const [profileResult, transactionResult, monthlyBudgetResult, categoryBudgetResult, plannedResult, goalResult, contributionResult, assets, futurePlannedResult, confirmedFutureResult, installmentFutureResult] = await Promise.all([
         supabase.from("profiles").select("base_currency").eq("id", userId).maybeSingle(),
         supabase.from("transactions").select("id,transaction_at,type,status,amount,currency,base_amount,memo,recurring_rule_id,planned_transaction_id,categories(name),accounts!transactions_account_id_fkey(name),from_accounts:accounts!transactions_from_account_id_fkey(name),to_accounts:accounts!transactions_to_account_id_fkey(name),transaction_tags(tags(name))").eq("user_id", userId).gte("transaction_at", `${period.startDate}T00:00:00+09:00`).lt("transaction_at", `${nextDate}T00:00:00+09:00`).order("transaction_at"),
         supabase.from("monthly_budgets").select("year,month,total_budget").eq("user_id", userId),
@@ -134,6 +184,13 @@ export function createExportRepository(supabase: SupabaseClient): ExportReadRepo
         supabase.from("savings_goals").select("id,name,target_amount,target_date").eq("user_id", userId).eq("is_active", true).order("target_date"),
         supabase.from("savings_contributions").select("goal_id,amount,contribution_date").eq("user_id", userId),
         assetService.getOverview(userId),
+        // Independent of the selected period - every still-PLANNED planned
+        // transaction, so "future spending" isn't limited to the export window.
+        supabase.from("planned_transactions").select("scheduled_date,type,status,amount,base_amount,memo").eq("user_id", userId).eq("status", "PLANNED"),
+        // A planned transaction confirmed ahead of its scheduled_date becomes a
+        // CONFIRMED transaction dated in the future - still a future cashflow.
+        supabase.from("transactions").select("transaction_at,type,base_amount,memo").eq("user_id", userId).eq("status", "CONFIRMED").in("type", ["INCOME", "EXPENSE"]).gte("transaction_at", futureBoundary),
+        supabase.from("installment_payments").select("sequence,scheduled_date,principal_amount,fee_amount,installment_plans(installment_count,transactions(memo))").eq("user_id", userId).eq("status", "SCHEDULED"),
       ]);
       const profile = errorOr(profileResult as { data: ProfileRow | null; error: { message: string } | null });
       const transactionRows = errorOr(transactionResult as { data: TransactionRow[] | null; error: { message: string } | null });
@@ -142,6 +199,14 @@ export function createExportRepository(supabase: SupabaseClient): ExportReadRepo
       const plannedRows = errorOr(plannedResult as { data: PlannedRow[] | null; error: { message: string } | null });
       const goals = errorOr(goalResult as { data: GoalRow[] | null; error: { message: string } | null });
       const contributions = errorOr(contributionResult as { data: ContributionRow[] | null; error: { message: string } | null });
+      const futurePlannedRows = errorOr(futurePlannedResult as { data: PlannedRow[] | null; error: { message: string } | null });
+      const confirmedFutureRows = errorOr(confirmedFutureResult as { data: ConfirmedFutureTransactionRow[] | null; error: { message: string } | null });
+      const installmentFutureRows = errorOr(installmentFutureResult as { data: InstallmentPaymentRow[] | null; error: { message: string } | null });
+      const futureCashflows: ExportFutureCashflow[] = [
+        ...futurePlannedRows.filter(isExportablePlannedCashflow).map(mapFuturePlanned),
+        ...confirmedFutureRows.map(mapConfirmedFuture),
+        ...installmentFutureRows.map(mapInstallmentFuturePayment),
+      ];
       const transactions = transactionRows.map(mapTransaction);
       const months = new Set(periodMonths(period));
       const expenses = transactions.filter(isActualExpense);
@@ -187,6 +252,7 @@ export function createExportRepository(supabase: SupabaseClient): ExportReadRepo
         savingsGoals: goals.map((goal) => ({ name: goal.name, targetBaseAmount: asSafeInteger(goal.target_amount, "savings target"), contributedBaseAmount: contributedByGoal.get(goal.id) ?? 0, targetDate: goal.target_date })),
         creditCards: assets.cards.map((card) => ({ name: card.name, outstandingBaseAmount: card.outstanding, nextPaymentDate: card.nextPaymentDate })),
         periodActualSavingsBaseAmount,
+        futureCashflows,
       };
     },
   };

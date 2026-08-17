@@ -53,6 +53,22 @@ export type ExportReadModel = Readonly<{
   creditCards?: readonly Readonly<{ name: string; outstandingBaseAmount: number; nextPaymentDate?: string | null }>[];
   /** Sum of savings_contributions within the export period, for goals tracked in Money Context - this is "저축 목표 적립액", not the user's total savings behavior. */
   periodActualSavingsBaseAmount?: number;
+  /**
+   * Every future cashflow regardless of the selected export period: still-PLANNED
+   * planned transactions, planned transactions confirmed ahead of their
+   * scheduled_date (so the resulting CONFIRMED transaction is future-dated), and
+   * remaining installment payments not yet billed. Unlike plannedCashflows, this
+   * is never limited to the export window.
+   */
+  futureCashflows?: readonly ExportFutureCashflow[];
+}>;
+
+export type ExportFutureCashflow = Readonly<{
+  source: "PLANNED" | "CONFIRMED_FUTURE" | "INSTALLMENT";
+  scheduledDate: string;
+  type: "INCOME" | "EXPENSE";
+  baseAmount: number;
+  memo?: string;
 }>;
 
 export type ActualTransaction = ExportTransaction & Readonly<{ type: "INCOME" | "EXPENSE"; rawType: ActualTransactionType }>;

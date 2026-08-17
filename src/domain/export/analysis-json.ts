@@ -4,6 +4,7 @@ import {
   externalFlows,
   paymentMethodKey,
   type ActualTransaction,
+  type ExportFutureCashflow,
   type ExportReadModel,
   type ExportTransaction,
 } from "./markdown";
@@ -52,6 +53,27 @@ export type AnalysisJson = Readonly<{
   credit_cards: readonly Readonly<{ name: string; outstanding_base_amount: number; next_payment_date: string | null }>[];
   savings_goals: readonly Readonly<{ name: string; target_base_amount: number; contributed_base_amount: number; target_date: string }>[];
   planned_cashflows: readonly Readonly<{ scheduled_date: string; transaction_type: "INCOME" | "EXPENSE"; status: "PLANNED" | "CONFIRMED" | "CANCELLED"; base_amount: number; memo: string | null }>[];
+  /**
+   * Every future cashflow regardless of the selected period/preset above (unlike
+   * planned_cashflows, which is limited to the export window). installment_remaining_base_amount
+   * was already recognized as an expense at purchase time - it is future money owed
+   * to the card issuer, not new spending, so do not add it to period_summary.expense_base_amount.
+   */
+  future_cashflows: Readonly<{
+    planned_expense_base_amount: number;
+    planned_income_base_amount: number;
+    confirmed_future_expense_base_amount: number;
+    confirmed_future_income_base_amount: number;
+    installment_remaining_base_amount: number;
+    installment_already_expensed_at_purchase: true;
+    items: readonly Readonly<{
+      source: "PLANNED" | "CONFIRMED_FUTURE" | "INSTALLMENT";
+      scheduled_date: string;
+      transaction_type: "INCOME" | "EXPENSE";
+      base_amount: number;
+      memo: string | null;
+    }>[];
+  }>;
   statistics: Readonly<{
     category_spending: readonly AmountBreakdown[];
     tag_spending: readonly AmountBreakdown[];
@@ -142,6 +164,15 @@ function spendingBreakdown(transactions: readonly ActualTransaction[], keys: (tr
     .map(([name, base_amount]) => ({ name, base_amount }));
 }
 
+function sumFutureCashflow(items: readonly ExportFutureCashflow[], source: ExportFutureCashflow["source"], type: "INCOME" | "EXPENSE"): number {
+  return items.filter((item) => item.source === source && item.type === type).reduce((total, item) => {
+    assertNonNegativeAmount(item.baseAmount, "future cashflow baseAmount");
+    const next = total + item.baseAmount;
+    assertSafeInteger(next, "future cashflow total");
+    return next;
+  }, 0);
+}
+
 export function generateAnalysisJson(readModel: ExportReadModel): AnalysisJson {
   const transactions = exportTransactions(readModel);
   const actual = actualTransactions(readModel);
@@ -217,6 +248,27 @@ export function generateAnalysisJson(readModel: ExportReadModel): AnalysisJson {
       assertNonNegativeAmount(flow.baseAmount, "planned cashflow baseAmount");
       return { scheduled_date: flow.scheduledDate, transaction_type: flow.type, status: flow.status, base_amount: flow.baseAmount, memo: flow.memo ?? null };
     }),
+    future_cashflows: (() => {
+      const items = readModel.futureCashflows ?? [];
+      return {
+        planned_expense_base_amount: sumFutureCashflow(items, "PLANNED", "EXPENSE"),
+        planned_income_base_amount: sumFutureCashflow(items, "PLANNED", "INCOME"),
+        confirmed_future_expense_base_amount: sumFutureCashflow(items, "CONFIRMED_FUTURE", "EXPENSE"),
+        confirmed_future_income_base_amount: sumFutureCashflow(items, "CONFIRMED_FUTURE", "INCOME"),
+        installment_remaining_base_amount: sumFutureCashflow(items, "INSTALLMENT", "EXPENSE"),
+        installment_already_expensed_at_purchase: true as const,
+        items: items.map((item) => {
+          assertNonNegativeAmount(item.baseAmount, "future cashflow baseAmount");
+          return {
+            source: item.source,
+            scheduled_date: item.scheduledDate,
+            transaction_type: item.type,
+            base_amount: item.baseAmount,
+            memo: item.memo ?? null,
+          };
+        }),
+      };
+    })(),
     statistics: {
       category_spending: spendingBreakdown(actual, (transaction) => [transaction.categoryName ?? "Uncategorized"]),
       tag_spending: spendingBreakdown(actual, (transaction) => transaction.tagNames ?? []),

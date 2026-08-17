@@ -60,6 +60,7 @@ describe("generateAnalysisJson", () => {
       "credit_cards",
       "savings_goals",
       "planned_cashflows",
+      "future_cashflows",
       "statistics",
       "transactions",
     ]);
@@ -139,6 +140,48 @@ describe("generateAnalysisJson", () => {
     }));
 
     expect(result.planned_cashflows).toEqual([expect.objectContaining({ scheduled_date: "2026-08-10", status: "PLANNED" })]);
+  });
+
+  it("defaults future_cashflows to zeroed totals and an empty item list when the read model omits it", () => {
+    const result = generateAnalysisJson(readModel());
+
+    expect(result.future_cashflows).toEqual({
+      planned_expense_base_amount: 0,
+      planned_income_base_amount: 0,
+      confirmed_future_expense_base_amount: 0,
+      confirmed_future_income_base_amount: 0,
+      installment_remaining_base_amount: 0,
+      installment_already_expensed_at_purchase: true,
+      items: [],
+    });
+  });
+
+  it("aggregates future_cashflows by source and type regardless of the selected period", () => {
+    const result = generateAnalysisJson(readModel({
+      futureCashflows: [
+        { source: "PLANNED", scheduledDate: "2026-09-01", type: "EXPENSE", baseAmount: 10_000, memo: "Phone" },
+        { source: "PLANNED", scheduledDate: "2026-09-05", type: "INCOME", baseAmount: 500_000 },
+        { source: "CONFIRMED_FUTURE", scheduledDate: "2026-09-06", type: "EXPENSE", baseAmount: 30_000 },
+        { source: "CONFIRMED_FUTURE", scheduledDate: "2026-09-07", type: "INCOME", baseAmount: 700_000 },
+        { source: "INSTALLMENT", scheduledDate: "2026-09-10", type: "EXPENSE", baseAmount: 55_000, memo: "노트북 (할부 3/6회차)" },
+      ],
+    }));
+
+    expect(result.future_cashflows).toEqual({
+      planned_expense_base_amount: 10_000,
+      planned_income_base_amount: 500_000,
+      confirmed_future_expense_base_amount: 30_000,
+      confirmed_future_income_base_amount: 700_000,
+      installment_remaining_base_amount: 55_000,
+      installment_already_expensed_at_purchase: true,
+      items: [
+        { source: "PLANNED", scheduled_date: "2026-09-01", transaction_type: "EXPENSE", base_amount: 10_000, memo: "Phone" },
+        { source: "PLANNED", scheduled_date: "2026-09-05", transaction_type: "INCOME", base_amount: 500_000, memo: null },
+        { source: "CONFIRMED_FUTURE", scheduled_date: "2026-09-06", transaction_type: "EXPENSE", base_amount: 30_000, memo: null },
+        { source: "CONFIRMED_FUTURE", scheduled_date: "2026-09-07", transaction_type: "INCOME", base_amount: 700_000, memo: null },
+        { source: "INSTALLMENT", scheduled_date: "2026-09-10", transaction_type: "EXPENSE", base_amount: 55_000, memo: "노트북 (할부 3/6회차)" },
+      ],
+    });
   });
 
   it("counts a one-sided TRANSFER in period_summary and statistics but keeps its raw type in the transactions dump", () => {

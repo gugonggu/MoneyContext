@@ -128,6 +128,7 @@ Markdown 마지막에 최소한 다음 의미를 넣는다.
   "credit_cards": [],
   "savings_goals": [],
   "planned_cashflows": [],
+  "future_cashflows": {},
   "statistics": {},
   "transactions": []
 }
@@ -174,6 +175,34 @@ Markdown 마지막에 최소한 다음 의미를 넣는다.
 ```
 
 `included_in_period_totals: true`는 `outgoing_base_amount`/`incoming_base_amount`가 `period_summary`의 수입/지출 합계에 이미 포함된 부분집합이며, 별도로 더해서는 안 된다는 의미다.
+
+## future_cashflows (schema v1, 필드 추가)
+
+`planned_cashflows`는 선택한 분석 기간 안의 예정 항목만 담지만, `future_cashflows`는 **분석 기간과 무관하게** 아직 정산/실현되지 않은 모든 미래 현금흐름을 담는다.
+
+```json
+{
+  "planned_expense_base_amount": 10000,
+  "planned_income_base_amount": 500000,
+  "confirmed_future_expense_base_amount": 30000,
+  "confirmed_future_income_base_amount": 700000,
+  "installment_remaining_base_amount": 55000,
+  "installment_already_expensed_at_purchase": true,
+  "items": [
+    { "source": "PLANNED", "scheduled_date": "2026-09-01", "transaction_type": "EXPENSE", "base_amount": 10000, "memo": "Phone" },
+    { "source": "CONFIRMED_FUTURE", "scheduled_date": "2026-09-07", "transaction_type": "INCOME", "base_amount": 700000, "memo": null },
+    { "source": "INSTALLMENT", "scheduled_date": "2026-09-10", "transaction_type": "EXPENSE", "base_amount": 55000, "memo": "노트북 (할부 3/6회차)" }
+  ]
+}
+```
+
+포함 항목 3종:
+
+- `PLANNED` — 아직 확정하지 않은 `planned_transactions`(상태 `PLANNED`) 전체. 예정일 무관.
+- `CONFIRMED_FUTURE` — 예정거래를 예정일 전에 미리 확정(`확정` 버튼)해 만들어진, 예정일이 아직 오늘(Asia/Seoul) 이후인 `CONFIRMED` 거래. 예정거래에서 오지 않은 일반 미래 날짜 거래도 포함한다.
+- `INSTALLMENT` — 아직 청구되지 않은 할부 회차(`installment_payments.status = 'SCHEDULED'`)의 원금+수수료.
+
+`installment_already_expensed_at_purchase: true`는 할부 원금이 카드 구매 시점에 이미 `period_summary.expense_base_amount`로 한 번 인식되었다는 의미다. `installment_remaining_base_amount`는 카드사에 갚을 미래 현금유출이지 새로운 소비가 아니므로, 외부 AI가 이를 `period_summary.expense_base_amount`나 다른 지출 총액에 다시 더해서는 안 된다.
 
 ## expense_nature
 
