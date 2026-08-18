@@ -271,8 +271,8 @@ describe("authenticated markdown export read model", () => {
       period: { kind: "CUSTOM", startDate: "2026-08-01", endDate: "2026-08-31" },
     });
 
-    expect(markdown).toContain("- 반복성 지출: 14,900 KRW");
-    expect(markdown).toContain("- 일회성 지출: 600,000 KRW");
+    expect(markdown).toContain("- 반복성 소비: 14,900 KRW");
+    expect(markdown).toContain("- 일회성 소비: 600,000 KRW");
   });
 
   it("maps a manually-set expense nature and includes emergencyFundAmount/nextPaydayDate/horizonDeductions from the asset overview", async () => {

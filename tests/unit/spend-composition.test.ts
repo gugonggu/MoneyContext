@@ -41,6 +41,19 @@ describe("calculateSpendComposition", () => {
     });
   });
 
+  it("Case A: 예외/일회성 거래가 없는 평범한 달은 소비 구조가 전부 평소 소비로 채워진다", () => {
+    const result = calculateSpendComposition([
+      { baseAmount: 300_000, nature: "RECURRING" },
+      { baseAmount: 80_000, nature: "RECURRING" },
+      { baseAmount: 15_000, nature: "UNKNOWN" },
+    ]);
+    expect(result.totalExpenseBaseAmount).toBe(395_000);
+    expect(result.exceptionalBaseAmount).toBe(0);
+    expect(result.oneTimeBaseAmount).toBe(0);
+    expect(result.adjustedExpenseBaseAmount).toBe(395_000);
+    expect(result.habitualBaseAmount).toBe(380_000);
+  });
+
   it("빈 입력에서도 안전한 0을 반환한다", () => {
     const result = calculateSpendComposition([]);
     expect(result.totalExpenseBaseAmount).toBe(0);
