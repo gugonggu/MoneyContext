@@ -42,6 +42,10 @@ async function submitEdit(id: string, _previous: EditTransactionState, formData:
     } else {
       const categoryId = String(formData.get("categoryId") ?? "") || undefined;
       const accountId = String(formData.get("accountId"));
+      const expenseNatureUserRaw = String(formData.get("expenseNatureUser") ?? "");
+      const expenseNatureUser = expenseNatureUserRaw
+        ? (expenseNatureUserRaw as "RECURRING" | "ONE_TIME" | "IRREGULAR" | "EXCEPTIONAL" | "UNKNOWN")
+        : undefined;
       await updateTransactionForCurrentUser(id, {
         type: type as "INCOME" | "EXPENSE",
         amount,
@@ -52,6 +56,7 @@ async function submitEdit(id: string, _previous: EditTransactionState, formData:
         categoryId,
         exchangeRate,
         memo,
+        expenseNatureUser,
       });
     }
   } catch (error) {
@@ -84,6 +89,7 @@ export default async function EditTransactionPage({ params }: { params: Promise<
           toAccountId: transaction.toAccountId,
           categoryId: transaction.categoryId,
           memo: transaction.memo,
+          expenseNatureUser: transaction.expenseNatureUser,
           transactionAtLocal: utcIsoToSeoulWallClock(transaction.transactionAt),
         }}
         accounts={accounts.map((account) => ({ id: account.id, name: account.name, type: account.type }))}

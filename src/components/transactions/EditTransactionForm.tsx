@@ -22,6 +22,7 @@ export type EditTransaction = Readonly<{
   toAccountId?: string;
   categoryId?: string;
   memo?: string;
+  expenseNatureUser?: "RECURRING" | "ONE_TIME" | "IRREGULAR" | "EXCEPTIONAL" | "UNKNOWN";
   /** `datetime-local`-formatted value (YYYY-MM-DDTHH:mm) in the server's local time. */
   transactionAtLocal: string;
 }>;
@@ -30,6 +31,14 @@ export type EditTransactionState = Readonly<{ status: "idle" | "error"; message?
 export type EditTransactionAction = (state: EditTransactionState, formData: FormData) => Promise<EditTransactionState>;
 
 const CURRENCIES = ["KRW", "USD", "JPY", "EUR"];
+
+const EXPENSE_NATURE_LABELS: Record<"RECURRING" | "ONE_TIME" | "IRREGULAR" | "EXCEPTIONAL" | "UNKNOWN", string> = {
+  RECURRING: "정기",
+  ONE_TIME: "일회성",
+  IRREGULAR: "비정기",
+  EXCEPTIONAL: "예외적",
+  UNKNOWN: "미분류",
+};
 
 export function EditTransactionForm({
   transaction,
@@ -53,6 +62,7 @@ export function EditTransactionForm({
   const [currency, setCurrency] = useState(transaction.currency);
   const [exchangeRate, setExchangeRate] = useState(transaction.exchangeRate ?? "");
   const [transactionAt, setTransactionAt] = useState(transaction.transactionAtLocal);
+  const [expenseNatureUser, setExpenseNatureUser] = useState(transaction.expenseNatureUser ?? "");
 
   const visibleCategories = categories.filter((category) => category.kind === "BOTH" || category.kind === transaction.type);
 
@@ -155,6 +165,22 @@ export function EditTransactionForm({
             </div>
           ) : null}
         </div>
+
+        {transaction.type === "EXPENSE" ? (
+          <div className="flex-1">
+            <Select
+              label="소비 성격"
+              name="expenseNatureUser"
+              value={expenseNatureUser}
+              onChange={(event) => setExpenseNatureUser(event.target.value)}
+            >
+              <option value="">지정 안 함</option>
+              {(Object.keys(EXPENSE_NATURE_LABELS) as (keyof typeof EXPENSE_NATURE_LABELS)[]).map((value) => (
+                <option key={value} value={value}>{EXPENSE_NATURE_LABELS[value]}</option>
+              ))}
+            </Select>
+          </div>
+        ) : null}
       </Card>
 
       {state.status === "error" ? (
