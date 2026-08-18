@@ -2,9 +2,10 @@ import { resolvePeriodAggregation, type ExportPeriod } from "@/domain/export/per
 import { resolveExpenseNature, type ExpenseNatureSource, type ResolvedExpenseNature } from "@/domain/export/expense-nature";
 import { calculateSpendComposition } from "@/domain/export/spend-composition";
 import { calculateSpendConcentration } from "@/domain/export/concentration";
-import { splitDeductionsByHorizon, calculateSafeToSpend, type HorizonDeduction } from "@/domain/forecasts/spendable";
+import { splitDeductionsByHorizon, calculateDailySpendable, calculateRemainingDaysUntilPayday, calculateSafeToSpend, type HorizonDeduction } from "@/domain/forecasts/spendable";
 import { exportPresets, isExportPreset, type ExportPreset } from "@/domain/export/presets";
 import { classifyTransferDirection } from "@/domain/transactions/transfer-direction";
+import { toSeoulDate } from "@/lib/dates/seoul";
 
 type ActualTransactionType = "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
 type TransactionStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
@@ -361,13 +362,17 @@ function spendableLines(readModel: ExportReadModel): string[] {
   const { nearTerm } = splitDeductionsByHorizon(readModel.horizonDeductions ?? [], readModel.nextPaydayDate);
   const nearTermTotal = nearTerm.reduce((total, item) => total + item.amount, 0);
   const safeToSpend = calculateSafeToSpend(readModel.financialPosition.totalAssets, nearTermTotal, readModel.emergencyFundAmount);
-  const remainingDays = Math.max(1, Math.round((new Date(readModel.nextPaydayDate).getTime() - new Date(readModel.generatedAt).getTime()) / 86_400_000));
+  const remainingDays = calculateRemainingDaysUntilPayday(toSeoulDate(readModel.generatedAt), readModel.nextPaydayDate);
+  // Safe-to-Spend itself is a signed lump sum - a negative value is a real signal
+  // ("이미 사용 가능 금액이 없다") and must not be clamped, matching the statistics
+  // page. Only the derived daily rate floors at 0, since a negative daily rate
+  // doesn't make sense the way a negative total does.
   return [
     "## 소비 여력 (Safe-to-Spend)",
     `- 현재 자산: ${formatMoney(BigInt(readModel.financialPosition.totalAssets), readModel.baseCurrency)}`,
     `- 비상금 기준: ${formatMoney(BigInt(readModel.emergencyFundAmount), readModel.baseCurrency)}`,
-    `- 다음 급여일까지 사용 가능 금액: ${formatMoney(BigInt(Math.max(0, safeToSpend)), readModel.baseCurrency)}`,
-    `- 일평균 사용 가능 금액(참고): ${formatMoney(BigInt(Math.max(0, Math.floor(Math.max(0, safeToSpend) / remainingDays))), readModel.baseCurrency)}`,
+    `- 다음 급여일까지 사용 가능 금액: ${formatMoney(BigInt(safeToSpend), readModel.baseCurrency)}`,
+    `- 일평균 사용 가능 금액(참고): ${formatMoney(BigInt(calculateDailySpendable(safeToSpend, remainingDays)), readModel.baseCurrency)}`,
     "",
   ];
 }

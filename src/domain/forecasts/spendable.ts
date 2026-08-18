@@ -1,3 +1,5 @@
+import { addIsoDays } from "@/lib/dates/seoul";
+
 export type ForecastDeduction = Readonly<{ amount: number; provenance: string }>;
 
 export function aggregateRequiredCashflow(items: readonly ForecastDeduction[]): number {
@@ -35,4 +37,18 @@ export function splitDeductionsByHorizon(
  */
 export function calculateSafeToSpend(liquidAssets: number, nearTermOutflow: number, emergencyFundAmount: number): number {
   return liquidAssets - nearTermOutflow - emergencyFundAmount;
+}
+
+/**
+ * Days remaining from `today` through the day before `nextPaydayDate`,
+ * inclusive of both endpoints (today counts as a remaining day). Mirrors
+ * `countInclusiveDays` in src/server/dashboard/index.ts so every consumer of
+ * "remaining days until payday" agrees on the same count regardless of
+ * time-of-day, instead of each computing its own millisecond-based diff.
+ */
+export function calculateRemainingDaysUntilPayday(today: string, nextPaydayDate: string): number {
+  const cycleEnd = addIsoDays(nextPaydayDate, -1);
+  let count = 1;
+  for (let date = today; date < cycleEnd; date = addIsoDays(date, 1)) count += 1;
+  return count;
 }

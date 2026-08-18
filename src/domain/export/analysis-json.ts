@@ -12,7 +12,8 @@ import { resolvePeriodAggregation, type PeriodAggregationStatus } from "./period
 import { resolveExpenseNature } from "./expense-nature";
 import { calculateSpendComposition } from "./spend-composition";
 import { calculateSpendConcentration } from "./concentration";
-import { splitDeductionsByHorizon, calculateSafeToSpend } from "@/domain/forecasts/spendable";
+import { splitDeductionsByHorizon, calculateDailySpendable, calculateRemainingDaysUntilPayday, calculateSafeToSpend } from "@/domain/forecasts/spendable";
+import { toSeoulDate } from "@/lib/dates/seoul";
 
 type AmountBreakdown = Readonly<{ name: string; base_amount: number }>;
 
@@ -290,14 +291,17 @@ export function generateAnalysisJson(readModel: ExportReadModel): AnalysisJson {
         const { nearTerm } = splitDeductionsByHorizon(readModel.horizonDeductions ?? [], readModel.nextPaydayDate as string);
         const nearTermTotal = nearTerm.reduce((total, item) => total + item.amount, 0);
         const safeToSpend = calculateSafeToSpend(readModel.financialPosition.totalAssets, nearTermTotal, readModel.emergencyFundAmount as number);
-        const remainingDays = Math.max(1, Math.round((new Date(readModel.nextPaydayDate as string).getTime() - new Date(readModel.generatedAt).getTime()) / 86_400_000));
+        const remainingDays = calculateRemainingDaysUntilPayday(toSeoulDate(readModel.generatedAt), readModel.nextPaydayDate as string);
+        // safe_to_spend_base_amount is a signed lump sum - a negative value is a
+        // real signal ("사용 가능 금액이 없다"), matching the statistics page, which
+        // does not clamp it either. Only the derived daily rate floors at 0.
         return {
           current_liquid_assets_base_amount: readModel.financialPosition.totalAssets,
           emergency_fund_base_amount: readModel.emergencyFundAmount as number,
           near_term_confirmed_outflow_base_amount: nearTermTotal,
-          safe_to_spend_base_amount: Math.max(0, safeToSpend),
+          safe_to_spend_base_amount: safeToSpend,
           remaining_days_until_payday: remainingDays,
-          daily_safe_to_spend_base_amount: Math.max(0, Math.floor(Math.max(0, safeToSpend) / remainingDays)),
+          daily_safe_to_spend_base_amount: calculateDailySpendable(safeToSpend, remainingDays),
         };
       })(),
     } : {}),

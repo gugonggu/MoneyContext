@@ -5,16 +5,10 @@ import { createSupabaseServerClient } from "@/server/supabase/server";
 import { buildHorizonDeductions } from "@/server/export/repository";
 import { getSalaryCycle } from "@/lib/dates/salary-cycle";
 import { addIsoDays, todayInSeoul } from "@/lib/dates/seoul";
-import { calculateDailySpendable, calculateSafeToSpend, splitDeductionsByHorizon } from "@/domain/forecasts/spendable";
+import { calculateDailySpendable, calculateRemainingDaysUntilPayday, calculateSafeToSpend, splitDeductionsByHorizon } from "@/domain/forecasts/spendable";
 import { listStatisticsTransactions } from "./repository";
 import { buildStatistics } from "./service";
 import type { StatisticsOverview, StatisticsSafeToSpend } from "./service";
-
-function countInclusiveDays(start: string, end: string): number {
-  let count = 1;
-  for (let date = start; date < end; date = addIsoDays(date, 1)) count += 1;
-  return count;
-}
 
 export async function getStatisticsForCurrentUser(): Promise<StatisticsOverview> {
   const [profile, supabase, assets] = await Promise.all([requireCurrentProfile(), createSupabaseServerClient(), getAssetOverviewForCurrentUser()]);
@@ -30,7 +24,7 @@ export async function getStatisticsForCurrentUser(): Promise<StatisticsOverview>
   const nearTermTotal = nearTerm.reduce((sum, item) => sum + item.amount, 0);
   const emergencyFundAmount = Number(profile.emergency_fund_amount);
   const amount = calculateSafeToSpend(assets.liquidAssets, nearTermTotal, emergencyFundAmount);
-  const remainingDays = countInclusiveDays(today, cycle.end);
+  const remainingDays = calculateRemainingDaysUntilPayday(today, nextPaydayDate);
   const dailyAmount = calculateDailySpendable(amount, remainingDays);
   const safeToSpend: StatisticsSafeToSpend = { amount, dailyAmount, weeklyAmount: dailyAmount * 7, nextPaydayDate };
 
