@@ -233,6 +233,7 @@ export function StatisticsOverview({ statistics }: Readonly<{ statistics: Statis
             <>
               <p>다음 급여일({statistics.safeToSpend.nextPaydayDate})까지 사용 가능 금액: {statistics.safeToSpend.amount.toLocaleString()}원</p>
               <p>일평균 사용 가능 금액(참고): {statistics.safeToSpend.dailyAmount.toLocaleString()}원</p>
+              <p>주간 사용 가능 금액(참고): {statistics.safeToSpend.weeklyAmount.toLocaleString()}원</p>
             </>
           ) : (
             <p>급여일과 비상금을 설정에서 등록하면 사용 가능 금액을 볼 수 있어요.</p>
