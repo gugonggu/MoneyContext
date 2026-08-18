@@ -4,9 +4,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { effectiveIncomeExpenseType, type ExportFutureCashflow, type ExportTransaction } from "@/domain/export/markdown";
 import type { ExportPeriod } from "@/domain/export/period";
+import type { HorizonDeduction } from "@/domain/forecasts/spendable";
 import { addIsoDays, seoulDayStartUtcIso, todayInSeoul } from "@/lib/dates/seoul";
+import { getSalaryCycle } from "@/lib/dates/salary-cycle";
 import { createAssetReadRepository } from "@/server/assets/repository";
-import { createAssetReadService } from "@/server/assets/service";
+import { createAssetReadService, type AssetOverview } from "@/server/assets/service";
 
 import type { ExportReadData, ExportReadRepository } from "./service";
 
@@ -26,9 +28,11 @@ type TransactionRow = Readonly<{
   transaction_tags: Array<{ tags: { name: string } | { name: string }[] | null }> | null;
   recurring_rule_id: string | null;
   planned_transaction_id: string | null;
+  expense_nature_user: ExportTransaction["expenseNatureUser"] | null;
+  expense_nature_source: ExportTransaction["expenseNatureSource"] | null;
 }>;
 
-type ProfileRow = Readonly<{ base_currency: string }>;
+type ProfileRow = Readonly<{ base_currency: string; salary_cycle_day: number | null; emergency_fund_amount: number | string | null }>;
 type MonthlyBudgetRow = Readonly<{ year: number | string; month: number | string; total_budget: number | string }>;
 type CategoryBudgetRow = Readonly<{
   year: number | string;
@@ -109,7 +113,37 @@ function mapTransaction(row: TransactionRow): ExportTransaction {
     ...(row.memo === null ? {} : { memo: row.memo }),
     ...(row.recurring_rule_id === null ? {} : { recurringRuleId: row.recurring_rule_id }),
     ...(row.planned_transaction_id === null ? {} : { plannedTransactionId: row.planned_transaction_id }),
+    ...(row.expense_nature_user === null ? {} : { expenseNatureUser: row.expense_nature_user }),
+    ...(row.expense_nature_source === null ? {} : { expenseNatureSource: row.expense_nature_source }),
   };
+}
+
+function nextCardPaymentDate(paymentDay: number, today: string): string {
+  const [year, month, day] = today.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const candidateDay = Math.min(paymentDay, lastDay);
+  if (day <= candidateDay) return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(candidateDay).padStart(2, "0")}`;
+  const nextMonthLastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const nextCandidateDay = Math.min(paymentDay, nextMonthLastDay);
+  const nextMonthDate = new Date(Date.UTC(year, month, nextCandidateDay));
+  return nextMonthDate.toISOString().slice(0, 10);
+}
+
+function buildHorizonDeductions(assets: AssetOverview, today: string): HorizonDeduction[] {
+  return assets.cards.flatMap((card): HorizonDeduction[] => {
+    const scheduledInstallmentTotal = card.installmentSchedule
+      .filter((payment) => payment.status === "SCHEDULED")
+      .reduce((sum, payment) => sum + payment.paymentAmount, 0);
+    const nonInstallmentBalance = Math.max(0, card.outstanding - scheduledInstallmentTotal);
+    const installmentDeductions = card.installmentSchedule
+      .filter((payment) => payment.status === "SCHEDULED")
+      .map((payment): HorizonDeduction => ({ amount: payment.paymentAmount, provenance: `installment:${payment.id}`, dueDate: payment.scheduledDate }));
+    if (nonInstallmentBalance === 0 || card.paymentDay === null) return installmentDeductions;
+    return [
+      ...installmentDeductions,
+      { amount: nonInstallmentBalance, provenance: `card:${card.id}`, dueDate: nextCardPaymentDate(card.paymentDay, today) },
+    ];
+  });
 }
 
 // Mirrors the income/expense totals' own reclassification - a one-sided
@@ -176,8 +210,8 @@ export function createExportRepository(supabase: SupabaseClient): ExportReadRepo
       const nextDate = nextSeoulDate(period.endDate);
       const futureBoundary = seoulDayStartUtcIso(addIsoDays(todayInSeoul(), 1));
       const [profileResult, transactionResult, monthlyBudgetResult, categoryBudgetResult, plannedResult, goalResult, contributionResult, assets, futurePlannedResult, confirmedFutureResult, installmentFutureResult] = await Promise.all([
-        supabase.from("profiles").select("base_currency").eq("id", userId).maybeSingle(),
-        supabase.from("transactions").select("id,transaction_at,type,status,amount,currency,base_amount,memo,recurring_rule_id,planned_transaction_id,categories(name),accounts!transactions_account_id_fkey(name),from_accounts:accounts!transactions_from_account_id_fkey(name),to_accounts:accounts!transactions_to_account_id_fkey(name),transaction_tags(tags(name))").eq("user_id", userId).gte("transaction_at", `${period.startDate}T00:00:00+09:00`).lt("transaction_at", `${nextDate}T00:00:00+09:00`).order("transaction_at"),
+        supabase.from("profiles").select("base_currency,salary_cycle_day,emergency_fund_amount").eq("id", userId).maybeSingle(),
+        supabase.from("transactions").select("id,transaction_at,type,status,amount,currency,base_amount,memo,recurring_rule_id,planned_transaction_id,expense_nature_user,expense_nature_source,categories(name),accounts!transactions_account_id_fkey(name),from_accounts:accounts!transactions_from_account_id_fkey(name),to_accounts:accounts!transactions_to_account_id_fkey(name),transaction_tags(tags(name))").eq("user_id", userId).gte("transaction_at", `${period.startDate}T00:00:00+09:00`).lt("transaction_at", `${nextDate}T00:00:00+09:00`).order("transaction_at"),
         supabase.from("monthly_budgets").select("year,month,total_budget").eq("user_id", userId),
         supabase.from("category_budgets").select("year,month,base_budget,rollover_amount,categories(name)").eq("user_id", userId),
         supabase.from("planned_transactions").select("scheduled_date,type,status,amount,base_amount,memo").eq("user_id", userId).gte("scheduled_date", period.startDate).lte("scheduled_date", period.endDate),
@@ -238,8 +272,13 @@ export function createExportRepository(supabase: SupabaseClient): ExportReadRepo
           periodActualSavingsBaseAmount += amount;
         }
       }
+      const today = todayInSeoul();
+      const nextPaydayDate = profile.salary_cycle_day !== null ? addIsoDays(getSalaryCycle(today, profile.salary_cycle_day).end, 1) : undefined;
       return {
         baseCurrency: profile.base_currency,
+        ...(profile.emergency_fund_amount === null ? {} : { emergencyFundAmount: asSafeInteger(profile.emergency_fund_amount, "emergency_fund_amount") }),
+        ...(nextPaydayDate ? { nextPaydayDate } : {}),
+        horizonDeductions: buildHorizonDeductions(assets, today),
         financialPosition: {
           totalAssets: Math.max(assets.liquidAssets, 0),
           totalLiabilities: assets.liabilities + Math.max(-assets.liquidAssets, 0),

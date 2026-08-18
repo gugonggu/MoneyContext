@@ -275,6 +275,68 @@ describe("authenticated markdown export read model", () => {
     expect(markdown).toContain("- 일회성 지출: 600,000 KRW");
   });
 
+  it("maps a manually-set expense nature and includes emergencyFundAmount/nextPaydayDate/horizonDeductions from the asset overview", async () => {
+    const { data: card, error: cardError } = await userAClient
+      .from("accounts")
+      .insert({ user_id: userA.id, name: "A horizon card", type: "CREDIT_CARD" })
+      .select("id")
+      .single();
+    if (cardError || !card) throw new Error(cardError?.message ?? "Unable to create credit card account");
+
+    const { error: settingsError } = await userAClient
+      .from("credit_card_settings")
+      .insert({ account_id: card.id, user_id: userA.id, payment_account_id: userACheckingAccountId, payment_day: 10, billing_cycle_rule: {} });
+    if (settingsError) throw new Error(settingsError.message);
+
+    const { error: manualNatureError } = await userAClient.from("transactions").insert({
+      user_id: userA.id,
+      type: "EXPENSE",
+      status: "CONFIRMED",
+      transaction_at: "2026-08-07T12:00:00+09:00",
+      amount: 30_000,
+      currency: "KRW",
+      base_amount: 30_000,
+      base_currency: "KRW",
+      account_id: userACheckingAccountId,
+      expense_nature_user: "IRREGULAR",
+      expense_nature_source: "MANUAL",
+    });
+    if (manualNatureError) throw new Error(manualNatureError.message);
+
+    const { error: cardPurchaseError } = await userAClient.from("transactions").insert({
+      user_id: userA.id,
+      type: "EXPENSE",
+      status: "CONFIRMED",
+      transaction_at: "2026-08-08T12:00:00+09:00",
+      amount: 45_000,
+      currency: "KRW",
+      base_amount: 45_000,
+      base_currency: "KRW",
+      account_id: card.id,
+    });
+    if (cardPurchaseError) throw new Error(cardPurchaseError.message);
+
+    const { error: emergencyFundError } = await admin.from("profiles").update({ emergency_fund_amount: 500_000 }).eq("id", userA.id);
+    if (emergencyFundError) throw new Error(emergencyFundError.message);
+
+    const readData = await createExportRepository(userAClient).getReadData(userA.id, {
+      startDate: "2026-08-01",
+      endDate: "2026-08-31",
+    });
+
+    expect(readData.transactions).toContainEqual(expect.objectContaining({
+      baseAmount: 30_000,
+      expenseNatureUser: "IRREGULAR",
+      expenseNatureSource: "MANUAL",
+    }));
+    expect(readData.emergencyFundAmount).toBe(500_000);
+    expect(readData.nextPaydayDate).toEqual(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
+    expect(readData.horizonDeductions).toContainEqual(expect.objectContaining({
+      provenance: `card:${card.id}`,
+      amount: 45_000,
+    }));
+  });
+
   it("includes future_cashflows sources regardless of the selected period: an all-time PLANNED transaction, a planned transaction confirmed ahead of its future scheduled_date, and a remaining installment payment", async () => {
     const { data: card, error: cardError } = await userAClient
       .from("accounts")

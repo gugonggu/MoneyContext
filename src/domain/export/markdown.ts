@@ -1,7 +1,8 @@
 import { resolvePeriodAggregation, type ExportPeriod } from "@/domain/export/period";
-import { classifyExpenseNature, type ExpenseNature } from "@/domain/export/expense-nature";
+import { classifyExpenseNature, type ExpenseNature, type ExpenseNatureSource, type ResolvedExpenseNature } from "@/domain/export/expense-nature";
 import { exportPresets, isExportPreset, type ExportPreset } from "@/domain/export/presets";
 import { classifyTransferDirection } from "@/domain/transactions/transfer-direction";
+import type { HorizonDeduction } from "@/domain/forecasts/spendable";
 
 type ActualTransactionType = "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
 type TransactionStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
@@ -22,6 +23,8 @@ export type ExportTransaction = Readonly<{
   memo?: string;
   recurringRuleId?: string;
   plannedTransactionId?: string;
+  expenseNatureUser?: ResolvedExpenseNature;
+  expenseNatureSource?: ExpenseNatureSource;
 }>;
 
 export type ExportReadModel = Readonly<{
@@ -61,6 +64,12 @@ export type ExportReadModel = Readonly<{
    * is never limited to the export window.
    */
   futureCashflows?: readonly ExportFutureCashflow[];
+  /** 설정한 경우에만 존재 - Safe-to-Spend 계산에 사용한다. */
+  emergencyFundAmount?: number;
+  /** profiles.salary_cycle_day를 설정한 경우에만 존재. */
+  nextPaydayDate?: string;
+  /** 다음 급여일 이전/이후로 나뉘는 확정 현금유출. profiles.salary_cycle_day가 없으면 비어 있다. */
+  horizonDeductions?: readonly HorizonDeduction[];
 }>;
 
 export type ExportFutureCashflow = Readonly<{
