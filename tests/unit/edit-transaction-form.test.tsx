@@ -44,7 +44,7 @@ describe("EditTransactionForm", () => {
 
     expect((screen.getByLabelText("금액") as HTMLInputElement).value).toBe("12000");
     expect((screen.getByLabelText("메모") as HTMLInputElement).value).toBe("점심");
-    expect((screen.getByLabelText("카테고리") as HTMLSelectElement).value).toBe("cat-food");
+    expect((screen.getByLabelText("카테고리 (무엇을 샀나요)") as HTMLSelectElement).value).toBe("cat-food");
     expect((screen.getByLabelText("결제수단") as HTMLSelectElement).value).toBe("bank-a");
     expect((screen.getByLabelText("날짜/시간") as HTMLInputElement).value).toBe("2026-08-11T13:30");
   });
@@ -66,7 +66,7 @@ describe("EditTransactionForm", () => {
 
     expect(screen.getByLabelText("출금 계좌")).toBeTruthy();
     expect(screen.getByLabelText("입금 계좌")).toBeTruthy();
-    expect(screen.queryByLabelText("카테고리")).toBeNull();
+    expect(screen.queryByLabelText("카테고리 (무엇을 샀나요)")).toBeNull();
   });
 
   it("does not offer tag or installment editing", () => {

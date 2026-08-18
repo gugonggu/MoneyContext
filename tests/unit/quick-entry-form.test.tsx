@@ -49,7 +49,7 @@ describe("QuickEntryForm", () => {
   it("shows category and account selectors for an EXPENSE, scoped to matching category kinds", () => {
     renderForm();
 
-    const categorySelect = screen.getByLabelText("카테고리") as HTMLSelectElement;
+    const categorySelect = screen.getByLabelText("카테고리 (무엇을 샀나요)") as HTMLSelectElement;
     const optionNames = Array.from(categorySelect.options).map((option) => option.text);
     expect(optionNames).toContain("식비");
     expect(optionNames).toContain("기타");
@@ -65,7 +65,7 @@ describe("QuickEntryForm", () => {
 
     expect(screen.getByLabelText("출금 계좌")).toBeTruthy();
     expect(screen.getByLabelText("입금 계좌")).toBeTruthy();
-    expect(screen.getByLabelText("카테고리")).toBeTruthy();
+    expect(screen.getByLabelText("카테고리 (무엇을 샀나요)")).toBeTruthy();
   });
 
   it("shows only the source account for an external transfer out, and submits without a destination", async () => {
@@ -216,7 +216,7 @@ describe("QuickEntryForm", () => {
     renderForm(action);
 
     fireEvent.change(screen.getByLabelText("금액"), { target: { value: "4500" } });
-    fireEvent.change(screen.getByLabelText("카테고리"), { target: { value: "cat-food" } });
+    fireEvent.change(screen.getByLabelText("카테고리 (무엇을 샀나요)"), { target: { value: "cat-food" } });
     fireEvent.change(screen.getByLabelText("날짜/시간"), { target: { value: "2026-08-11T09:00" } });
     fireEvent.change(screen.getByLabelText("메모"), { target: { value: "커피" } });
 
@@ -226,7 +226,7 @@ describe("QuickEntryForm", () => {
 
     await waitFor(() => screen.getByRole("status"));
     await waitFor(() => expect((screen.getByLabelText("금액") as HTMLInputElement).value).toBe(""));
-    expect((screen.getByLabelText("카테고리") as HTMLSelectElement).value).toBe("");
+    expect((screen.getByLabelText("카테고리 (무엇을 샀나요)") as HTMLSelectElement).value).toBe("");
     expect((screen.getByLabelText("날짜/시간") as HTMLInputElement).value).toBe("");
     expect((screen.getByLabelText("메모") as HTMLInputElement).value).toBe("");
   });
@@ -250,7 +250,7 @@ describe("QuickEntryForm", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "식비 · 주거래 은행" }));
 
-    expect((screen.getByLabelText("카테고리") as HTMLSelectElement).value).toBe("cat-food");
+    expect((screen.getByLabelText("카테고리 (무엇을 샀나요)") as HTMLSelectElement).value).toBe("cat-food");
     expect((screen.getByLabelText("결제수단") as HTMLSelectElement).value).toBe("bank-a");
   });
 
@@ -290,14 +290,14 @@ describe("QuickEntryForm", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("카테고리"), { target: { value: "__new__" } });
+    fireEvent.change(screen.getByLabelText("카테고리 (무엇을 샀나요)"), { target: { value: "__new__" } });
     expect((screen.getByRole("button", { name: "저장" }) as HTMLButtonElement).disabled).toBe(true);
 
     fireEvent.change(screen.getByLabelText("새 카테고리 이름"), { target: { value: "용돈" } });
     fireEvent.click(screen.getByRole("button", { name: "추가" }));
 
     await waitFor(() => expect(onCreateCategory).toHaveBeenCalledWith("용돈", "EXPENSE"));
-    await waitFor(() => expect((screen.getByLabelText("카테고리") as HTMLSelectElement).value).toBe("cat-new"));
+    await waitFor(() => expect((screen.getByLabelText("카테고리 (무엇을 샀나요)") as HTMLSelectElement).value).toBe("cat-new"));
     expect(screen.getByRole("option", { name: "용돈" })).toBeTruthy();
     expect((screen.getByRole("button", { name: "저장" }) as HTMLButtonElement).disabled).toBe(false);
   });
@@ -316,7 +316,7 @@ describe("QuickEntryForm", () => {
     );
 
     fireEvent.click(screen.getByRole("radio", { name: "이체" }));
-    fireEvent.change(screen.getByLabelText("카테고리"), { target: { value: "__new__" } });
+    fireEvent.change(screen.getByLabelText("카테고리 (무엇을 샀나요)"), { target: { value: "__new__" } });
     fireEvent.change(screen.getByLabelText("새 카테고리 이름"), { target: { value: "지인 송금" } });
     fireEvent.click(screen.getByRole("button", { name: "추가" }));
 
@@ -338,7 +338,7 @@ describe("QuickEntryForm", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("카테고리"), { target: { value: "__new__" } });
+    fireEvent.change(screen.getByLabelText("카테고리 (무엇을 샀나요)"), { target: { value: "__new__" } });
     fireEvent.change(screen.getByLabelText("새 카테고리 이름"), { target: { value: "용돈" } });
     fireEvent.click(screen.getByRole("button", { name: "추가" }));
 
