@@ -131,10 +131,14 @@ export function nextCardPaymentDate(paymentDay: number, today: string): string {
 
 export function buildHorizonDeductions(assets: AssetOverview, today: string): HorizonDeduction[] {
   return assets.cards.flatMap((card): HorizonDeduction[] => {
-    const scheduledInstallmentTotal = card.installmentSchedule
+    // card.outstanding is purchases minus settlements - principal only, with no
+    // fee concept. Compare against installment PRINCIPAL only (not principal+fee)
+    // so an interest-bearing installment's fee doesn't overstate its share of
+    // outstanding and wrongly clamp a real non-installment balance to 0.
+    const scheduledInstallmentPrincipal = card.installmentSchedule
       .filter((payment) => payment.status === "SCHEDULED")
-      .reduce((sum, payment) => sum + payment.paymentAmount, 0);
-    const nonInstallmentBalance = Math.max(0, card.outstanding - scheduledInstallmentTotal);
+      .reduce((sum, payment) => sum + payment.principalAmount, 0);
+    const nonInstallmentBalance = Math.max(0, card.outstanding - scheduledInstallmentPrincipal);
     const installmentDeductions = card.installmentSchedule
       .filter((payment) => payment.status === "SCHEDULED")
       .map((payment): HorizonDeduction => ({ amount: payment.paymentAmount, provenance: `installment:${payment.id}`, dueDate: payment.scheduledDate }));
