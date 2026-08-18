@@ -200,6 +200,58 @@ describe("generateExportMarkdown", () => {
     expect(markdown).toContain("카테고리는 소비 대상(무엇에 사용했는가), 태그는 소비 맥락(왜/어떤 상황에서 사용했는가)을 나타냅니다.");
     expect(markdown).toContain("'미래 지출'은 선택한 분석 기간과 무관하게 아직 실현되지 않은 모든 미래 현금흐름(예정 거래, 예정일 전에 미리 확정한 거래, 할부 잔여금)을 의미합니다.");
     expect(markdown).toContain("할부 잔여금은 이미 구매 시점에 지출로 전액 인식된 금액을 카드사에 갚는 미래 현금흐름이며, 새로운 소비가 아니므로 위 기간 지출 합계에 다시 더하면 안 됩니다.");
+    expect(markdown).toContain("- 총 월 지출이 곧 평소 월 생활비를 의미하지 않습니다.");
+    expect(markdown).toContain("- 예외적·일회성 대형 거래가 월 소비를 크게 왜곡할 수 있습니다.");
+    expect(markdown).toContain("- 조정 소비는 분석용 참고 지표이며 공식 지출 통계를 대체하지 않습니다.");
+    expect(markdown).toContain("- 할부 잔여금은 이미 소비로 인식된 구매의 미래 현금흐름입니다.");
+    expect(markdown).toContain("- 장기 할부 전체를 현재 소비 가능 금액에서 즉시 차감하면 실제 단기 현금흐름을 왜곡할 수 있어, 근거리/장기로 구분해서 봅니다.");
+    expect(markdown).toContain("- Safe-to-Spend(소비 여력) 값은 재정적 안전성을 보장하지 않으며, 현재 입력된 데이터를 기반으로 한 참고 지표입니다.");
+  });
+
+  it("renders spend composition and concentration sections", () => {
+    const markdown = generateExportMarkdown(readModel({
+      transactions: [
+        { id: "recurring", transactionDate: "2026-08-05", type: "EXPENSE", status: "CONFIRMED", baseAmount: 14_900, recurringRuleId: "rule-1", categoryName: "구독" },
+        { id: "big-one-time", transactionDate: "2026-08-06", type: "EXPENSE", status: "CONFIRMED", baseAmount: 600_000, plannedTransactionId: "plan-1", categoryName: "경조사", memo: "결혼식" },
+        { id: "unknown", transactionDate: "2026-08-07", type: "EXPENSE", status: "CONFIRMED", baseAmount: 56_678, categoryName: "생활" },
+      ],
+    }));
+
+    expect(markdown).toContain("## 소비 구조");
+    expect(markdown).toContain("- 총 소비: 671,578 KRW");
+    expect(markdown).toContain("- 예외 소비 제외 소비(조정 소비, 참고 지표): 671,578 KRW");
+    expect(markdown).toContain("- 평소/생활 소비(반복+비정기): 14,900 KRW");
+    expect(markdown).toContain("## 지출 집중도");
+    expect(markdown).toContain("- 상위 1개 거래 비중: 89%");
+    expect(markdown).toContain("### 주요 대형 거래");
+    expect(markdown).toContain("- 2026-08-06: 600,000 KRW (경조사 · 결혼식)");
+  });
+
+  it("reports that cashflow horizon and safe-to-spend cannot be computed without a payday date", () => {
+    const markdown = generateExportMarkdown(readModel());
+
+    expect(markdown).toContain("## 가까운 미래 현금흐름 (근거리/장기 구분)");
+    expect(markdown).toContain("- 급여일이 설정되지 않아 근거리/장기 구분을 계산할 수 없습니다. 설정에서 급여일을 등록하면 이 구분을 볼 수 있습니다.");
+    expect(markdown).toContain("## 소비 여력 (Safe-to-Spend)");
+    expect(markdown).toContain("- 급여일 또는 비상금 기준이 설정되지 않아 계산할 수 없습니다. 설정에서 등록하면 이 지표를 볼 수 있습니다.");
+  });
+
+  it("renders cashflow horizon and safe-to-spend when payday and emergency fund are set", () => {
+    const markdown = generateExportMarkdown(readModel({
+      nextPaydayDate: "2026-08-25",
+      emergencyFundAmount: 1_000_000,
+      horizonDeductions: [
+        { amount: 100_000, provenance: "installment-1", dueDate: "2026-08-20" },
+        { amount: 200_000, provenance: "installment-2", dueDate: "2026-09-20" },
+      ],
+    }));
+
+    expect(markdown).toContain("- 다음 급여일: 2026-08-25");
+    expect(markdown).toContain("- 다음 급여일까지 확정 지출: 100,000 KRW");
+    expect(markdown).toContain("- 장기 확정 의무(주로 할부 잔여금): 200,000 KRW");
+    expect(markdown).toContain("- 현재 자산: 5,000,000 KRW");
+    expect(markdown).toContain("- 비상금 기준: 1,000,000 KRW");
+    expect(markdown).toContain("- 다음 급여일까지 사용 가능 금액: 3,900,000 KRW");
   });
 
   it("reports the period surplus separately from actual savings contributions", () => {
@@ -248,9 +300,11 @@ describe("generateExportMarkdown", () => {
     }));
 
     expect(markdown).toContain("## 소비 성격");
-    expect(markdown).toContain("- 반복성 지출: 14,900 KRW");
-    expect(markdown).toContain("- 일회성 지출: 600,000 KRW");
-    expect(markdown).toContain("- 분류되지 않은 지출: 56,678 KRW");
+    expect(markdown).toContain("- 반복성 소비: 14,900 KRW");
+    expect(markdown).toContain("- 일회성 소비: 600,000 KRW");
+    expect(markdown).toContain("- 비정기 소비: 0 KRW");
+    expect(markdown).toContain("- 예외 소비: 0 KRW");
+    expect(markdown).toContain("- 미분류 소비: 56,678 KRW");
   });
 
   it("does not classify a one-off planned transaction as RECURRING just because it was scheduled ahead of time", () => {
@@ -260,8 +314,8 @@ describe("generateExportMarkdown", () => {
       ],
     }));
 
-    expect(markdown).toContain("- 일회성 지출: 300,000 KRW");
-    expect(markdown).toContain("- 반복성 지출: 0 KRW");
+    expect(markdown).toContain("- 일회성 소비: 300,000 KRW");
+    expect(markdown).toContain("- 반복성 소비: 0 KRW");
   });
 
   it("does not add external outgoing transfers on top of the period expense total", () => {
@@ -284,8 +338,8 @@ describe("generateExportMarkdown", () => {
       ],
     }));
 
-    expect(markdown).toContain("- 분류되지 않은 지출: 117,000 KRW");
-    expect(markdown).toContain("- 일회성 지출: 0 KRW");
+    expect(markdown).toContain("- 미분류 소비: 117,000 KRW");
+    expect(markdown).toContain("- 일회성 소비: 0 KRW");
   });
 
   it("rejects an unsupported preset supplied at runtime", () => {

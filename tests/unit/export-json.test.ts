@@ -56,6 +56,9 @@ describe("generateAnalysisJson", () => {
       "period_summary",
       "external_flows",
       "expense_nature",
+      "spend_composition",
+      "concentration",
+      "cashflow_horizon",
       "budgets",
       "credit_cards",
       "savings_goals",
@@ -66,7 +69,7 @@ describe("generateAnalysisJson", () => {
     ]);
     expect(result.metadata).toEqual({
       schema: "money-context-analysis",
-      schema_version: 1,
+      schema_version: 2,
       generated_at: "2026-08-11T03:00:00.000Z",
       base_currency: "KRW",
       timezone: "Asia/Seoul",
@@ -265,7 +268,67 @@ describe("generateAnalysisJson", () => {
       ],
     }));
 
-    expect(result.expense_nature).toEqual({ recurring_base_amount: 14_900, one_time_base_amount: 600_000, unknown_base_amount: 56_678 });
+    expect(result.expense_nature).toEqual({
+      recurring_base_amount: 14_900,
+      one_time_base_amount: 600_000,
+      irregular_base_amount: 0,
+      exceptional_base_amount: 0,
+      unknown_base_amount: 56_678,
+    });
+  });
+
+  it("computes spend_composition, concentration, and cashflow_horizon alongside expense_nature", () => {
+    const result = generateAnalysisJson(readModel({
+      transactions: [
+        { id: "recurring", transactionDate: "2026-08-05T00:00:00.000+09:00", type: "EXPENSE", status: "CONFIRMED", baseAmount: 14_900, recurringRuleId: "rule-1", categoryName: "구독" },
+        { id: "big-one-time", transactionDate: "2026-08-06T00:00:00.000+09:00", type: "EXPENSE", status: "CONFIRMED", baseAmount: 600_000, plannedTransactionId: "plan-1", categoryName: "경조사", memo: "결혼식" },
+        { id: "unknown", transactionDate: "2026-08-07T00:00:00.000+09:00", type: "EXPENSE", status: "CONFIRMED", baseAmount: 56_678, categoryName: "생활" },
+      ],
+    }));
+
+    expect(result.spend_composition).toEqual({
+      total_expense_base_amount: 671_578,
+      adjusted_expense_base_amount: 671_578,
+      habitual_base_amount: 14_900,
+    });
+    expect(result.concentration.top1_share).toBeCloseTo(600_000 / 671_578);
+    expect(result.concentration.top_transactions[0]).toEqual({
+      transaction_date: "2026-08-06",
+      base_amount: 600_000,
+      category: "경조사",
+      memo: "결혼식",
+    });
+    expect(result.cashflow_horizon).toEqual({
+      next_payday_date: null,
+      near_term_confirmed_outflow_base_amount: null,
+      long_term_committed_base_amount: null,
+    });
+    expect(result.spendable).toBeUndefined();
+  });
+
+  it("includes spendable only when emergencyFundAmount and nextPaydayDate are both set", () => {
+    const result = generateAnalysisJson(readModel({
+      emergencyFundAmount: 1_000_000,
+      nextPaydayDate: "2026-08-25",
+      horizonDeductions: [
+        { amount: 100_000, provenance: "installment-1", dueDate: "2026-08-20" },
+        { amount: 200_000, provenance: "installment-2", dueDate: "2026-09-20" },
+      ],
+    }));
+
+    expect(result.cashflow_horizon).toEqual({
+      next_payday_date: "2026-08-25",
+      near_term_confirmed_outflow_base_amount: 100_000,
+      long_term_committed_base_amount: 200_000,
+    });
+    expect(result.spendable).toEqual({
+      current_liquid_assets_base_amount: 5_000_000,
+      emergency_fund_base_amount: 1_000_000,
+      near_term_confirmed_outflow_base_amount: 100_000,
+      safe_to_spend_base_amount: 3_900_000,
+      remaining_days_until_payday: expect.any(Number),
+      daily_safe_to_spend_base_amount: expect.any(Number),
+    });
   });
 
   it("marks a mid-month selected period as in progress with the actual data range clamped to today", () => {

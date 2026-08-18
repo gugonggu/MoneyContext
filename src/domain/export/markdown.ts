@@ -1,8 +1,10 @@
 import { resolvePeriodAggregation, type ExportPeriod } from "@/domain/export/period";
-import { classifyExpenseNature, type ExpenseNature, type ExpenseNatureSource, type ResolvedExpenseNature } from "@/domain/export/expense-nature";
+import { resolveExpenseNature, type ExpenseNatureSource, type ResolvedExpenseNature } from "@/domain/export/expense-nature";
+import { calculateSpendComposition } from "@/domain/export/spend-composition";
+import { calculateSpendConcentration } from "@/domain/export/concentration";
+import { splitDeductionsByHorizon, calculateSafeToSpend, type HorizonDeduction } from "@/domain/forecasts/spendable";
 import { exportPresets, isExportPreset, type ExportPreset } from "@/domain/export/presets";
 import { classifyTransferDirection } from "@/domain/transactions/transfer-direction";
-import type { HorizonDeduction } from "@/domain/forecasts/spendable";
 
 type ActualTransactionType = "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
 type TransactionStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
@@ -159,19 +161,11 @@ export function externalFlows(transactions: readonly ActualTransaction[]): Reado
   return { outgoingBaseAmount, incomingBaseAmount };
 }
 
-export function expenseNatureBreakdown(transactions: readonly ActualTransaction[]): Readonly<{ recurringBaseAmount: number; oneTimeBaseAmount: number; unknownBaseAmount: number }> {
-  let recurringBaseAmount = 0;
-  let oneTimeBaseAmount = 0;
-  let unknownBaseAmount = 0;
-  for (const transaction of transactions) {
-    if (transaction.type !== "EXPENSE") continue;
-    assertSafeAmount(transaction.baseAmount, "transaction baseAmount");
-    const nature: ExpenseNature = classifyExpenseNature(transaction);
-    if (nature === "RECURRING") recurringBaseAmount += transaction.baseAmount;
-    else if (nature === "ONE_TIME") oneTimeBaseAmount += transaction.baseAmount;
-    else unknownBaseAmount += transaction.baseAmount;
-  }
-  return { recurringBaseAmount, oneTimeBaseAmount, unknownBaseAmount };
+export function expenseNatureBreakdown(transactions: readonly ActualTransaction[]): Readonly<Record<ResolvedExpenseNature, number>> {
+  const composition = calculateSpendComposition(
+    transactions.filter((transaction) => transaction.type === "EXPENSE").map((transaction) => ({ baseAmount: transaction.baseAmount, nature: resolveExpenseNature(transaction) })),
+  );
+  return composition.natureBreakdown;
 }
 
 function breakdown(transactions: readonly ActualTransaction[], key: (transaction: ActualTransaction) => readonly string[]): readonly [string, bigint][] {
@@ -302,9 +296,78 @@ function expenseNatureLines(readModel: ExportReadModel, transactions: readonly A
   const nature = expenseNatureBreakdown(transactions);
   return [
     "## 소비 성격",
-    `- 반복성 지출: ${formatMoney(BigInt(nature.recurringBaseAmount), readModel.baseCurrency)}`,
-    `- 일회성 지출: ${formatMoney(BigInt(nature.oneTimeBaseAmount), readModel.baseCurrency)}`,
-    `- 분류되지 않은 지출: ${formatMoney(BigInt(nature.unknownBaseAmount), readModel.baseCurrency)}`,
+    `- 반복성 소비: ${formatMoney(BigInt(nature.RECURRING), readModel.baseCurrency)}`,
+    `- 일회성 소비: ${formatMoney(BigInt(nature.ONE_TIME), readModel.baseCurrency)}`,
+    `- 비정기 소비: ${formatMoney(BigInt(nature.IRREGULAR), readModel.baseCurrency)}`,
+    `- 예외 소비: ${formatMoney(BigInt(nature.EXCEPTIONAL), readModel.baseCurrency)}`,
+    `- 미분류 소비: ${formatMoney(BigInt(nature.UNKNOWN), readModel.baseCurrency)}`,
+    "",
+  ];
+}
+
+function spendCompositionLines(readModel: ExportReadModel, transactions: readonly ActualTransaction[]): string[] {
+  const expenseTx = transactions.filter((transaction) => transaction.type === "EXPENSE");
+  const composition = calculateSpendComposition(expenseTx.map((transaction) => ({ baseAmount: transaction.baseAmount, nature: resolveExpenseNature(transaction) })));
+  return [
+    "## 소비 구조",
+    `- 총 소비: ${formatMoney(BigInt(composition.totalExpenseBaseAmount), readModel.baseCurrency)}`,
+    `- 예외 소비 제외 소비(조정 소비, 참고 지표): ${formatMoney(BigInt(composition.adjustedExpenseBaseAmount), readModel.baseCurrency)}`,
+    `- 평소/생활 소비(반복+비정기): ${formatMoney(BigInt(composition.habitualBaseAmount), readModel.baseCurrency)}`,
+    "",
+  ];
+}
+
+function concentrationLines(readModel: ExportReadModel, transactions: readonly ActualTransaction[]): string[] {
+  const expenseTx = transactions.filter((transaction) => transaction.type === "EXPENSE");
+  const concentration = calculateSpendConcentration(expenseTx.map((transaction) => ({ id: transaction.id, baseAmount: transaction.baseAmount })));
+  const byId = new Map(expenseTx.map((transaction) => [transaction.id, transaction]));
+  const topLines = concentration.topTransactionIds.map((id) => {
+    const transaction = byId.get(id);
+    if (!transaction) return null;
+    const label = [transaction.categoryName, transaction.memo].filter(Boolean).join(" · ");
+    return `- ${dateKey(transaction.transactionDate)}: ${formatMoney(BigInt(transaction.baseAmount), readModel.baseCurrency)}${label ? ` (${label})` : ""}`;
+  }).filter((line): line is string => line !== null);
+  return [
+    "## 지출 집중도",
+    concentration.top1Share === null ? "- 계산 불가(지출 거래 없음)" : `- 상위 1개 거래 비중: ${Math.round(concentration.top1Share * 100)}%`,
+    concentration.top3Share === null ? "" : `- 상위 3개 거래 비중: ${Math.round(concentration.top3Share * 100)}%`,
+    concentration.top5Share === null ? "" : `- 상위 5개 거래 비중: ${Math.round(concentration.top5Share * 100)}%`,
+    "### 주요 대형 거래",
+    ...(topLines.length === 0 ? ["- 해당 없음"] : topLines),
+    "",
+  ].filter((line) => line !== "");
+}
+
+function cashflowHorizonLines(readModel: ExportReadModel): string[] {
+  const deductions = readModel.horizonDeductions ?? [];
+  if (!readModel.nextPaydayDate) {
+    return ["## 가까운 미래 현금흐름 (근거리/장기 구분)", "- 급여일이 설정되지 않아 근거리/장기 구분을 계산할 수 없습니다. 설정에서 급여일을 등록하면 이 구분을 볼 수 있습니다.", ""];
+  }
+  const { nearTerm, longTerm } = splitDeductionsByHorizon(deductions, readModel.nextPaydayDate);
+  const sum = (items: readonly HorizonDeduction[]) => items.reduce((total, item) => total + item.amount, 0);
+  return [
+    "## 가까운 미래 현금흐름 (근거리/장기 구분)",
+    `- 다음 급여일: ${readModel.nextPaydayDate}`,
+    `- 다음 급여일까지 확정 지출: ${formatMoney(BigInt(sum(nearTerm)), readModel.baseCurrency)}`,
+    `- 장기 확정 의무(주로 할부 잔여금): ${formatMoney(BigInt(sum(longTerm)), readModel.baseCurrency)}`,
+    "",
+  ];
+}
+
+function spendableLines(readModel: ExportReadModel): string[] {
+  if (readModel.emergencyFundAmount === undefined || !readModel.nextPaydayDate) {
+    return ["## 소비 여력 (Safe-to-Spend)", "- 급여일 또는 비상금 기준이 설정되지 않아 계산할 수 없습니다. 설정에서 등록하면 이 지표를 볼 수 있습니다.", ""];
+  }
+  const { nearTerm } = splitDeductionsByHorizon(readModel.horizonDeductions ?? [], readModel.nextPaydayDate);
+  const nearTermTotal = nearTerm.reduce((total, item) => total + item.amount, 0);
+  const safeToSpend = calculateSafeToSpend(readModel.financialPosition.totalAssets, nearTermTotal, readModel.emergencyFundAmount);
+  const remainingDays = Math.max(1, Math.round((new Date(readModel.nextPaydayDate).getTime() - new Date(readModel.generatedAt).getTime()) / 86_400_000));
+  return [
+    "## 소비 여력 (Safe-to-Spend)",
+    `- 현재 자산: ${formatMoney(BigInt(readModel.financialPosition.totalAssets), readModel.baseCurrency)}`,
+    `- 비상금 기준: ${formatMoney(BigInt(readModel.emergencyFundAmount), readModel.baseCurrency)}`,
+    `- 다음 급여일까지 사용 가능 금액: ${formatMoney(BigInt(Math.max(0, safeToSpend)), readModel.baseCurrency)}`,
+    `- 일평균 사용 가능 금액(참고): ${formatMoney(BigInt(Math.max(0, Math.floor(Math.max(0, safeToSpend) / remainingDays))), readModel.baseCurrency)}`,
     "",
   ];
 }
@@ -359,10 +422,14 @@ export function generateExportMarkdown(readModel: ExportReadModel): string {
   if (sections.includes("PAYMENT_METHODS")) lines.push(...listBreakdown("## 결제수단별 소비", breakdown(transactions, (transaction) => [paymentMethodKey(transaction)]), readModel.baseCurrency));
   if (sections.includes("EXTERNAL_FLOWS")) lines.push(...externalFlowLines(readModel, transactions));
   if (sections.includes("EXPENSE_NATURE")) lines.push(...expenseNatureLines(readModel, transactions));
+  if (sections.includes("SPEND_COMPOSITION")) lines.push(...spendCompositionLines(readModel, transactions));
+  if (sections.includes("CONCENTRATION")) lines.push(...concentrationLines(readModel, transactions));
   if (sections.includes("CARDS")) lines.push(...cardLines(readModel));
   if (sections.includes("SAVINGS_GOALS")) lines.push(...savingsGoalLines(readModel));
   if (sections.includes("PLANNED_CASHFLOWS")) lines.push(...plannedCashflowLines(readModel));
   if (sections.includes("FUTURE_CASHFLOWS")) lines.push(...futureCashflowLines(readModel));
+  if (sections.includes("CASHFLOW_HORIZON")) lines.push(...cashflowHorizonLines(readModel));
+  if (sections.includes("SPENDABLE")) lines.push(...spendableLines(readModel));
   if (sections.includes("TRANSACTIONS")) lines.push(...transactionLines(transactions, readModel.baseCurrency));
   lines.push(
     "## 데이터 해석 주의사항",
@@ -387,6 +454,12 @@ export function generateExportMarkdown(readModel: ExportReadModel): string {
     "- 카테고리는 소비 대상(무엇에 사용했는가), 태그는 소비 맥락(왜/어떤 상황에서 사용했는가)을 나타냅니다.",
     "- '미래 지출'은 선택한 분석 기간과 무관하게 아직 실현되지 않은 모든 미래 현금흐름(예정 거래, 예정일 전에 미리 확정한 거래, 할부 잔여금)을 의미합니다.",
     "- 할부 잔여금은 이미 구매 시점에 지출로 전액 인식된 금액을 카드사에 갚는 미래 현금흐름이며, 새로운 소비가 아니므로 위 기간 지출 합계에 다시 더하면 안 됩니다.",
+    "- 총 월 지출이 곧 평소 월 생활비를 의미하지 않습니다.",
+    "- 예외적·일회성 대형 거래가 월 소비를 크게 왜곡할 수 있습니다.",
+    "- 조정 소비는 분석용 참고 지표이며 공식 지출 통계를 대체하지 않습니다.",
+    "- 할부 잔여금은 이미 소비로 인식된 구매의 미래 현금흐름입니다.",
+    "- 장기 할부 전체를 현재 소비 가능 금액에서 즉시 차감하면 실제 단기 현금흐름을 왜곡할 수 있어, 근거리/장기로 구분해서 봅니다.",
+    "- Safe-to-Spend(소비 여력) 값은 재정적 안전성을 보장하지 않으며, 현재 입력된 데이터를 기반으로 한 참고 지표입니다.",
   );
   return `${lines.join("\n")}\n`;
 }

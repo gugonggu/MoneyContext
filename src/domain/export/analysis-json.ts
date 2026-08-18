@@ -9,13 +9,17 @@ import {
   type ExportTransaction,
 } from "./markdown";
 import { resolvePeriodAggregation, type PeriodAggregationStatus } from "./period";
+import { resolveExpenseNature } from "./expense-nature";
+import { calculateSpendComposition } from "./spend-composition";
+import { calculateSpendConcentration } from "./concentration";
+import { splitDeductionsByHorizon, calculateSafeToSpend } from "@/domain/forecasts/spendable";
 
 type AmountBreakdown = Readonly<{ name: string; base_amount: number }>;
 
 export type AnalysisJson = Readonly<{
   metadata: Readonly<{
     schema: "money-context-analysis";
-    schema_version: 1;
+    schema_version: 2;
     generated_at: string;
     base_currency: string;
     timezone: "Asia/Seoul";
@@ -48,7 +52,11 @@ export type AnalysisJson = Readonly<{
   }>;
   /** outgoing/incoming are already counted inside period_summary income/expense - do not add them again. */
   external_flows: Readonly<{ included_in_period_totals: true; outgoing_base_amount: number; incoming_base_amount: number }>;
-  expense_nature: Readonly<{ recurring_base_amount: number; one_time_base_amount: number; unknown_base_amount: number }>;
+  expense_nature: Readonly<{ recurring_base_amount: number; one_time_base_amount: number; irregular_base_amount: number; exceptional_base_amount: number; unknown_base_amount: number }>;
+  spend_composition: Readonly<{ total_expense_base_amount: number; adjusted_expense_base_amount: number; habitual_base_amount: number }>;
+  concentration: Readonly<{ top1_share: number | null; top3_share: number | null; top5_share: number | null; top_transactions: readonly Readonly<{ transaction_date: string; base_amount: number; category: string | null; memo: string | null }>[] }>;
+  cashflow_horizon: Readonly<{ next_payday_date: string | null; near_term_confirmed_outflow_base_amount: number | null; long_term_committed_base_amount: number | null }>;
+  spendable?: Readonly<{ current_liquid_assets_base_amount: number; emergency_fund_base_amount: number; near_term_confirmed_outflow_base_amount: number; safe_to_spend_base_amount: number; remaining_days_until_payday: number; daily_safe_to_spend_base_amount: number }>;
   budgets: readonly Readonly<{ name: string; allocated_base_amount: number; actual_usage_base_amount: number }>[];
   credit_cards: readonly Readonly<{ name: string; outstanding_base_amount: number; next_payment_date: string | null }>[];
   savings_goals: readonly Readonly<{ name: string; target_base_amount: number; contributed_base_amount: number; target_date: string }>[];
@@ -191,7 +199,7 @@ export function generateAnalysisJson(readModel: ExportReadModel): AnalysisJson {
   return {
     metadata: {
       schema: "money-context-analysis",
-      schema_version: 1,
+      schema_version: 2,
       generated_at: readModel.generatedAt,
       base_currency: readModel.baseCurrency,
       timezone: "Asia/Seoul",
@@ -228,8 +236,71 @@ export function generateAnalysisJson(readModel: ExportReadModel): AnalysisJson {
     })(),
     expense_nature: (() => {
       const nature = expenseNatureBreakdown(actual);
-      return { recurring_base_amount: nature.recurringBaseAmount, one_time_base_amount: nature.oneTimeBaseAmount, unknown_base_amount: nature.unknownBaseAmount };
+      return {
+        recurring_base_amount: nature.RECURRING,
+        one_time_base_amount: nature.ONE_TIME,
+        irregular_base_amount: nature.IRREGULAR,
+        exceptional_base_amount: nature.EXCEPTIONAL,
+        unknown_base_amount: nature.UNKNOWN,
+      };
     })(),
+    spend_composition: (() => {
+      const expenseTx = actual.filter((transaction) => transaction.type === "EXPENSE");
+      const composition = calculateSpendComposition(expenseTx.map((transaction) => ({ baseAmount: transaction.baseAmount, nature: resolveExpenseNature(transaction) })));
+      return {
+        total_expense_base_amount: composition.totalExpenseBaseAmount,
+        adjusted_expense_base_amount: composition.adjustedExpenseBaseAmount,
+        habitual_base_amount: composition.habitualBaseAmount,
+      };
+    })(),
+    concentration: (() => {
+      const expenseTx = actual.filter((transaction) => transaction.type === "EXPENSE");
+      const concentration = calculateSpendConcentration(expenseTx.map((transaction) => ({ id: transaction.id, baseAmount: transaction.baseAmount })));
+      const byId = new Map(expenseTx.map((transaction) => [transaction.id, transaction]));
+      return {
+        top1_share: concentration.top1Share,
+        top3_share: concentration.top3Share,
+        top5_share: concentration.top5Share,
+        top_transactions: concentration.topTransactionIds.flatMap((id) => {
+          const transaction = byId.get(id);
+          if (!transaction) return [];
+          return [{
+            transaction_date: seoulDate(transaction.transactionDate),
+            base_amount: transaction.baseAmount,
+            category: transaction.categoryName ?? null,
+            memo: transaction.memo ?? null,
+          }];
+        }),
+      };
+    })(),
+    cashflow_horizon: (() => {
+      if (!readModel.nextPaydayDate) {
+        return { next_payday_date: null, near_term_confirmed_outflow_base_amount: null, long_term_committed_base_amount: null };
+      }
+      const { nearTerm, longTerm } = splitDeductionsByHorizon(readModel.horizonDeductions ?? [], readModel.nextPaydayDate);
+      const sum = (items: readonly { amount: number }[]) => items.reduce((total, item) => total + item.amount, 0);
+      return {
+        next_payday_date: readModel.nextPaydayDate,
+        near_term_confirmed_outflow_base_amount: sum(nearTerm),
+        long_term_committed_base_amount: sum(longTerm),
+      };
+    })(),
+    ...(readModel.emergencyFundAmount !== undefined && readModel.nextPaydayDate ? {
+      spendable: (() => {
+        const { nearTerm } = splitDeductionsByHorizon(readModel.horizonDeductions ?? [], readModel.nextPaydayDate as string);
+        const nearTermTotal = nearTerm.reduce((total, item) => total + item.amount, 0);
+        const safeToSpend = calculateSafeToSpend(readModel.financialPosition.totalAssets, nearTermTotal, readModel.emergencyFundAmount as number);
+        const remainingDays = Math.max(1, Math.round((new Date(readModel.nextPaydayDate as string).getTime() - new Date(readModel.generatedAt).getTime()) / 86_400_000));
+        return {
+          current_liquid_assets_base_amount: readModel.financialPosition.totalAssets,
+          emergency_fund_base_amount: readModel.emergencyFundAmount as number,
+          near_term_confirmed_outflow_base_amount: nearTermTotal,
+          safe_to_spend_base_amount: Math.max(0, safeToSpend),
+          remaining_days_until_payday: remainingDays,
+          daily_safe_to_spend_base_amount: Math.max(0, Math.floor(Math.max(0, safeToSpend) / remainingDays)),
+        };
+      })(),
+    } : {}),
     budgets: readModel.budgets.map((budget) => {
       assertNonNegativeAmount(budget.allocatedBaseAmount, "budget allocatedBaseAmount");
       assertNonNegativeAmount(budget.actualUsageBaseAmount, "budget actualUsageBaseAmount");
