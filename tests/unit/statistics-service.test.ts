@@ -1,3 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { buildStatistics } from "@/server/statistics/service";
-describe("buildStatistics", () => { it("uses confirmed income and expenses only, excluding transfers and pending rows", () => { const result = buildStatistics([{ type: "INCOME", status: "CONFIRMED", transactionAt: "2026-07-01T00:00:00+09:00", baseAmount: 1_000, tagNames: [] }, { type: "EXPENSE", status: "CONFIRMED", transactionAt: "2026-07-02T00:00:00+09:00", baseAmount: 300, categoryName: "Food", accountName: "Card", tagNames: ["Lunch"], recurringRuleId: "rule" }, { type: "TRANSFER", status: "CONFIRMED", transactionAt: "2026-07-02T00:00:00+09:00", baseAmount: 900, tagNames: [] }, { type: "EXPENSE", status: "PENDING", transactionAt: "2026-07-03T00:00:00+09:00", baseAmount: 500, tagNames: [] }], 9_000, new Date("2026-07-20T00:00:00+09:00")); expect(result.monthly).toEqual([{ key: "2026-07", income: 1_000, expense: 300, value: 700 }]); expect(result.category).toEqual([{ name: "Food", amount: 300 }]); expect(result.fixedVariable).toEqual([{ name: "Fixed", amount: 300 }]); expect(result.tags).toEqual([{ name: "Lunch", amount: 300 }]); expect(result.savingsRate).toBe(70); expect(result.netWorthTrend).toEqual([{ month: "2026-07", value: 9_000 }]); }); });
+import { todayInSeoul } from "@/lib/dates/seoul";
+
+const currentMonth = todayInSeoul().slice(0, 7);
+
+describe("buildStatistics", () => {
+  it("uses confirmed income and expenses only, excluding transfers and pending rows", () => { const result = buildStatistics([{ type: "INCOME", status: "CONFIRMED", transactionAt: "2026-07-01T00:00:00+09:00", baseAmount: 1_000, tagNames: [] }, { type: "EXPENSE", status: "CONFIRMED", transactionAt: "2026-07-02T00:00:00+09:00", baseAmount: 300, categoryName: "Food", accountName: "Card", tagNames: ["Lunch"], recurringRuleId: "rule" }, { type: "TRANSFER", status: "CONFIRMED", transactionAt: "2026-07-02T00:00:00+09:00", baseAmount: 900, tagNames: [] }, { type: "EXPENSE", status: "PENDING", transactionAt: "2026-07-03T00:00:00+09:00", baseAmount: 500, tagNames: [] }], 9_000, new Date("2026-07-20T00:00:00+09:00")); expect(result.monthly).toEqual([{ key: "2026-07", income: 1_000, expense: 300, value: 700 }]); expect(result.category).toEqual([{ name: "Food", amount: 300 }]); expect(result.fixedVariable).toEqual([{ name: "Fixed", amount: 300 }]); expect(result.tags).toEqual([{ name: "Lunch", amount: 300 }]); expect(result.savingsRate).toBe(70); expect(result.netWorthTrend).toEqual([{ month: "2026-07", value: 9_000 }]); });
+
+  it("이번 달 소비 구조와 집중도를 계산한다", () => {
+    const result = buildStatistics([
+      { type: "EXPENSE", status: "CONFIRMED", transactionAt: `${currentMonth}-05T00:00:00.000Z`, baseAmount: 600_000, categoryName: "가족지원", tagNames: [], expenseNatureUser: "EXCEPTIONAL", expenseNatureSource: "MANUAL" },
+      { type: "EXPENSE", status: "CONFIRMED", transactionAt: `${currentMonth}-06T00:00:00.000Z`, baseAmount: 200_000, categoryName: "식비", tagNames: [] },
+    ], 0);
+    expect(result.spendComposition.totalExpenseBaseAmount).toBe(800_000);
+    expect(result.spendComposition.exceptionalBaseAmount).toBe(600_000);
+    expect(result.concentration.top1Share).toBeCloseTo(0.75, 6);
+  });
+});

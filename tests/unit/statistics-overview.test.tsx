@@ -18,6 +18,21 @@ describe("StatisticsOverview", () => {
           monthOverMonth: 20,
           savingsRate: -20,
           netWorthTrend: [],
+          spendComposition: {
+            totalExpenseBaseAmount: 120_000,
+            exceptionalBaseAmount: 0,
+            oneTimeBaseAmount: 0,
+            habitualBaseAmount: 120_000,
+            adjustedExpenseBaseAmount: 120_000,
+            natureBreakdown: { RECURRING: 120_000, ONE_TIME: 0, IRREGULAR: 0, EXCEPTIONAL: 0, UNKNOWN: 0 },
+          },
+          concentration: {
+            top1Share: 1,
+            top3Share: 1,
+            top5Share: 1,
+            topTransactionIds: ["0"],
+            topTransactions: [{ label: "미분류", baseAmount: 120_000 }],
+          },
         }}
       />,
     );

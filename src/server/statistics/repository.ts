@@ -15,7 +15,7 @@ export async function listStatisticsTransactions(supabase: SupabaseClient, userI
   const { data, error } = await supabase
     .from("transactions")
     .select(
-      "type,status,transaction_at,base_amount,recurring_rule_id,from_account_id,to_account_id,categories(name),account:accounts!transactions_account_id_fkey(name),from_account:accounts!transactions_from_account_id_fkey(name),to_account:accounts!transactions_to_account_id_fkey(name),transaction_tags(tags(name))",
+      "type,status,transaction_at,base_amount,recurring_rule_id,from_account_id,to_account_id,expense_nature_user,expense_nature_source,planned_transaction_id,categories(name),account:accounts!transactions_account_id_fkey(name),from_account:accounts!transactions_from_account_id_fkey(name),to_account:accounts!transactions_to_account_id_fkey(name),transaction_tags(tags(name))",
     )
     .eq("user_id", userId)
     .eq("status", "CONFIRMED")
@@ -35,6 +35,9 @@ export async function listStatisticsTransactions(supabase: SupabaseClient, userI
       categoryName: category?.name,
       accountName,
       recurringRuleId: row.recurring_rule_id ?? undefined,
+      expenseNatureUser: row.expense_nature_user ?? undefined,
+      expenseNatureSource: row.expense_nature_source ?? undefined,
+      plannedTransactionId: row.planned_transaction_id ?? undefined,
       tagNames: links.flatMap((link) => (Array.isArray(link.tags) ? link.tags : link.tags ? [link.tags] : [])).map((tag) => tag.name),
     };
   });

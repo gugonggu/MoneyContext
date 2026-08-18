@@ -118,7 +118,7 @@ function mapTransaction(row: TransactionRow): ExportTransaction {
   };
 }
 
-function nextCardPaymentDate(paymentDay: number, today: string): string {
+export function nextCardPaymentDate(paymentDay: number, today: string): string {
   const [year, month, day] = today.split("-").map(Number);
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const candidateDay = Math.min(paymentDay, lastDay);
@@ -129,7 +129,7 @@ function nextCardPaymentDate(paymentDay: number, today: string): string {
   return nextMonthDate.toISOString().slice(0, 10);
 }
 
-function buildHorizonDeductions(assets: AssetOverview, today: string): HorizonDeduction[] {
+export function buildHorizonDeductions(assets: AssetOverview, today: string): HorizonDeduction[] {
   return assets.cards.flatMap((card): HorizonDeduction[] => {
     const scheduledInstallmentTotal = card.installmentSchedule
       .filter((payment) => payment.status === "SCHEDULED")
