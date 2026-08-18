@@ -96,6 +96,105 @@ describe("security regression: profiles self-only isolation", () => {
     const { data: unchanged } = await admin.from("profiles").select("display_name").eq("id", userB.id).single();
     expect(unchanged?.display_name).toBe("Security Suite User B");
   });
+
+  it("allows reading own profile emergency_fund_amount", async () => {
+    const { data, error } = await userAClient.from("profiles").select("emergency_fund_amount").eq("id", userA.id).single();
+    expect(error).toBeNull();
+    expect(data).toBeDefined();
+    expect(data?.emergency_fund_amount).toBeNull(); // Default is null
+  });
+
+  it("allows updating own profile emergency_fund_amount", async () => {
+    const { data, error } = await userAClient.from("profiles").update({ emergency_fund_amount: 5000000 }).eq("id", userA.id).select("emergency_fund_amount").single();
+    expect(error).toBeNull();
+    expect(data?.emergency_fund_amount).toBe(5000000);
+  });
+
+  it("does not allow updating another user's emergency_fund_amount", async () => {
+    const { data, error } = await userAClient.from("profiles").update({ emergency_fund_amount: 999999 }).eq("id", userB.id).select("id");
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
+});
+
+describe("security regression: transaction expense nature columns isolation", () => {
+  it("allows reading own transaction expense_nature columns", async () => {
+    const { data, error } = await userBClient.from("transactions").select("expense_nature_user,expense_nature_source").eq("id", transactionBId).single();
+    expect(error).toBeNull();
+    expect(data).toBeDefined();
+    expect(data?.expense_nature_source).toBe("UNSET"); // Default value
+    expect(data?.expense_nature_user).toBeNull(); // Consistent with UNSET
+  });
+
+  it("allows updating own transaction expense_nature with MANUAL source", async () => {
+    const { data, error } = await userBClient
+      .from("transactions")
+      .update({ expense_nature_user: "RECURRING", expense_nature_source: "MANUAL" })
+      .eq("id", transactionBId)
+      .select("expense_nature_user,expense_nature_source")
+      .single();
+    expect(error).toBeNull();
+    expect(data?.expense_nature_user).toBe("RECURRING");
+    expect(data?.expense_nature_source).toBe("MANUAL");
+  });
+
+  it("does not allow updating another user's transaction expense_nature", async () => {
+    const { data, error } = await userAClient
+      .from("transactions")
+      .update({ expense_nature_user: "ONE_TIME", expense_nature_source: "MANUAL" })
+      .eq("id", transactionBId)
+      .select("id");
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
+
+  it("enforces expense_nature source-value consistency constraint", async () => {
+    const { data: accountA2 } = await userAClient
+      .from("accounts")
+      .insert({ user_id: userA.id, name: "test account", type: "CASH" })
+      .select("id")
+      .single();
+    const accountA2Id = accountA2?.id;
+
+    const { data: transactionA } = await userAClient
+      .from("transactions")
+      .insert({
+        user_id: userA.id,
+        type: "EXPENSE",
+        status: "CONFIRMED",
+        transaction_at: "2026-08-10T00:00:00+09:00",
+        amount: 1000,
+        currency: "KRW",
+        base_amount: 1000,
+        base_currency: "KRW",
+        account_id: accountA2Id,
+      })
+      .select("id")
+      .single();
+    const transactionAId = transactionA?.id;
+
+    // UNSET source with null value should pass
+    const { error: validError } = await userAClient
+      .from("transactions")
+      .update({ expense_nature_user: null, expense_nature_source: "UNSET" })
+      .eq("id", transactionAId)
+      .select("id");
+    expect(validError).toBeNull();
+
+    // MANUAL source with null value should fail constraint
+    const { error: invalidError } = await userAClient
+      .from("transactions")
+      .update({ expense_nature_user: null, expense_nature_source: "MANUAL" })
+      .eq("id", transactionAId);
+    expect(invalidError).not.toBeNull();
+
+    // UNSET source with non-null value should fail constraint
+    const { error: invalidError2 } = await userAClient
+      .from("transactions")
+      .update({ expense_nature_user: "RECURRING", expense_nature_source: "UNSET" })
+      .eq("id", transactionAId);
+    expect(invalidError2).not.toBeNull();
+  });
 });
 
 describe("security regression: transaction_tags relationship-scoped isolation", () => {
