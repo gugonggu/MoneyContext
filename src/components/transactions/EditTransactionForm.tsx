@@ -167,19 +167,17 @@ export function EditTransactionForm({
         </div>
 
         {transaction.type === "EXPENSE" ? (
-          <div className="flex-1">
-            <Select
-              label="소비 성격"
-              name="expenseNatureUser"
-              value={expenseNatureUser}
-              onChange={(event) => setExpenseNatureUser(event.target.value)}
-            >
-              <option value="">지정 안 함</option>
-              {(Object.keys(EXPENSE_NATURE_LABELS) as (keyof typeof EXPENSE_NATURE_LABELS)[]).map((value) => (
-                <option key={value} value={value}>{EXPENSE_NATURE_LABELS[value]}</option>
-              ))}
-            </Select>
-          </div>
+          <Select
+            label="소비 성격"
+            name="expenseNatureUser"
+            value={expenseNatureUser}
+            onChange={(event) => setExpenseNatureUser(event.target.value)}
+          >
+            <option value="">지정 안 함</option>
+            {(Object.keys(EXPENSE_NATURE_LABELS) as (keyof typeof EXPENSE_NATURE_LABELS)[]).map((value) => (
+              <option key={value} value={value}>{EXPENSE_NATURE_LABELS[value]}</option>
+            ))}
+          </Select>
         ) : null}
       </Card>
 

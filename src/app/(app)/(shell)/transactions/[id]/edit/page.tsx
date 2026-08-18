@@ -45,7 +45,7 @@ async function submitEdit(id: string, _previous: EditTransactionState, formData:
       const expenseNatureUserRaw = String(formData.get("expenseNatureUser") ?? "");
       const expenseNatureUser = expenseNatureUserRaw
         ? (expenseNatureUserRaw as "RECURRING" | "ONE_TIME" | "IRREGULAR" | "EXCEPTIONAL" | "UNKNOWN")
-        : undefined;
+        : existing.expenseNatureUser;
       await updateTransactionForCurrentUser(id, {
         type: type as "INCOME" | "EXPENSE",
         amount,
