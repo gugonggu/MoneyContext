@@ -21,6 +21,22 @@ function repository(accounts = [bank, bankB], categories = [category]): Transact
 }
 
 describe("transaction service", () => {
+  it("소비 성격을 지정하면 MANUAL 출처로 저장하고, 비워두면 UNSET을 유지한다", async () => {
+    const created: unknown[] = [];
+    const repository = {
+      findAccount: async () => ({ id: "acc-1", userId: "user-1", type: "BANK" as const, isActive: true }),
+      findCategory: async () => null,
+      create: async (userId: string, input: unknown) => { created.push(input); return { id: "tx-1", userId, ...(input as object) } as never; },
+    } as never;
+    const service = createTransactionService(repository);
+    await service.create("user-1", {
+      type: "EXPENSE", amount: 60_000, baseAmount: 60_000, currency: "KRW",
+      transactionAt: "2026-08-18T00:00:00.000Z", accountId: "acc-1",
+      expenseNatureUser: "EXCEPTIONAL",
+    } as never);
+    expect(created[0]).toMatchObject({ expenseNatureUser: "EXCEPTIONAL", expenseNatureSource: "MANUAL" });
+  });
+
   it("rejects a transfer whose source and destination are the same account", async () => {
     const service = createTransactionService(repository());
     await expect(service.create(userId, { type: "TRANSFER", amount: 10_000, baseAmount: 10_000, currency: "KRW", transactionAt: "2026-08-11T10:00:00+09:00", fromAccountId: bank.id, toAccountId: bank.id })).rejects.toThrow("distinct");

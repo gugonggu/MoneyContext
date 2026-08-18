@@ -1,10 +1,11 @@
 import "server-only";
+import type { ResolvedExpenseNature } from "@/domain/export/expense-nature";
 
 export type TransactionType = "INCOME" | "EXPENSE" | "TRANSFER" | "ADJUSTMENT";
 type Account = Readonly<{ id: string; userId: string; type: "BANK" | "CASH" | "DEBIT" | "CREDIT_CARD" | "LIABILITY"; isActive: boolean }>;
 type Category = Readonly<{ id: string; userId: string; isActive: boolean }>;
-type TransactionInput = Readonly<{ type: TransactionType; amount: number; baseAmount: number; currency: string; transactionAt: string; accountId?: string; fromAccountId?: string; toAccountId?: string; categoryId?: string; exchangeRate?: string; memo?: string }>;
-export type TransactionRecord = Readonly<TransactionInput & { id: string; userId: string; status: TransactionStatus }>;
+export type TransactionInput = Readonly<{ type: TransactionType; amount: number; baseAmount: number; currency: string; transactionAt: string; accountId?: string; fromAccountId?: string; toAccountId?: string; categoryId?: string; exchangeRate?: string; memo?: string; expenseNatureUser?: ResolvedExpenseNature }>;
+export type TransactionRecord = Readonly<TransactionInput & { id: string; userId: string; status: TransactionStatus; expenseNatureSource: "UNSET" | "MANUAL" | "SUGGESTED" }>;
 export type PatternTransaction = Readonly<{ accountId: string; categoryId?: string; type: "INCOME" | "EXPENSE"; transactionAt: string }>;
 export type ConfirmedRecurringOccurrenceMonth = Readonly<{ ruleId: string; month: string }>;
 export type TransactionStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
@@ -98,7 +99,7 @@ async function activeCategory(repository: TransactionRepository, userId: string,
   if (!category || !category.isActive) throw new Error("categoryId must be an active category owned by the current user");
   return category.id;
 }
-async function validate(repository: TransactionRepository, userId: string, input: TransactionInput): Promise<TransactionInput> {
+async function validate(repository: TransactionRepository, userId: string, input: TransactionInput): Promise<TransactionInput & { expenseNatureSource: "UNSET" | "MANUAL" | "SUGGESTED" }> {
   const isAdjustment = input.type === "ADJUSTMENT";
   validAmount(input.amount, "amount", isAdjustment); validAmount(input.baseAmount, "baseAmount", isAdjustment); validCurrency(input);
   if (Number.isNaN(Date.parse(input.transactionAt))) fail("transactionAt must be an ISO timestamp");
@@ -114,9 +115,18 @@ async function validate(repository: TransactionRepository, userId: string, input
       categoryId: await activeCategory(repository, userId, input.categoryId),
       fromAccountId: input.fromAccountId ? await active(repository, userId, input.fromAccountId) : undefined,
       toAccountId: input.toAccountId ? await active(repository, userId, input.toAccountId) : undefined,
+      expenseNatureUser: undefined,
+      expenseNatureSource: "UNSET" as const,
     };
   }
-  return { ...input, accountId: await active(repository, userId, input.accountId), categoryId: await activeCategory(repository, userId, input.categoryId), fromAccountId: undefined, toAccountId: undefined };
+  return {
+    ...input,
+    accountId: await active(repository, userId, input.accountId),
+    categoryId: await activeCategory(repository, userId, input.categoryId),
+    fromAccountId: undefined,
+    toAccountId: undefined,
+    expenseNatureSource: input.expenseNatureUser ? "MANUAL" as const : "UNSET" as const,
+  };
 }
 export function createTransactionService(repository: TransactionRepository) { return {
   list: (userId: string) => repository.list(userId),
