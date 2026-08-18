@@ -14,3 +14,24 @@ export function classifyExpenseNature(transaction: Readonly<{ recurringRuleId?: 
   if (transaction.plannedTransactionId) return "ONE_TIME";
   return "UNKNOWN";
 }
+
+export type ExpenseNatureSource = "UNSET" | "MANUAL" | "SUGGESTED";
+export type ResolvedExpenseNature = ExpenseNature | "IRREGULAR" | "EXCEPTIONAL";
+
+/**
+ * A MANUAL value the user explicitly chose always wins - it carries intent
+ * the derived signal can't see (e.g. "this subscription-looking charge was
+ * actually a one-off gift"). Anything else falls back to classifyExpenseNature
+ * so existing UNSET data keeps behaving exactly as before this feature shipped.
+ */
+export function resolveExpenseNature(transaction: Readonly<{
+  recurringRuleId?: string;
+  plannedTransactionId?: string;
+  expenseNatureUser?: ResolvedExpenseNature;
+  expenseNatureSource?: ExpenseNatureSource;
+}>): ResolvedExpenseNature {
+  if (transaction.expenseNatureSource === "MANUAL" && transaction.expenseNatureUser) {
+    return transaction.expenseNatureUser;
+  }
+  return classifyExpenseNature(transaction);
+}
