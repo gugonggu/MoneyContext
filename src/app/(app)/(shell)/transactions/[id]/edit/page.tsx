@@ -42,10 +42,13 @@ async function submitEdit(id: string, _previous: EditTransactionState, formData:
     } else {
       const categoryId = String(formData.get("categoryId") ?? "") || undefined;
       const accountId = String(formData.get("accountId"));
+      // The 소비 성격 select is always rendered for EXPENSE transactions (never omitted),
+      // so a blank value ("지정 안 함") is a real, explicit user choice to clear the
+      // MANUAL classification back to UNSET — not an "unchanged" signal like transactionAt.
       const expenseNatureUserRaw = String(formData.get("expenseNatureUser") ?? "");
       const expenseNatureUser = expenseNatureUserRaw
         ? (expenseNatureUserRaw as "RECURRING" | "ONE_TIME" | "IRREGULAR" | "EXCEPTIONAL" | "UNKNOWN")
-        : existing.expenseNatureUser;
+        : undefined;
       await updateTransactionForCurrentUser(id, {
         type: type as "INCOME" | "EXPENSE",
         amount,
