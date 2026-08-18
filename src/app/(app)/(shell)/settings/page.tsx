@@ -2,9 +2,27 @@ import Link from "next/link";
 
 import { BackupRestore } from "@/components/settings/BackupRestore";
 import { DeleteAccount } from "@/components/settings/DeleteAccount";
+import { EmergencyFundSettings, type EmergencyFundState } from "@/components/settings/EmergencyFundSettings";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { requireCurrentProfile } from "@/server/auth/require-profile";
+import { updateEmergencyFundForCurrentUser } from "@/server/profile";
+
+async function submitEmergencyFund(
+  userId: string,
+  _previous: EmergencyFundState,
+  formData: FormData,
+): Promise<EmergencyFundState> {
+  "use server";
+
+  try {
+    const raw = String(formData.get("amount") ?? "").trim();
+    await updateEmergencyFundForCurrentUser(userId, raw === "" ? null : Number(raw));
+  } catch (error) {
+    return { status: "error", message: error instanceof Error ? error.message : "저장에 실패했습니다." };
+  }
+  return { status: "success" };
+}
 
 export default async function SettingsPage() {
   const profile = await requireCurrentProfile();
@@ -30,6 +48,10 @@ export default async function SettingsPage() {
         </section>
       ) : null}
 
+      <EmergencyFundSettings
+        currentAmount={profile.emergency_fund_amount ?? null}
+        action={submitEmergencyFund.bind(null, profile.id)}
+      />
       <BackupRestore />
       <DeleteAccount />
     </div>
