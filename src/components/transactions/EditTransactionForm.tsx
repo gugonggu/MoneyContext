@@ -109,7 +109,7 @@ export function EditTransactionForm({
         ) : (
           <div className="flex flex-col gap-4 sm:flex-row">
             <div className="flex-1">
-              <Select label="카테고리" name="categoryId" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+              <Select label="카테고리 (무엇을 샀나요)" name="categoryId" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
                 <option value="">선택 안 함</option>
                 {visibleCategories.map((category) => (
                   <option key={category.id} value={category.id}>

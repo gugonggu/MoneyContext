@@ -196,7 +196,7 @@ export function QuickEntryForm({
 
   const categoryPicker = (
     <div className="flex-1">
-      <Select label="카테고리" name="categoryId" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+      <Select label="카테고리 (무엇을 샀나요)" name="categoryId" value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
         <option value="">선택 안 함</option>
         {visibleCategories.map((category) => (
           <option key={category.id} value={category.id}>
@@ -404,7 +404,7 @@ export function QuickEntryForm({
             <TextField label="메모" name="memo" type="text" value={memo} onChange={(event) => setMemo(event.target.value)} />
 
             <fieldset className="flex flex-col gap-2">
-              <legend className="text-sm font-medium text-content-secondary">태그</legend>
+              <legend className="text-sm font-medium text-content-secondary">태그 (왜, 어떤 상황이었나요)</legend>
               <div className="flex flex-wrap gap-1.5">
                 {tags.map((tag) => (
                   <ToggleButton key={tag.id} type="button" role="checkbox" aria-checked={selectedTagIds.has(tag.id)} onClick={() => toggleTag(tag.id)}>
